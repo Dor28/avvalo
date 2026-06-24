@@ -1,51 +1,49 @@
 services:
-  postgres:
+  db:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: avvalo
       POSTGRES_USER: avvalo
-      POSTGRES_PASSWORD: avvalo
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-avvalo}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U avvalo -d avvalo"]
       interval: 2s
       timeout: 3s
       retries: 15
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pg:/var/lib/postgresql/data
 
-  bot:
+  app:
     build: .
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://avvalo:avvalo@postgres:5432/avvalo
+      DATABASE_URL: postgresql+asyncpg://avvalo:${POSTGRES_PASSWORD:-avvalo}@db:5432/avvalo
       APP_HMAC_SECRET: ${APP_HMAC_SECRET:-development-only-hmac-secret-change-me}
       TELEGRAM_TOKEN_FAMILY_SHIELD: ${TELEGRAM_TOKEN_FAMILY_SHIELD:-development-placeholder}
       TELEGRAM_TOKEN_SELLER_GUARD: ${TELEGRAM_TOKEN_SELLER_GUARD:-}
-      LLM_BASE_URL: ${LLM_BASE_URL:-https://example.invalid/v1}
-      LLM_API_KEY: ${LLM_API_KEY:-development-placeholder}
-      LLM_MODEL: ${LLM_MODEL:-qwen-placeholder}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama:11434/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-ollama}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:7b-instruct}
       WEB_SESSION_SECRET: ${WEB_SESSION_SECRET:-development-only-web-secret-change-me}
       WEB_ENABLED: ${WEB_ENABLED:-false}
     restart: unless-stopped
 
   ollama:
-    # Optional local LLM for dev:  docker compose --profile local-llm up
-    # then:  docker compose exec ollama ollama pull qwen2.5:7b-instruct
-    # and set LLM_BASE_URL=http://ollama:11434/v1 in your .env
+    # Optional local LLM for dev: docker compose --profile local-llm up -d ollama
+    # Then pull once: docker compose exec ollama ollama pull qwen2.5:7b-instruct
     image: ollama/ollama:latest
     profiles: ["local-llm"]
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
+    environment:
+      OLLAMA_MAX_TRANSFER_STREAMS: "1"
     gpus: all
     volumes:
       - ollama_models:/root/.ollama
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  pg:
   ollama_models:
-

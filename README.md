@@ -12,7 +12,7 @@ Requirements: Docker with Compose, or Python 3.11+ with PostgreSQL 16.
 docker compose up --build
 ```
 
-The `bot` service currently performs the T1 database connectivity check and then remains
+The `app` service currently performs the T1 database connectivity check and then remains
 running. Telegram, engine, and web behavior are added in later numbered build tasks.
 
 For a one-shot local connectivity check:
@@ -23,4 +23,3 @@ python -m app.main --check
 
 Submitted content must never be persisted or logged. See
 `docs/V1_TECHNICAL_PLAN.md` and `docs/PRODUCT_GUIDE.md` before implementation work.
-
