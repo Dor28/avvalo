@@ -1,0 +1,1 @@
+"""Avvalo application package."""

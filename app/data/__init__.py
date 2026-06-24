@@ -1,0 +1,1 @@
+"""Privacy-safe persistence infrastructure."""

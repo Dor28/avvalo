@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "avvalo"
+version = "0.1.0"
+description = "AI safety assistant for Uzbekistan"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aiogram>=3.20,<4",
+    "alembic>=1.15,<2",
+    "apscheduler>=3.11,<4",
+    "asyncpg>=0.30,<1",
+    "fastapi>=0.115,<1",
+    "google-cloud-vision>=3.10,<4",
+    "jinja2>=3.1,<4",
+    "langdetect>=1.0.9,<2",
+    "openai>=2,<3",
+    "pillow>=11,<13",
+    "pydantic>=2.10,<3",
+    "pydantic-settings>=2.8,<3",
+    "python-multipart>=0.0.20,<1",
+    "pyyaml>=6,<7",
+    "sqlalchemy[asyncio]>=2.0.38,<3",
+    "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<10",
+    "pytest-asyncio>=0.25,<2",
+    "ruff>=0.11,<1",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["tools/eval_models.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

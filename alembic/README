@@ -1,0 +1,2 @@
+Avvalo uses one Alembic migration history for its shared PostgreSQL database.
+

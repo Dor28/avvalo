@@ -36,7 +36,7 @@
 | Tests | **pytest** + **pytest-asyncio** | | Golden fixtures are mandatory |
 | Lint/format | **ruff** | One tool | |
 | Packaging | **uv** or **pip + pyproject.toml** | | |
-| Deploy | **Docker + docker-compose** | One-command bring-up; UZ-region VPS for the residency story | bot + postgres services |
+| Deploy | **Docker + docker-compose** | One-command bring-up; UZ-region VPS for the residency story | services: `app` (bot+web), `db`; optional GPU `ollama` (`local-llm` profile) |
 
 **Do not add:** a graph database, a message queue, Redis (use Postgres + in-process for this scale), a second LLM/OCR vendor, or a heavy SPA/Node frontend (the web client is server-rendered Jinja2 + HTMX — no build pipeline). Keep it boring.
 
@@ -52,7 +52,8 @@
 | `LLM_API_KEY` | Key for that host |
 | `LLM_MODEL` | e.g. `qwen/qwen-2.5-72b-instruct` (verify exact id on the host; also try a current Qwen3 instruct in the eval) |
 | `LLM_IN_RATE_PER_M` / `LLM_OUT_RATE_PER_M` | $/1M tokens for cost calc (from the host's pricing) |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to Cloud Vision service-account JSON |
+| `OCR_PROVIDER` | `gcv` (production, Cloud Vision) or `tesseract` (offline dev — see §1.2) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to Cloud Vision service-account JSON (only when `OCR_PROVIDER=gcv`) |
 | `OCR_MIN_CONFIDENCE` | default `0.5` |
 | `NOTICE_VERSION` | consent notice version string; bump ⇒ re-consent |
 | `DAILY_LIMIT_FAMILY_SHIELD` / `DAILY_LIMIT_SELLER_GUARD` | defaults 5 / 20 |
@@ -66,6 +67,41 @@
 | `WEB_DAILY_LIMIT` | anonymous checks per web session/IP per day (default 5) |
 
 `config.py` loads these via pydantic-settings and fails fast if a required one is missing.
+
+### 1.2 Local dev (Ollama, offline — no API keys)
+
+You can build and integration-test the **entire pipeline with zero API keys, fully offline.** This is the recommended way to develop T1–T9 and T13. **Use it for plumbing, not for judging Uzbek quality** — a small local model writes rough Uzbek; that's the model size, not your code. Make the quality/model decision against hosted Qwen via the eval (§8.1).
+
+**LLM via Ollama — two ways to run it.** The `openai_compat.py` adapter is host-agnostic, so "local" is just a different `LLM_BASE_URL`.
+
+*Pattern A — containerized (recommended; this machine's Docker already has the `nvidia` runtime registered).* Ollama is an optional compose service behind a `local-llm` profile that shares the GPU (see the compose in T1); the app reaches it at `http://ollama:11434/v1`. Bring it up and pull the model once (the named volume keeps it):
+```
+docker compose --profile local-llm up -d ollama
+docker compose exec ollama ollama pull qwen2.5:7b-instruct
+```
+*Pattern B — native Windows app (fallback if the container GPU misbehaves).*
+```
+winget install Ollama.Ollama          # then:  ollama pull qwen2.5:7b-instruct  &&  ollama serve
+```
+Containers then reach it at `http://host.docker.internal:11434/v1`.
+
+Point the engine/eval at whichever you chose:
+```
+LLM_BASE_URL=http://ollama:11434/v1   # Pattern A · Pattern B: http://host.docker.internal:11434/v1 · bare host: http://localhost:11434/v1
+LLM_API_KEY=ignored
+LLM_MODEL=qwen2.5:7b-instruct
+```
+Reference dev hardware (RTX 4050, **6 GB VRAM / 16 GB RAM**): `qwen2.5:7b-instruct` runs fully on GPU (~25–40 tok/s) and is the daily driver. `qwen2.5:14b` runs with CPU offload (slow, ~5–10 tok/s) for an occasional Uzbek spot-check. **32B+ is not feasible on 6 GB / 16 GB — use the host for that.** Russian output looks reasonable at 7B; Uzbek looks rough — expected, not a bug.
+
+*Verify GPU-in-container once:* `docker run --rm --gpus all ollama/ollama nvidia-smi` should list the RTX 4050.
+
+*Production self-host (roadmap):* the same compose pattern runs on a Linux GPU server; for real throughput swap the `ollama/ollama` image for **`vllm/vllm-openai`** (also OpenAI-compatible) — only `LLM_BASE_URL` and the model name change, never `openai_compat.py`.
+
+**OCR offline** — two ways to avoid a Cloud Vision key in dev:
+- **Text-only path (simplest):** test forwarded/pasted-text checks; no OCR involved. Covers most of the pipeline.
+- **Tesseract dev provider:** set `OCR_PROVIDER=tesseract` to use `engine/ocr/tesseract.py` (CPU, offline; install Tesseract + the `rus`, `uzb`, `uzb_cyrl` language data). Lower quality than Cloud Vision — a dev unblocker, not the production OCR. Production uses `OCR_PROVIDER=gcv`.
+
+Postgres, the bot, and the web app already run locally via `docker compose`, so the full loop — bot/web → rules → minimize → local Qwen → validate → format — needs **no external account**.
 
 ---
 
@@ -162,7 +198,7 @@ avvalo/
 │  │  ├─ types.py             # CheckInput, CheckResult, RuleHit, DraftOutput, ... (§6)
 │  │  ├─ intake.py
 │  │  ├─ faces.py             # Face config registry (§5)
-│  │  ├─ ocr/{base.py,gcv.py,local_stub.py}
+│  │  ├─ ocr/{base.py,gcv.py,tesseract.py,local_stub.py}   # gcv=prod · tesseract=offline dev · local_stub=on-prem roadmap
 │  │  ├─ minimize.py
 │  │  ├─ rules/{engine.py,loader.py}
 │  │  ├─ llm/{base.py,openai_compat.py,prompt.py}   # openai_compat = Qwen via neutral host (host-agnostic)
@@ -325,7 +361,9 @@ class OCRProvider(Protocol):
     async def extract(self, image_bytes: bytes) -> OCRResult: ...
 ```
 - `gcv.py` — Google Cloud Vision `DOCUMENT_TEXT_DETECTION`. Map page-level confidence to `confidence` (average word confidence is fine). **Strip EXIF/GPS before the call** (use Pillow: re-save without metadata). Verify SDK auth via service-account JSON in env. **Caution:** GCV detects Latin/Cyrillic at the *script* level so RU and UZ-Cyrl/UZ-Latn screenshots generally work, but Uzbek has no dedicated language model and no public benchmark — sanity-check OCR quality on real UZ screenshots during T8, and rely on the low-confidence "paste the text" fallback when it struggles.
+- `tesseract.py` — **offline dev OCR** (`pytesseract` + Tesseract, CPU, with `rus` / `uzb` / `uzb_cyrl` language data). Selected by `OCR_PROVIDER=tesseract`. Lower quality than Cloud Vision — for key-free local dev only (§1.2), never the production default.
 - `local_stub.py` — raises `NotImplementedError("on-prem OCR is post-grant roadmap")`. Exists so the swap is obvious.
+- **Provider selection:** `OCR_PROVIDER` chooses the implementation (`gcv` default for prod, `tesseract` for offline dev). The pipeline only depends on the `OCRProvider` interface.
 - Threshold: if `confidence < OCR_MIN_CONFIDENCE` (default 0.5) → pipeline returns `CheckStatus.low_ocr` (ask user to paste text). No LLM call.
 - **The image is never sent to the LLM.** Only OCR text continues, and only after minimization.
 
@@ -440,8 +478,32 @@ rules:
 
 Build in this order. Each task is independently testable.
 
-**T1 — Skeleton & config.** Repo layout (§4), `pyproject.toml`, `config.py` (env via pydantic), `docker-compose.yml` (bot + postgres), `.env.example`, Alembic init.
-*Accept:* `docker compose up` starts Postgres; the app process boots and connects; `ruff` clean.
+**T1 — Skeleton & config.** Repo layout (§4), `pyproject.toml`, `config.py` (env via pydantic-settings), `.env.example`, Alembic init, and `docker-compose.yml` with services **`db`** (Postgres 16), **`app`** (bot + FastAPI web in one image), and an optional GPU **`ollama`** behind a `local-llm` profile (§1.2):
+```yaml
+services:
+  db:
+    image: postgres:16
+    environment: { POSTGRES_DB: avvalo, POSTGRES_USER: avvalo, POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} }
+    volumes: ["pg:/var/lib/postgresql/data"]
+  ollama:                                  # optional local LLM:  docker compose --profile local-llm up
+    image: ollama/ollama:latest
+    profiles: ["local-llm"]
+    ports: ["11434:11434"]
+    volumes: ["ollama_models:/root/.ollama"]
+    gpus: all                              # uses the registered nvidia runtime
+    restart: unless-stopped
+  app:                                     # Telegram bot + FastAPI web (same process)
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://avvalo:${POSTGRES_PASSWORD}@db:5432/avvalo
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama:11434/v1}   # defaults to local; override to the hosted Qwen
+      LLM_API_KEY: ${LLM_API_KEY:-ignored}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:7b-instruct}
+    depends_on: [db]
+    ports: ["8080:8080"]                   # web app
+volumes: { pg: {}, ollama_models: {} }
+```
+*Accept:* `docker compose up` starts `db` + `app` (app boots and connects to the DB); `docker compose --profile local-llm up` additionally starts Ollama and the app reaches it at `http://ollama:11434/v1`; `ruff` clean.
 
 **T2 — DB models & repo.** Implement §5.2 schema in `models.py`, Alembic migration, `repo.py` CRUD, `user_key.py` HMAC.
 *Accept:* migration applies; unit test creates consent + event rows; **no content column exists** (assert by inspecting the schema in a test).
@@ -461,8 +523,8 @@ Build in this order. Each task is independently testable.
 **T7 — Safety validator + format.** `validate.py` (all §9 checks), `format.py` (assemble block + limitation line + no-signal lead).
 *Accept:* validator rejects crafted bad drafts (verdict word; fabricated phone; "open the link"); on double-fail returns `safety_fallback`; the 5 FS golden outputs pass validation and match the golden structure/facts (wording may differ, facts/actions/safety must not).
 
-**T8 — OCR.** `ocr/gcv.py`, EXIF strip, low-confidence path; `local_stub.py`.
-*Accept:* an image of golden example 3 (UZ-Cyrl) OCRs to usable text → full pipeline produces a valid output; a blurry image returns `low_ocr` with no LLM call; EXIF is stripped (test on a GPS-tagged image).
+**T8 — OCR.** `ocr/base.py` interface + `OCR_PROVIDER` selection; `ocr/gcv.py` (prod) and `ocr/tesseract.py` (offline dev); EXIF strip; low-confidence path; `local_stub.py` placeholder.
+*Accept:* with `OCR_PROVIDER=gcv`, an image of golden example 3 (UZ-Cyrl) OCRs to usable text → full pipeline produces a valid output; with `OCR_PROVIDER=tesseract` the same image runs **offline** (lower quality acceptable); a blurry image returns `low_ocr` with no LLM call; EXIF is stripped (test on a GPS-tagged image).
 
 **T9 — Limits, feedback, share, events.** Daily limit per face; post-check feedback buttons → `feedback` rows; share button (link only); wire all privacy-safe events.
 *Accept:* 6th FS check same day is refused with a reset message; feedback recorded categorically; events emitted for the full happy path; logger rejects a content field (test).
