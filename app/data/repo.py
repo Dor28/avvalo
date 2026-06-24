@@ -1,0 +1,159 @@
+"""Privacy-safe CRUD over the §5.2 schema.
+
+Every function operates on a caller-provided :class:`AsyncSession` and flushes;
+the caller owns the transaction (commit/rollback). No function accepts or returns
+submitted content — only pseudonymous keys, categorical fields, IDs, and metrics.
+"""
+
+import uuid
+from datetime import UTC, date, datetime
+from decimal import Decimal
+
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimit
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+async def upsert_consent(
+    session: AsyncSession,
+    *,
+    user_key: str,
+    face: str,
+    notice_version: str,
+    language: str,
+) -> Consent:
+    """Insert or refresh the consent row for ``(user_key, face)``."""
+
+    row = await session.get(Consent, (user_key, face))
+    if row is None:
+        row = Consent(
+            user_key=user_key,
+            face=face,
+            notice_version=notice_version,
+            language=language,
+            ts=_utcnow(),
+        )
+        session.add(row)
+    else:
+        row.notice_version = notice_version
+        row.language = language
+        row.ts = _utcnow()
+    await session.flush()
+    return row
+
+
+async def get_consent(session: AsyncSession, *, user_key: str, face: str) -> Consent | None:
+    """Return the consent row for ``(user_key, face)`` or ``None``."""
+
+    return await session.get(Consent, (user_key, face))
+
+
+async def record_check_event(
+    session: AsyncSession,
+    *,
+    user_key: str,
+    face: str,
+    input_type: str,
+    language: str,
+    status: str,
+    rule_ids: list[str] | None = None,
+    no_signal: bool = False,
+    error_class: str | None = None,
+    ocr_confidence: float | None = None,
+    latency_ms: int = 0,
+    ocr_ms: int | None = None,
+    llm_ms: int | None = None,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
+    cost_usd: float | None = None,
+    safety_blocked: bool = False,
+) -> uuid.UUID:
+    """Persist one privacy-safe check event and return its generated id."""
+
+    event = CheckEvent(
+        id=uuid.uuid4(),
+        user_key=user_key,
+        face=face,
+        ts=_utcnow(),
+        input_type=input_type,
+        language=language,
+        rule_ids=list(rule_ids or []),
+        no_signal=no_signal,
+        status=status,
+        error_class=error_class,
+        ocr_confidence=ocr_confidence,
+        latency_ms=latency_ms,
+        ocr_ms=ocr_ms,
+        llm_ms=llm_ms,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cost_usd=None if cost_usd is None else Decimal(str(cost_usd)),
+        safety_blocked=safety_blocked,
+    )
+    session.add(event)
+    await session.flush()
+    return event.id
+
+
+async def record_feedback(
+    session: AsyncSession,
+    *,
+    check_id: uuid.UUID,
+    usefulness: str,
+    next_action: str,
+) -> None:
+    """Store categorical feedback for a completed check."""
+
+    session.add(
+        Feedback(check_id=check_id, usefulness=usefulness, next_action=next_action, ts=_utcnow())
+    )
+    await session.flush()
+
+
+async def get_usage(
+    session: AsyncSession, *, user_key: str, face: str, day: date | None = None
+) -> int:
+    """Return today's (or ``day``'s) check count for ``(user_key, face)``."""
+
+    row = await session.get(RateLimit, (user_key, face, day or _utcnow().date()))
+    return row.count if row else 0
+
+
+async def increment_usage(
+    session: AsyncSession, *, user_key: str, face: str, day: date | None = None
+) -> int:
+    """Increment and return the daily check count for ``(user_key, face)``."""
+
+    day = day or _utcnow().date()
+    row = await session.get(RateLimit, (user_key, face, day))
+    if row is None:
+        row = RateLimit(user_key=user_key, face=face, day=day, count=1)
+        session.add(row)
+    else:
+        row.count += 1
+    await session.flush()
+    return row.count
+
+
+async def delete_user_data(session: AsyncSession, *, user_key: str) -> None:
+    """Erase every row for ``user_key`` and write a deletion-log entry.
+
+    Feedback has no ``user_key`` of its own, so its rows are removed via the
+    user's check ids before the check events themselves are deleted.
+    """
+
+    result = await session.execute(select(CheckEvent.id).where(CheckEvent.user_key == user_key))
+    check_ids = result.scalars().all()
+    if check_ids:
+        await session.execute(delete(Feedback).where(Feedback.check_id.in_(check_ids)))
+    await session.execute(delete(CheckEvent).where(CheckEvent.user_key == user_key))
+    await session.execute(delete(Consent).where(Consent.user_key == user_key))
+    await session.execute(delete(RateLimit).where(RateLimit.user_key == user_key))
+    now = _utcnow()
+    session.add(DeletionLog(user_key=user_key, requested_ts=now, completed_ts=now))
+    await session.flush()
