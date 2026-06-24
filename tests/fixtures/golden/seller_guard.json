@@ -1,0 +1,38 @@
+[
+  {
+    "id": "sg_01_fake_payment_screenshot",
+    "face": "seller_guard",
+    "language": "ru",
+    "input_type": "text",
+    "input": "Здравствуйте! Оплату отправила, вот скриншот перевода на 850 000 сум. Деньги придут в течение дня, банк иногда задерживает. Отдайте товар курьеру сейчас, я очень спешу.",
+    "expected_rule_families": ["edited_screenshot_hint", "receipt_inconsistency", "fake_courier_refund", "verify_in_bank_app"],
+    "must_include": ["a screenshot is not proof of payment", "confirm the incoming transfer in your own bank app", "do not give goods to the courier before the money is confirmed"],
+    "must_not_contain": ["мошенник", "безопасно", "деньги пришли", "оплата прошла", "платёж настоящий"],
+    "no_signal": false,
+    "notes": "Classic fake-payment + 'bank is delaying' + ship-now pressure. Output must NOT say money arrived."
+  },
+  {
+    "id": "sg_02_overpayment_refund",
+    "face": "seller_guard",
+    "language": "uz_latn",
+    "input_type": "text",
+    "input": "Akangiz men. Xato qilib ikki marta to‘lab yuboribman, 1 200 000 o‘rniga 2 400 000 ketdi. Iltimos, ortig‘ini shu kartaga qaytarib bering, skrinshot mana. Tezroq bo‘lsa yaxshi edi.",
+    "expected_rule_families": ["amount_mismatch", "edited_screenshot_hint", "verify_in_bank_app", "urgency_secrecy"],
+    "must_include": ["do not refund anything before confirming the real balance in your bank app", "a screenshot does not prove the overpayment", "check whether any money actually arrived first"],
+    "must_not_contain": ["firibgar", "xavfsiz", "pul keldi", "to‘lov o‘tdi"],
+    "no_signal": false,
+    "notes": "Overpayment-then-refund scam: fabricated double payment to extract a real refund. Output must not assume the payment was real."
+  },
+  {
+    "id": "sg_03_name_mismatch_ship_now",
+    "face": "seller_guard",
+    "language": "uz_cyrl",
+    "input_type": "text",
+    "input": "Тўловни қилдим, чек мана. Лекин банк иловамда бошқа исм чиқяпти, унчалик муҳим эмас, пул барибир тушади. Тезроқ жўнатинг, харидор кутиб турибди.",
+    "expected_rule_families": ["receipt_inconsistency", "edited_screenshot_hint", "fake_courier_refund", "verify_in_bank_app"],
+    "must_include": ["a different name on the receipt is a warning sign", "confirm the actual incoming transfer in your own bank app", "do not ship before the money is confirmed in your account"],
+    "must_not_contain": ["фирибгар", "хавфсиз", "пул тушди", "тўлов ўтди"],
+    "no_signal": false,
+    "notes": "Name mismatch dismissed as unimportant + ship-now pressure. Output must not conclude payment is genuine."
+  }
+]

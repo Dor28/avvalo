@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Avvalo
+eval_out/                 # model eval outputs (may contain generated content)
+service-account*.json     # Google Cloud Vision credentials

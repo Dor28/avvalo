@@ -1,0 +1,62 @@
+[
+  {
+    "id": "fs_01_fake_bank_support",
+    "face": "family_shield",
+    "language": "uz_latn",
+    "input_type": "text",
+    "input": "Bank xavfsizlik xizmatidanmiz. Kartangiz bloklanadi. Hozir SMS orqali kelgan 6 xonali kodni yuboring, aks holda hisobingiz 10 daqiqada yopiladi.",
+    "expected_rule_families": ["credential_theft", "urgency_secrecy", "authority_impersonation"],
+    "must_include": ["do not share the SMS code", "open the bank app yourself", "call the number printed on the card"],
+    "must_not_contain": ["firibgar", "xavfsiz", "ishonchli"],
+    "no_signal": false,
+    "notes": "Canonical golden output in FAMILY_SHIELD_VALIDATION.md Example 1."
+  },
+  {
+    "id": "fs_02_family_emergency",
+    "face": "family_shield",
+    "language": "ru",
+    "input_type": "text",
+    "input": "Мама, это мой новый номер. Телефон разбился. Я попал в неприятность, срочно переведи 3 000 000 сум на карту **** 4412. Только папе пока не звони.",
+    "expected_rule_families": ["authority_impersonation", "urgency_secrecy", "upfront_payment"],
+    "must_include": ["do not transfer money yet", "call the relative on the saved old number", "ask a control question only family knows"],
+    "must_not_contain": ["мошенник", "безопасно", "афёрист", "надёжный"],
+    "no_signal": false,
+    "notes": "Canonical golden output in FAMILY_SHIELD_VALIDATION.md Example 2."
+  },
+  {
+    "id": "fs_03_seller_prepayment",
+    "face": "family_shield",
+    "language": "uz_cyrl",
+    "input_type": "text",
+    "input": "Телевизорни фақат бугун 40% арзон бераман. Бошқа харидор кутяпти, ҳозир 50% олдиндан картага ташланг. Учрашув ҳам, видеоқўнғироқ ҳам қилмайман, курьер олиб боради.",
+    "expected_rule_families": ["upfront_payment", "verification_avoidance", "urgency_secrecy", "implausible_promise"],
+    "must_include": ["do not prepay before seeing the item", "ask for a short video with today's date", "compare price and photos with other listings"],
+    "must_not_contain": ["фирибгар", "хавфсиз", "ишончли"],
+    "no_signal": false,
+    "notes": "Canonical golden output in FAMILY_SHIELD_VALIDATION.md Example 3."
+  },
+  {
+    "id": "fs_04_fake_delivery_link",
+    "face": "family_shield",
+    "language": "ru",
+    "input_type": "text",
+    "input": "Ваша посылка задержана. Оплатите 14 900 сум в течение часа, иначе заказ вернётся отправителю: hxxps://delivery-check[.]example/uz. Можно также отсканировать QR-код ниже.",
+    "expected_rule_families": ["suspicious_link_qr", "urgency_secrecy", "upfront_payment"],
+    "must_include": ["do not open the link or scan the QR", "open the delivery app/site manually", "contact the service via an independently found channel"],
+    "must_not_contain": ["мошенник", "безопасно", "афёрист", "надёжный"],
+    "no_signal": false,
+    "notes": "Canonical golden output in FAMILY_SHIELD_VALIDATION.md Example 4. Output must not repeat the URL."
+  },
+  {
+    "id": "fs_05_upfront_fee_job",
+    "face": "family_shield",
+    "language": "uz_latn",
+    "input_type": "text",
+    "input": "Uydan turib kuniga 1,5 mln so‘m topasiz, tajriba kerak emas. Joylar faqat bugun. Ishni boshlash uchun 250 000 so‘m ro‘yxatdan o‘tish puli va pasport rasmini Telegramga yuboring.",
+    "expected_rule_families": ["implausible_promise", "upfront_payment", "credential_theft", "urgency_secrecy"],
+    "must_include": ["do not pay a registration fee before a contract", "verify the legal entity name and address independently", "do not send a passport photo in an ordinary chat"],
+    "must_not_contain": ["firibgar", "xavfsiz", "ishonchli"],
+    "no_signal": false,
+    "notes": "Canonical golden output in FAMILY_SHIELD_VALIDATION.md Example 5."
+  }
+]

@@ -1,0 +1,60 @@
+# Avvalo — Seller Guard rule pack (merchant-side scam families)
+#
+# Same format as the Family Shield pack. These fire on what a CUSTOMER sends a small
+# merchant. The hard product rule: never conclude money arrived — `verify_in_bank_app`
+# is an always-on reminder so every payment-related check ends with "confirm it yourself
+# in your real bank app before shipping."
+#
+# NOTE: keyword sets are a starting point; a native UZ/RU reviewer should expand them.
+
+families:
+  - family: receipt_inconsistency
+    rules:
+      - id: sg.receipt.mismatch
+        desc: "The payment screenshot/story doesn't line up — wrong/other name shown, or relies on a 'bank is delaying' excuse instead of a confirmed transfer."
+        message_key: receipt_inconsistency
+        severity: 2
+        match:
+          uz_latn: ["bank ushlab turibdi", "pul yo'lda", "kechikishi mumkin", "boshqa ism chiqyapti", "ertaga tushadi", "tasdiq keladi", "hozircha ko'rinmaydi"]
+          uz_cyrl: ["банк ушлаб турибди", "пул йўлда", "кечикиши мумкин", "бошқа исм чиқяпти", "эртага тушади", "тасдиқ келади", "ҳозирча кўринмайди"]
+          ru: ["банк задерживает", "деньги в пути", "может прийти позже", "показывает другое имя", "придёт завтра", "подтверждение придёт", "пока не видно"]
+  - family: amount_mismatch
+    rules:
+      - id: sg.amount.overpay
+        desc: "Claims a wrong amount was paid — often a deliberate 'overpayment' — and asks the merchant to refund the difference."
+        message_key: amount_mismatch
+        severity: 3
+        match:
+          uz_latn: ["ikki marta to'lab", "ko'p ketib qoldi", "ortig'ini qaytaring", "xato to'lov", "ortiqcha o'tdi", "qaytarib bering"]
+          uz_cyrl: ["икки марта тўлаб", "кўп кетиб қолди", "ортиғини қайтаринг", "хато тўлов", "ортиқча ўтди", "қайтариб беринг"]
+          ru: ["оплатил дважды", "перевёл больше", "верните разницу", "ошибочный платёж", "ушло лишнее", "верните излишек"]
+  - family: edited_screenshot_hint
+    rules:
+      - id: sg.edited.textsigns
+        desc: "A screenshot/'receipt' is offered as proof of payment instead of a confirmed transfer (treat as a claim, not proof; do not judge pixels)."
+        message_key: edited_screenshot
+        severity: 1
+        match:
+          uz_latn: ["skrinshot mana", "chek mana", "rasmini yubordim", "skrin yubordim", "to'lov cheki", "kvitansiya"]
+          uz_cyrl: ["скриншот мана", "чек мана", "расмини юбордим", "скрин юбордим", "тўлов чеки", "квитанция"]
+          ru: ["вот скриншот", "вот чек", "скрин отправил", "фото перевода", "чек об оплате", "квитанция"]
+  - family: fake_courier_refund
+    rules:
+      - id: sg.courier.shipnow
+        desc: "Pressure to hand goods to a courier or ship immediately, before the merchant has confirmed real receipt of the money."
+        message_key: ship_before_confirm
+        severity: 3
+        match:
+          uz_latn: ["hozir kuryerga bering", "tezroq jo'nating", "darhol yuboring", "kuryer kutyapti", "haridor kutyapti", "hoziroq joblang"]
+          uz_cyrl: ["ҳозир курьерга беринг", "тезроқ жўнатинг", "дарҳол юборинг", "курьер кутяпти", "харидор кутяпти", "ҳозироқ жўнатинг"]
+          ru: ["отдайте курьеру сейчас", "отправьте быстрее", "отгрузите немедленно", "курьер ждёт", "покупатель ждёт", "срочно отправьте"]
+  - family: verify_in_bank_app
+    rules:
+      - id: sg.verify.always
+        desc: "Always-on reminder: any claim of payment must be confirmed by the merchant in their own real bank/payment app — a screenshot or message is not proof."
+        message_key: verify_in_bank_app
+        severity: 1
+        match:
+          uz_latn: ["to'lov", "to'ladim", "pul o'tkazdim", "pul tashladim", "perevod", "karta", "to'lab yubordim"]
+          uz_cyrl: ["тўлов", "тўладим", "пул ўтказдим", "пул ташладим", "перевод", "карта", "тўлаб юбордим"]
+          ru: ["оплата", "оплатил", "оплатила", "перевёл деньги", "перевела", "перевод", "карта"]

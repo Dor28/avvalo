@@ -271,14 +271,14 @@ The §1 principle (verify the situation, not the person) **materially reduces** 
 2. **Pricing** — Seller Guard monthly tier; size it **bottoms-up** (active UZ TG/IG merchants × realistic paying % × price), not from the $2B TAM.
 3. **Legal confirmations** (§12) — the registration trigger and foreign-processing path, with a local lawyer.
 
-> **Next deliverable: a Family Shield *validation* spec — NOT a full technical build spec.** It defines:
+> **Completed 2026-06-21:** [FAMILY_SHIELD_VALIDATION.md](FAMILY_SHIELD_VALIDATION.md) is the Family Shield *validation* spec—not a full technical build spec. It defines:
 > 1. **one entry flow** (the single "forward a suspicious message" path),
 > 2. **five example outputs** (five real pasted scenarios → the exact 🚩/✅/❓ reply),
 > 3. **retention rules** (what's kept, minimized, or discarded, and for how long),
 > 4. a **cost ceiling per check**, and
 > 5. **measurable success / failure gates** (what result greenlights building further vs. kills or pivots it).
 >
-> The full engine schema comes *after* this experiment validates demand.
+> **Next:** implement the validation build and run its private alpha. The full engine schema comes *after* this experiment validates demand.
 
 ---
 

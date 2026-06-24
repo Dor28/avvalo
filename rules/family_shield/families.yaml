@@ -1,0 +1,104 @@
+# Avvalo — Family Shield rule pack (consumer scam families)
+#
+# Format: a top-level `families:` list. The loader iterates every family in every YAML
+# file under this directory; each rule has a stable, globally-unique `id`.
+# Matching: case-insensitive substring match on the RAW local text (before minimization),
+# per language group (uz_latn / uz_cyrl / ru). ANY keyword in ANY group => the rule fires.
+# `desc` is the neutral-English meaning passed to the LLM as a grounded fact.
+# `emits_signal` (optional) adds a structured Signal of that kind.
+#
+# NOTE: these keyword sets are a strong starting point, NOT exhaustive. A native
+# Uzbek/Russian reviewer should expand them during the alpha. Structural signals
+# (lookalike/shortened links, phone "newness", personal-card transfers) are produced
+# by the regex extractors in rules/engine.py, not only by these keywords.
+
+families:
+  - family: credential_theft
+    rules:
+      - id: fs.credential.otp
+        desc: "Asks for an SMS / one-time code (OTP). Legitimate bank or service staff never ask for it."
+        message_key: otp_request
+        severity: 3
+        emits_signal: otp_request
+        match:
+          uz_latn: ["sms kod", "sms orqali kelgan kod", "6 xonali kod", "bir martalik kod", "kodni yuboring", "kodni ayting", "tasdiqlash kodi", "kod keldi"]
+          uz_cyrl: ["смс код", "смс орқали келган код", "6 хонали код", "бир марталик код", "кодни юборинг", "кодни айтинг", "тасдиқлаш коди", "код келди"]
+          ru: ["код из смс", "одноразовый код", "пришлите код", "назовите код", "код подтверждения", "продиктуйте код", "6-значный код", "пришёл код"]
+      - id: fs.credential.secret_docs
+        desc: "Asks for card details / CVV / password / passport photo through an ordinary chat."
+        message_key: secret_request
+        severity: 3
+        match:
+          uz_latn: ["karta raqami", "karta ma'lumotlari", "cvv", "parol", "pin kod", "pasport rasmi", "pasport nusxasi", "pasport surati"]
+          uz_cyrl: ["карта рақами", "карта маълумотлари", "cvv", "парол", "пин код", "паспорт расми", "паспорт нусхаси", "паспорт сурати"]
+          ru: ["номер карты", "данные карты", "cvv", "пароль", "пин-код", "фото паспорта", "копия паспорта", "селфи с паспортом"]
+  - family: urgency_secrecy
+    rules:
+      - id: fs.urgency.deadline
+        desc: "Creates time pressure (now / today / one hour) to force action before the user can check."
+        message_key: urgency_deadline
+        severity: 2
+        match:
+          uz_latn: ["hozir", "faqat bugun", "10 daqiqada", "shoshiling", "tezda", "vaqt tugayapti", "bir soat ichida", "darhol"]
+          uz_cyrl: ["ҳозир", "фақат бугун", "10 дақиқада", "шошилинг", "тезда", "вақт тугаяпти", "бир соат ичида", "дарҳол"]
+          ru: ["сейчас же", "только сегодня", "в течение часа", "срочно", "поторопитесь", "время заканчивается", "осталось мало времени", "немедленно"]
+      - id: fs.secrecy.tell_nobody
+        desc: "Tells the user to keep it secret or not to call anyone — this blocks independent checking."
+        message_key: secrecy
+        severity: 3
+        match:
+          uz_latn: ["hech kimga aytma", "hech kimga aytmang", "papaga aytma", "otangga aytma", "sir saqla", "qo'ng'iroq qilma", "hech kimga qo'ng'iroq qilma"]
+          uz_cyrl: ["ҳеч кимга айтма", "ҳеч кимга айтманг", "папага айтма", "отангга айтма", "сир сақла", "қўнғироқ қилма", "ҳеч кимга қўнғироқ қилма"]
+          ru: ["никому не говори", "никому не звони", "только папе не звони", "только маме не говори", "сохрани в тайне", "не рассказывай"]
+  - family: authority_impersonation
+    rules:
+      - id: fs.authority.impersonation
+        desc: "Claims to be a bank, police, tax office, delivery service, employer, or a relative on a 'new number', without a channel the user can independently verify."
+        message_key: authority
+        severity: 2
+        match:
+          uz_latn: ["bank xavfsizlik", "bank xodimi", "xavfsizlik xizmati", "politsiya", "soliq", "yetkazib berish xizmati", "bu mening yangi raqamim", "yangi raqam", "telefonim buzildi"]
+          uz_cyrl: ["банк хавфсизлик", "банк ходими", "хавфсизлик хизмати", "политсия", "солиқ", "етказиб бериш хизмати", "бу менинг янги рақамим", "янги рақам", "телефоним бузилди"]
+          ru: ["служба безопасности банка", "сотрудник банка", "служба безопасности", "полиция", "налоговая", "служба доставки", "это мой новый номер", "новый номер", "телефон разбился"]
+  - family: upfront_payment
+    rules:
+      - id: fs.payment.prepay
+        desc: "Asks for prepayment / deposit / fee, or a transfer to a personal card, before goods, interview, or contract."
+        message_key: upfront_payment
+        severity: 2
+        emits_signal: card_personal
+        match:
+          uz_latn: ["oldindan to'lov", "oldindan to'lang", "50% oldindan", "kartaga tashlang", "kartaga o'tkazing", "shu kartaga", "ro'yxatdan o'tish puli", "depozit", "zalog", "avans"]
+          uz_cyrl: ["олдиндан тўлов", "олдиндан тўланг", "50% олдиндан", "картага ташланг", "картага ўтказинг", "шу картага", "рўйхатдан ўтиш пули", "депозит", "залог", "аванс"]
+          ru: ["предоплата", "оплатите заранее", "50% предоплаты", "переведите на карту", "перекиньте на карту", "на эту карту", "взнос за регистрацию", "депозит", "залог", "аванс"]
+  - family: verification_avoidance
+    rules:
+      - id: fs.verify.avoids
+        desc: "Refuses meeting, video call, or the official app; pushes off-platform; offers only its own contact path."
+        message_key: verification_avoidance
+        severity: 2
+        match:
+          uz_latn: ["uchrashmayman", "videoqo'ng'iroq qilmayman", "videoga chiqmayman", "faqat shu yerda yozing", "telegramda gaplashamiz", "kuryer olib boradi", "ko'rib bo'lmaydi"]
+          uz_cyrl: ["учрашмайман", "видеоқўнғироқ қилмайман", "видеога чиқмайман", "фақат шу ерда ёзинг", "телеграмда гаплашамиз", "курьер олиб боради", "кўриб бўлмайди"]
+          ru: ["не встречаюсь", "видеозвонок не делаю", "на видео не выхожу", "пишите только сюда", "общаемся только в телеграм", "курьер привезёт", "посмотреть нельзя"]
+  - family: implausible_promise
+    rules:
+      - id: fs.promise.toogood
+        desc: "Guaranteed or unusually high earnings, an unusually low price, or high pay with no experience."
+        message_key: implausible_promise
+        severity: 2
+        match:
+          uz_latn: ["kafolatlangan daromad", "kuniga 1,5 mln", "tajriba kerak emas", "juda arzon", "40% arzon", "100% foyda", "uydan turib pul ishlang", "oson pul"]
+          uz_cyrl: ["кафолатланган даромад", "кунига 1,5 млн", "тажриба керак эмас", "жуда арзон", "40% арзон", "100% фойда", "уйдан туриб пул ишланг", "осон пул"]
+          ru: ["гарантированный доход", "1,5 млн в день", "без опыта", "очень дёшево", "скидка 40%", "100% прибыли", "заработок из дома", "лёгкие деньги"]
+  - family: suspicious_link_qr
+    rules:
+      - id: fs.link.payorlogin
+        desc: "Pushes payment or login through a supplied link or QR code, usually with urgency."
+        message_key: suspicious_link
+        severity: 2
+        emits_signal: link_lookalike
+        match:
+          uz_latn: ["havola orqali to'lang", "linkni bosing", "havolani oching", "qr kodni skanerlang", "saytga kiring", "ushbu havola", "pastdagi qr"]
+          uz_cyrl: ["ҳавола орқали тўланг", "линкни босинг", "ҳаволани очинг", "qr кодни сканерланг", "сайтга киринг", "ушбу ҳавола", "пастдаги qr"]
+          ru: ["оплатите по ссылке", "перейдите по ссылке", "откройте ссылку", "отсканируйте qr", "зайдите на сайт", "по этой ссылке", "qr-код ниже"]

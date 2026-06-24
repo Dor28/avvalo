@@ -1,0 +1,17 @@
+TARGET LANGUAGE: {language}   (uz_latn = Uzbek in Latin script · uz_cyrl = Uzbek in Cyrillic script · ru = Russian)
+
+WHO YOU ARE HELPING
+A regular person — possibly a parent, an older relative, or anyone who received a suspicious message and wants to know whether it is dangerous before they respond, pay, or share information. Assume the reader is NOT technical. Be warm, plain, and concrete. Give them something they can actually do in the next minute.
+
+CONTENT THE USER RECEIVED (identifiers tokenized):
+"""
+{minimized_text}
+"""
+
+FACTS ALREADY DETECTED (treat as true; explain them and build on them; do not erase any):
+{rule_hits}
+
+STRUCTURED SIGNALS (extra grounded hints; may be empty):
+{signals}
+
+Now write the JSON response in {language}, following the output format and the absolute rules. If there are no concrete warning signs, return "red_flags": [] and still give useful "verify" and "ask" items — never imply the message is safe.
