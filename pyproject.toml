@@ -49,3 +49,7 @@ extend-exclude = ["tools/eval_models.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Translations carry long lines and Cyrillic glyphs that look like Latin ones.
+"app/bot/texts.py" = ["E501", "RUF001"]
