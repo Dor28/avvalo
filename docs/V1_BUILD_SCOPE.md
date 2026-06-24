@@ -10,10 +10,12 @@
 
 ## 1. What we are building and why this shape
 
-**One backend engine. Two thin Telegram-bot "faces" over it.**
+**One backend engine. Two "faces" over it. Two channels (Telegram bot + web app).**
 
 - **Family Shield (free/consumer face):** forward a suspicious message → get a 🚩/✅/❓ read. Reach + mission.
 - **Seller Guard (paid/merchant face):** forward a payment screenshot or order chat → get a verification checklist. The revenue *thesis* (path to who-pays).
+
+Both faces are delivered over **two channels**: a **Telegram bot** and a **web app**. The check logic is identical across channels — both call the same engine; the web app just adds anonymous access and the anti-spam controls Telegram gives for free. A clickable web URL also makes the product more demonstrable to a grant panel.
 
 **Why this shape for IT Park:** a single free bot reads as a feature; a **localized UZ/RU AI safety engine that powers two distinct markets** reads as a platform with IT-export and scale potential — the thing grant programs reward. The engine is the asset; the two faces are proof it generalizes.
 
@@ -29,6 +31,7 @@ The failure mode of "two faces" is building two half-products. The table in §3 
 
 ### In scope
 - One Telegram bot, **two entry modes** selectable at start (or two separate bots sharing one backend — see technical plan): *Family Shield* and *Seller Guard*.
+- **A web app** (FastAPI + server-rendered HTMX UI) exposing the same check over the **same engine** — anonymous (no accounts in v1), with Cloudflare Turnstile + rate-limit on image upload. Family Shield is the primary web experience; the endpoint is face-parameterized so Seller Guard works too. Bot and web share 100% of the analysis.
 - Inputs: forwarded text, pasted text, one image (screenshot/photo with readable text), optional caption.
 - Languages: **Uzbek Latin, Uzbek Cyrillic, Russian** — detect and reply in kind.
 - **OCR via cloud provider with a DPA + zero-retention config** for the demo (reviewed decision — see §4). Architecture keeps OCR pluggable so on-prem is a later swap.
@@ -44,7 +47,7 @@ The failure mode of "two faces" is building two half-products. The table in §3 
 - Accusation graph, entity/person lookup, "reported N×", clusters, public pages. *(Permanently retired — [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §14.)*
 - Family groups / shared accounts / guardian-dependent linking.
 - Subscriptions, paywalls, team accounts, payment-provider/marketplace integration.
-- Web client, mobile app, browser extension.
+- Mobile app, browser extension. (A **web app is now in scope** — see above; web **accounts/login** are not — web is anonymous in v1.)
 - URL browsing, malware scanning, reverse-image search, external reputation lookup, payment confirmation.
 - Long-term storage of any submitted content, OCR text, or model output.
 - A full admin dashboard UI (a protected export/query suffices).
@@ -67,6 +70,8 @@ This is the whole case for "both faces is not 2× the work."
 | Analytics / cost instrumentation | ✅ shared | reuse | reuse |
 
 **Net-new for Seller Guard:** ~5 rule families (receipt internal-consistency, order-vs-claimed-amount mismatch, edited-screenshot hints, fake-courier/refund chat patterns, "verify in your real bank app"), one merchant output template, and merchant entry copy. Nothing structural.
+
+**Net-new for the web channel:** a thin FastAPI app + a few Jinja2/HTMX templates + the abuse layer (captcha, IP rate-limit, upload cap) + an anonymous session key. **Zero** engine or analysis code — it calls the same `run_check()`. This is exactly what the "one backend, many thin faces" design buys you.
 
 **Hard rule carried from the guide:** Seller Guard must **never claim money "arrived"** from a screenshot. The merchant face demos the *verification checklist* ("here's what to confirm in your bank app"), not payment confirmation. The payment-provider API that would confirm receipt is the **post-grant moat** — say so in the pitch; it's a strength.
 
@@ -103,6 +108,7 @@ The build is demo-ready when:
 
 - A new user can pick a face, consent, and complete a first check **without instructions**.
 - Both faces run on the **same engine** (same intake → OCR → minimize → rules → LLM → validate → format path); the only difference is the rule pack + output template.
+- **Both channels (Telegram bot + web app) call the same engine** and return matching output; the web app is anonymous with captcha + rate-limit on image upload, and persists no submitted content.
 - All three language forms work for text and image input.
 - The 5 Family Shield golden examples ([FAMILY_SHIELD_VALIDATION.md](FAMILY_SHIELD_VALIDATION.md) §7) pass as fixtures; ≥3 Seller Guard golden examples (authored in the technical plan) pass.
 - Safety validator blocks every prohibited output in the test set; no submitted content ever reaches logs/backups.

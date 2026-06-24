@@ -23,6 +23,9 @@
 |---|---|---|---|
 | Language | **Python 3.11+** | Best AI/OCR ecosystem; most training data for the executor | Type-hint everything |
 | Telegram | **aiogram 3.x** (async) | Modern, clean FSM, well-documented | Long-polling for dev; webhook optional later |
+| Web API | **FastAPI** (async) | Runs in the same process; shares the engine + DB; pydantic-native; OpenAPI for free | Thin HTTP face over `run_check()` |
+| Web UI | **Jinja2 templates + HTMX** + vanilla CSS | No SPA / Node build step; submit→swap-result; minimal for a solo build | Reuses the 3-language UI strings |
+| Web abuse | **Cloudflare Turnstile** + IP/session rate-limit + upload caps | Open web has NO built-in anti-spam (unlike Telegram) — this is a v1 requirement | Captcha gates image upload |
 | LLM | **Qwen (open weights)** via a neutral OpenAI-compatible host (OpenRouter / Together / Fireworks) | Chinese model with the broadest multilingual coverage → best odds on low-resource Uzbek; open weights ⇒ served off mainland China (US/EU/SG), so user data never enters China (key for a privacy product); OpenAI-compatible; cheap | Behind the provider interface (§8). Host + model set by env (`LLM_BASE_URL` / `LLM_MODEL`). Choose a host offering a **DPA + no-retention / no-training**. Confirm Uzbek quality with the eval (§8.1) before locking. **Self-hosting Qwen in-region is the production roadmap** (full data residency). |
 | OCR | **Google Cloud Vision** `DOCUMENT_TEXT_DETECTION` | Strong Latin+Cyrillic; clear DPA | Behind an interface (§7). On-prem (Tesseract/PaddleOCR) is a later swap, stubbed now. |
 | DB | **PostgreSQL 16** | Relational is enough (no graph DB); JSONB for event payloads; real TTL/backup story | SQLite allowed for *local unit tests only* |
@@ -35,7 +38,7 @@
 | Packaging | **uv** or **pip + pyproject.toml** | | |
 | Deploy | **Docker + docker-compose** | One-command bring-up; UZ-region VPS for the residency story | bot + postgres services |
 
-**Do not add:** a graph database, a message queue, Redis (use Postgres + in-process for this scale), a web framework (no web client in this build), or a second LLM/OCR vendor. Keep it boring.
+**Do not add:** a graph database, a message queue, Redis (use Postgres + in-process for this scale), a second LLM/OCR vendor, or a heavy SPA/Node frontend (the web client is server-rendered Jinja2 + HTMX — no build pipeline). Keep it boring.
 
 ### 1.1 Environment variables (`.env.example`)
 
@@ -56,6 +59,11 @@
 | `LLM_TIMEOUT_S` / `OCR_TIMEOUT_S` | latency guards (§14) |
 | `MAX_OUTPUT_TOKENS` | default `600` |
 | `OPERATOR_ALERT_CHAT_ID` | where to alert on a critical safety violation (§9) |
+| `WEB_ENABLED` | `true` to serve the web app alongside the bot(s) |
+| `WEB_HOST` / `WEB_PORT` | uvicorn bind for FastAPI |
+| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | Cloudflare Turnstile (captcha) keys |
+| `WEB_SESSION_SECRET` | signs the anonymous web session cookie (pseudonymous web key) |
+| `WEB_DAILY_LIMIT` | anonymous checks per web session/IP per day (default 5) |
 
 `config.py` loads these via pydantic-settings and fails fast if a required one is missing.
 
@@ -64,11 +72,12 @@
 ## 2. System architecture
 
 ```
-                 ┌───────────────────────── Telegram ─────────────────────────┐
-                 │  Family Shield bot face        Seller Guard bot face        │
-                 └───────────────┬─────────────────────────┬───────────────────┘
-                                 │  (aiogram handlers, FSM) │
-                                 ▼                          ▼
+        ┌─────────── Telegram (aiogram) ───────────┐   ┌──── Web (FastAPI + HTMX) ────┐
+        │ Family Shield face    Seller Guard face   │   │ anonymous check; Turnstile-  │
+        │ (handlers, FSM, Telegram identity)        │   │ gated image upload           │
+        └─────────────────────┬─────────────────────┘   └──────────────┬───────────────┘
+                              │       same CheckInput → run_check()      │
+                              ▼                                          ▼
         ┌───────────────────────────────────────────────────────────────────┐
         │                         CORE ENGINE (one pipeline)                  │
         │                                                                     │
@@ -95,6 +104,8 @@
 **Key ordering decision (resolves the review's privacy-vs-analysis tension):** the **rule engine runs on the RAW local text first** (it never leaves the server), extracts structured signals (links, phone "newness", card destination, etc.), *then* the text is minimized for the LLM. The LLM receives **minimized text + the structured signals as grounded facts.** This is why it can still explain "lookalike link" without the raw URL leaving in the prompt.
 
 **The two faces share 100% of this pipeline.** A `Face` value (`family_shield` | `seller_guard`) selects (a) which rule pack loads and (b) which output template/prompt is used. Nothing else differs.
+
+**Both channels (Telegram, Web) share 100% of the engine too.** Each channel builds the same `CheckInput` and calls the same `run_check()`. No analysis logic ever lives in a channel — the web layer only adds anonymous identity (a signed-cookie pseudonymous key instead of a Telegram ID) and the abuse controls Telegram provides for free (captcha, IP rate-limit, upload caps).
 
 ---
 
@@ -139,6 +150,13 @@ avvalo/
 │  │  ├─ keyboards.py         # inline keyboards
 │  │  ├─ texts.py             # ALL UI strings keyed by (key, language)
 │  │  └─ states.py            # FSM states (ChoosingLang, AwaitingConsent, Ready, ...)
+│  ├─ web/
+│  │  ├─ app.py               # FastAPI app: GET / , POST /check , GET /privacy , GET /healthz
+│  │  ├─ routes.py            # /check builds CheckInput → engine.run_check (SAME pipeline)
+│  │  ├─ abuse.py             # Turnstile verify + IP/session rate-limit + upload-size cap
+│  │  ├─ session.py           # signed-cookie anonymous pseudonymous key
+│  │  ├─ templates/           # Jinja2: index.html, _result.html (HTMX partial), privacy.html
+│  │  └─ static/              # minimal CSS + htmx.min.js
 │  ├─ engine/
 │  │  ├─ pipeline.py          # run_check() orchestration (§3)
 │  │  ├─ types.py             # CheckInput, CheckResult, RuleHit, DraftOutput, ... (§6)
@@ -458,6 +476,9 @@ Build in this order. Each task is independently testable.
 **T12 — Hardening & demo polish.** Timeouts (p90 budget §14), one retry on LLM/transient, graceful failure messages, README with run + demo script.
 *Accept:* the §15 demo script runs clean end-to-end in both faces, all 3 languages, text + image.
 
+**T13 — Web client (bot + web).** A FastAPI app in the same process, sharing the engine and DB. `GET /` renders a page with a language selector, a face toggle (Family Shield default), a consent gate, a text box, and an image upload. `POST /check` builds a `CheckInput` and calls **the same `run_check()`** — no analysis logic in the web layer — and returns the result as an HTMX partial. `GET /privacy`. Image upload is gated by **Cloudflare Turnstile**; all checks are **IP/session rate-limited** (reuse the `rate_limit` table with a web `user_key` = HMAC of a signed session cookie). Reuse `bot/texts.py` for the three languages. Web is **anonymous** — no accounts, no history. *(Can be built any time after T10; it adds zero engine logic.)*
+*Accept:* a web check returns the **same structured output as the bot** for the same input (assert both paths call `run_check`); image upload fails without a valid Turnstile token; the per-day limit refuses extra checks; **no submitted content is persisted** (same guarantee as the bot — verified by test); the consent notice is shown before the first check; all three languages render.
+
 ---
 
 ## 14. Cost & performance budget (enforce in code)
@@ -475,8 +496,10 @@ Build in this order. Each task is independently testable.
 
 **Done when** all §13 acceptance criteria pass and:
 - both faces run on the identical pipeline (only rule pack + template differ);
+- **both channels (Telegram bot + web app) call the same `run_check()` and return matching output;**
 - 5 FS + ≥3 SG golden examples pass; safety test set fully blocked;
-- no submitted content in any DB/log/backup (verified by test + manual log inspection);
+- no submitted content in any DB/log/backup (verified by test + manual log inspection) — on bot **and** web;
+- web image upload is captcha-gated and all web checks are rate-limited;
 - p90 latency and ≤$0.03 cost hold on a 50-check sample;
 - `/privacy` + `/delete_my_data` work; metrics export returns the pitch numbers.
 
@@ -484,14 +507,15 @@ Build in this order. Each task is independently testable.
 1. *Family Shield:* forward the fake-bank-support message (UZ-Latn) → instant 🚩/✅/❓ in Uzbek. Show it never says "scammer."
 2. Send a screenshot of the seller-prepayment scam (UZ-Cyrl image) → OCR → same structured read in Cyrillic.
 3. *Seller Guard:* forward a payment-screenshot order → merchant checklist; point out it says **"verify in your bank app,"** never "money received."
-4. Show `/privacy` + `/delete_my_data`, then the **metrics export** (checks, languages, cost/check).
-5. Close on the platform story: one engine, two markets, roadmap = on-prem OCR + payment-provider API + more faces.
+4. *Web app:* open the URL, run the same Family Shield check anonymously → identical output; show the Turnstile-gated image upload. (One engine, two channels.)
+5. Show `/privacy` + `/delete_my_data`, then the **metrics export** (checks, languages, cost/check).
+6. Close on the platform story: one engine, two faces, two channels — roadmap = on-prem OCR + self-hosted model + payment-provider API + more faces.
 
 ---
 
 ## 16. Explicit non-goals for the implementer (do not build)
 
-Graph/entity/person lookup · "reported N×" · accusation storage · subscriptions/payments/team accounts · payment-provider integration · web/mobile/extension clients · image forensics / reverse-image search · URL fetching / malware scanning / external reputation calls · any persistence of submitted content · a full admin UI. If a task seems to require one of these, stop and flag it — it's out of scope by design ([PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §14, [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md) §2).
+Graph/entity/person lookup · "reported N×" · accusation storage · subscriptions/payments/team accounts · payment-provider integration · mobile / browser-extension clients (the **web app IS in scope** — T13) · web accounts/login (web is anonymous in v1) · image forensics / reverse-image search · URL fetching / malware scanning / external reputation calls · any persistence of submitted content · a full admin UI. If a task seems to require one of these, stop and flag it — it's out of scope by design ([PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §14, [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md) §2).
 
 ---
 
