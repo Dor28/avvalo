@@ -1,0 +1,37 @@
+"""Provider contracts for the LLM stage."""
+
+from typing import Protocol
+
+from pydantic import BaseModel, Field
+
+from app.engine.types import DraftOutput
+
+
+class LLMResponse(BaseModel):
+    """Parsed model response plus token usage."""
+
+    draft: DraftOutput
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+
+
+class LLMProvider(Protocol):
+    """Async provider interface shared by hosted and local OpenAI-compatible LLMs."""
+
+    async def analyze(
+        self,
+        *,
+        system: str,
+        user: str,
+        schema: dict,
+        max_output_tokens: int,
+    ) -> LLMResponse:
+        """Return a parsed draft for the supplied prompt."""
+
+
+class LLMProviderError(RuntimeError):
+    """Raised when a provider call fails before a usable draft is returned."""
+
+
+class LLMResponseFormatError(LLMProviderError):
+    """Raised when the provider returns non-JSON or schema-invalid content."""

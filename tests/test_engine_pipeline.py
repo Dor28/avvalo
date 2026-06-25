@@ -4,6 +4,22 @@ from sqlalchemy import select
 
 from app.data.models import CheckEvent
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
+from app.engine.llm import LLMResponse
+from app.engine.types import DraftOutput
+
+
+class FakeLLMProvider:
+    async def analyze(self, **_kwargs) -> LLMResponse:
+        return LLMResponse(
+            draft=DraftOutput(
+                red_flags=["Detected local warning sign."],
+                pattern="authority pressure",
+                verify=["Use an official channel you find yourself."],
+                ask=["Ask why this cannot wait."],
+            ),
+            input_tokens=100,
+            output_tokens=50,
+        )
 
 
 async def test_run_check_text_returns_result_and_records_event(session) -> None:
@@ -18,7 +34,7 @@ async def test_run_check_text_returns_result_and_records_event(session) -> None:
         ),
     )
 
-    result = await run_check(check_input, session=session)
+    result = await run_check(check_input, session=session, llm_provider=FakeLLMProvider())
     await session.commit()
 
     assert result.status == CheckStatus.ok
@@ -48,7 +64,7 @@ async def test_run_check_never_persists_ephemeral_input(session) -> None:
         caption="private caption",
     )
 
-    await run_check(check_input, session=session)
+    await run_check(check_input, session=session, llm_provider=FakeLLMProvider())
     await session.commit()
 
     stored_event = (await session.execute(select(CheckEvent))).scalar_one()
