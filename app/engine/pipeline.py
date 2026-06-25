@@ -1,7 +1,7 @@
-"""T4 engine pipeline skeleton.
+"""Engine pipeline skeleton with deterministic local stages.
 
-The real rule, minimization, LLM, validation, and formatting stages land in
-later tasks. This module wires their boundaries now and records only the
+LLM, validation, and final formatting stages land in later tasks. This module
+wires the real local rule/minimization boundary and records only the
 privacy-safe event metadata already allowed by the schema.
 """
 
@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data import repo
 from app.engine.faces import FACES
+from app.engine.minimize import minimize
+from app.engine.rules import load_rule_pack, run_rules
 from app.engine.types import (
     CheckInput,
     CheckResult,
@@ -19,7 +21,6 @@ from app.engine.types import (
     DraftOutput,
     InputType,
     RuleHit,
-    Signal,
 )
 
 _Stage = Callable[[CheckInput], Awaitable[CheckResult]]
@@ -57,9 +58,9 @@ async def _run_stub_stages(check_input: CheckInput) -> CheckResult:
     if not text:
         return _result(check_input, CheckStatus.empty_input, text="Please send some text to check.")
 
-    signals = await _detect_signals_stub(text)
-    rule_hits = await _run_rules_stub(text)
-    draft = await _draft_stub(rule_hits, signals)
+    rule_hits, signals = run_rules(text, check_input.face)
+    minimized_text = minimize(text, signals)
+    draft = await _draft_stub(check_input.face, rule_hits, minimized_text)
     no_signal = not rule_hits and not draft.red_flags
     status = CheckStatus.no_signal if no_signal else CheckStatus.ok
 
@@ -73,30 +74,27 @@ async def _run_stub_stages(check_input: CheckInput) -> CheckResult:
 
 
 def _extract_text(check_input: CheckInput) -> str:
-    return (check_input.raw_text or check_input.caption or "").strip()
+    parts = [part.strip() for part in (check_input.caption, check_input.raw_text) if part]
+    return "\n".join(part for part in parts if part).strip()
 
 
-async def _detect_signals_stub(_text: str) -> list[Signal]:
-    return [Signal(kind="t4_pipeline_stub", note="placeholder local signal")]
-
-
-async def _run_rules_stub(_text: str) -> list[RuleHit]:
-    return [
-        RuleHit(
-            rule_id="t4.stub.pipeline",
-            family="pipeline_skeleton",
-            message_key="pipeline_stub",
-            severity=1,
+async def _draft_stub(
+    face_id: str, rule_hits: list[RuleHit], minimized_text: str
+) -> DraftOutput:
+    if not rule_hits:
+        return DraftOutput(
+            red_flags=[],
+            pattern=None,
+            verify=["Use an official app, website, or saved contact before acting."],
+            ask=["Send another message if you want Avvalo to check it."],
         )
-    ]
 
-
-async def _draft_stub(_rule_hits: list[RuleHit], _signals: list[Signal]) -> DraftOutput:
+    descriptions = load_rule_pack(face_id).descriptions
     return DraftOutput(
-        red_flags=["Pipeline skeleton reached the draft stage."],
-        pattern="pipeline_skeleton",
+        red_flags=[descriptions.get(hit.rule_id, hit.message_key) for hit in rule_hits[:3]],
+        pattern="rule_engine_stub",
         verify=["Use official channels you find yourself before acting."],
-        ask=["Would you like to check another message?"],
+        ask=[f"Minimized text ready for LLM: {bool(minimized_text)}"],
     )
 
 

@@ -12,7 +12,10 @@ async def test_run_check_text_returns_result_and_records_event(session) -> None:
         user_key="u1",
         language=Language.ru,
         input_type=InputType.text,
-        raw_text="Please check this message with code 123456.",
+        raw_text=(
+            "Bank xavfsizlik xizmatidanmiz. Kartangiz bloklanadi. "
+            "Hozir SMS orqali kelgan 6 xonali kodni yuboring."
+        ),
     )
 
     result = await run_check(check_input, session=session)
@@ -21,7 +24,8 @@ async def test_run_check_text_returns_result_and_records_event(session) -> None:
     assert result.status == CheckStatus.ok
     assert result.language == Language.ru
     assert result.input_type == InputType.text
-    assert result.rule_ids == ["t4.stub.pipeline"]
+    assert "fs.credential.otp" in result.rule_ids
+    assert "fs.authority.impersonation" in result.rule_ids
     assert result.text
 
     stored_event = (await session.execute(select(CheckEvent))).scalar_one()
@@ -30,7 +34,7 @@ async def test_run_check_text_returns_result_and_records_event(session) -> None:
     assert stored_event.status == "ok"
     assert stored_event.language == "ru"
     assert stored_event.input_type == "text"
-    assert stored_event.rule_ids == ["t4.stub.pipeline"]
+    assert "fs.credential.otp" in stored_event.rule_ids
 
 
 async def test_run_check_never_persists_ephemeral_input(session) -> None:
