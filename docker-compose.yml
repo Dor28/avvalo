@@ -18,6 +18,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Apply the schema before booting; alembic tracks the version so this is
+    # idempotent across restarts. Without it the first DB write hits "relation
+    # ... does not exist" once a real bot token is configured.
+    command: ["sh", "-c", "alembic upgrade head && python -m app.main"]
     environment:
       DATABASE_URL: postgresql+asyncpg://avvalo:${POSTGRES_PASSWORD:-avvalo}@db:5432/avvalo
       APP_HMAC_SECRET: ${APP_HMAC_SECRET:-development-only-hmac-secret-change-me}

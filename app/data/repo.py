@@ -127,9 +127,29 @@ async def get_usage(
 async def increment_usage(
     session: AsyncSession, *, user_key: str, face: str, day: date | None = None
 ) -> int:
-    """Increment and return the daily check count for ``(user_key, face)``."""
+    """Increment and return the daily check count for ``(user_key, face)``.
+
+    On PostgreSQL this is a single atomic ``INSERT ... ON CONFLICT DO UPDATE`` so
+    two concurrent checks from the same user can't lose an increment (a plain
+    read-modify-write races). SQLite (unit tests only) keeps the simple path.
+    """
 
     day = day or _utcnow().date()
+
+    if session.bind.dialect.name == "postgresql":
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        stmt = (
+            pg_insert(RateLimit)
+            .values(user_key=user_key, face=face, day=day, count=1)
+            .on_conflict_do_update(
+                index_elements=["user_key", "face", "day"],
+                set_={"count": RateLimit.count + 1},
+            )
+            .returning(RateLimit.count)
+        )
+        return (await session.execute(stmt)).scalar_one()
+
     row = await session.get(RateLimit, (user_key, face, day))
     if row is None:
         row = RateLimit(user_key=user_key, face=face, day=day, count=1)

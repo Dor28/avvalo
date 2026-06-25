@@ -34,7 +34,10 @@ async def _language(state: FSMContext) -> str:
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext, settings, session_factory, face) -> None:
-    user_key = _user_key(message.from_user.id, settings)
+    user = message.from_user
+    if user is None:
+        return
+    user_key = _user_key(user.id, settings)
     async with session_factory() as session:
         consent = await repo.get_consent(session, user_key=user_key, face=face.id)
 
@@ -60,7 +63,10 @@ async def cmd_privacy(message: Message, state: FSMContext) -> None:
 async def cmd_delete_my_data(
     message: Message, state: FSMContext, settings, session_factory
 ) -> None:
-    user_key = _user_key(message.from_user.id, settings)
+    user = message.from_user
+    if user is None:
+        return
+    user_key = _user_key(user.id, settings)
     async with session_factory() as session:
         await repo.delete_user_data(session, user_key=user_key)
         await session.commit()
@@ -80,10 +86,11 @@ async def on_language_chosen(callback: CallbackQuery, state: FSMContext) -> None
 
     await state.update_data(language=language)
     await state.set_state(Onboarding.awaiting_consent)
-    await callback.message.edit_text(
-        t("privacy_notice", language),
-        reply_markup=consent_keyboard(language),
-    )
+    if isinstance(callback.message, Message):
+        await callback.message.edit_text(
+            t("privacy_notice", language),
+            reply_markup=consent_keyboard(language),
+        )
     await callback.answer()
 
 
@@ -104,17 +111,35 @@ async def on_consent_accepted(
         await session.commit()
 
     await state.set_state(Onboarding.ready)
-    await callback.message.edit_text(t("ready", language))
+    if isinstance(callback.message, Message):
+        await callback.message.edit_text(t("ready", language))
     await callback.answer()
     LOGGER.info("consent_accepted face=%s language=%s", face.id, language)
 
 
-@router.message(Onboarding.ready)
-async def on_ready_input(message: Message, state: FSMContext) -> None:
-    # The analysis engine is wired in later tasks. Never store or echo content.
-    await message.answer(t("analysis_pending", await _language(state)))
-
-
 @router.message()
-async def on_unconsented(message: Message, state: FSMContext) -> None:
-    await message.answer(t("need_consent", await _language(state)))
+async def on_content(
+    message: Message, state: FSMContext, settings, session_factory, face
+) -> None:
+    """Gate every non-command message on current, DB-backed consent (§12).
+
+    Consent is re-read from the database on each message instead of trusting the
+    in-memory FSM state, so a process restart can't wrongly block a user who has
+    already consented, and bumping ``NOTICE_VERSION`` immediately forces
+    re-consent. The analysis engine is wired in later tasks; this handler must
+    never store or echo content.
+    """
+
+    user = message.from_user
+    if user is None:
+        return
+
+    user_key = _user_key(user.id, settings)
+    async with session_factory() as session:
+        consent = await repo.get_consent(session, user_key=user_key, face=face.id)
+
+    if not is_consent_current(consent, settings.notice_version):
+        await message.answer(t("need_consent", await _language(state)))
+        return
+
+    await message.answer(t("analysis_pending", consent.language))
