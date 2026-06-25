@@ -11,6 +11,7 @@ from app.engine.types import (
     RuleHit,
     Signal,
 )
+from app.engine.validate import ValidationResult, validate
 
 __all__ = [
     "CheckInput",
@@ -21,5 +22,7 @@ __all__ = [
     "Language",
     "RuleHit",
     "Signal",
+    "ValidationResult",
     "run_check",
+    "validate",
 ]
