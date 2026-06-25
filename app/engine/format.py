@@ -2,7 +2,6 @@
 
 from app.engine.types import DraftOutput, Language
 
-
 _HEADINGS = {
     Language.uz_latn: {
         "red_flags": "🚩 **Xavf belgilari**",
