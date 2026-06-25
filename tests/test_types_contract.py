@@ -1,0 +1,82 @@
+"""Engine type-contract tests (V1_TECHNICAL_PLAN §6).
+
+§6 is the source of truth for the shapes that cross module boundaries and get
+written to the (content-free) event row as ``.value`` strings. A silent rename
+here would break persistence and channel parity, so the enums and model fields
+are pinned to the spec.
+"""
+
+from app.engine.types import (
+    CheckInput,
+    CheckResult,
+    CheckStatus,
+    DraftOutput,
+    InputType,
+    Language,
+    RuleHit,
+    Signal,
+)
+
+
+def test_language_enum_values() -> None:
+    assert {lang.value for lang in Language} == {"uz_latn", "uz_cyrl", "ru"}
+
+
+def test_input_type_enum_values() -> None:
+    assert {it.value for it in InputType} == {"text", "image"}
+
+
+def test_check_status_enum_values() -> None:
+    assert {status.value for status in CheckStatus} == {
+        "ok",
+        "no_signal",
+        "empty_input",
+        "low_ocr",
+        "rate_limited",
+        "timeout",
+        "llm_error",
+        "safety_fallback",
+        "unsupported_media",
+    }
+
+
+def test_check_input_fields_and_ephemeral_defaults() -> None:
+    fields = CheckInput.model_fields
+    assert {"face", "user_key", "language", "input_type"} <= fields.keys()
+    # Ephemeral content is optional and defaults to None (§6 / §0.4).
+    for ephemeral in ("raw_text", "image_bytes", "caption"):
+        assert fields[ephemeral].default is None
+
+
+def test_draft_output_contract() -> None:
+    assert set(DraftOutput.model_fields) == {"red_flags", "pattern", "verify", "ask"}
+    empty = DraftOutput()
+    assert empty.red_flags == [] and empty.verify == [] and empty.ask == []
+    assert empty.pattern is None
+
+
+def test_rule_hit_and_signal_contract() -> None:
+    assert {"rule_id", "family", "message_key", "severity"} <= RuleHit.model_fields.keys()
+    assert RuleHit.model_fields["severity"].default == 1
+    assert set(Signal.model_fields) == {"kind", "note"}
+
+
+def test_check_result_carries_metrics_and_safety_flags() -> None:
+    fields = CheckResult.model_fields
+    for metric in (
+        "status",
+        "language",
+        "input_type",
+        "rule_ids",
+        "no_signal",
+        "safety_blocked",
+        "latency_ms",
+        "ocr_ms",
+        "llm_ms",
+        "ocr_confidence",
+        "input_tokens",
+        "output_tokens",
+        "cost_usd",
+        "error_class",
+    ):
+        assert metric in fields, f"CheckResult missing §6 field '{metric}'"

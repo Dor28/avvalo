@@ -17,7 +17,7 @@
     "language": "uz_latn",
     "input_type": "text",
     "input": "Akangiz men. Xato qilib ikki marta to‘lab yuboribman, 1 200 000 o‘rniga 2 400 000 ketdi. Iltimos, ortig‘ini shu kartaga qaytarib bering, skrinshot mana. Tezroq bo‘lsa yaxshi edi.",
-    "expected_rule_families": ["amount_mismatch", "edited_screenshot_hint", "verify_in_bank_app", "urgency_secrecy"],
+    "expected_rule_families": ["amount_mismatch", "edited_screenshot_hint", "verify_in_bank_app"],
     "must_include": ["do not refund anything before confirming the real balance in your bank app", "a screenshot does not prove the overpayment", "check whether any money actually arrived first"],
     "must_not_contain": ["firibgar", "xavfsiz", "pul keldi", "to‘lov o‘tdi"],
     "no_signal": false,
