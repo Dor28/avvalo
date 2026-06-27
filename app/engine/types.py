@@ -1,6 +1,7 @@
 """Pydantic contracts shared by the Avvalo engine pipeline."""
 
 from enum import StrEnum
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -79,6 +80,7 @@ class CheckResult(BaseModel):
     """Final result returned to a bot or web caller."""
 
     status: CheckStatus
+    check_id: UUID | None = None
     text: str | None = None
     rule_ids: list[str] = Field(default_factory=list)
     no_signal: bool = False

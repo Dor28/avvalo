@@ -65,6 +65,7 @@ def test_check_result_carries_metrics_and_safety_flags() -> None:
     fields = CheckResult.model_fields
     for metric in (
         "status",
+        "check_id",
         "language",
         "input_type",
         "rule_ids",

@@ -8,6 +8,7 @@ event metadata already allowed by the schema.
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from time import perf_counter
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +38,7 @@ from app.engine.types import (
 )
 from app.engine.validate import validate
 from app.obs.cost import estimate_llm_cost_from_settings
+from app.obs.events import log_event
 
 _Stage = Callable[[CheckInput], Awaitable[CheckResult]]
 _DEFAULT_MAX_OUTPUT_TOKENS = 600
@@ -58,18 +60,85 @@ async def run_check(
     """
 
     started = perf_counter()
-    result = await _run_stages(
-        check_input,
-        llm_provider=llm_provider,
-        ocr_provider=ocr_provider,
-        settings=settings,
+    _log_check_started(check_input)
+
+    result = (
+        await _rate_limit_result(session, check_input)
+        if session is not None
+        else None
     )
+    if result is None:
+        result = await _run_stages(
+            check_input,
+            llm_provider=llm_provider,
+            ocr_provider=ocr_provider,
+            settings=settings,
+        )
     result.latency_ms = max(0, round((perf_counter() - started) * 1000))
+    _log_check_finished(check_input, result)
 
     if session is not None:
-        await _record_event(session, check_input, result)
+        result.check_id = await _record_event(session, check_input, result)
 
     return result
+
+
+async def _rate_limit_result(
+    session: AsyncSession, check_input: CheckInput
+) -> CheckResult | None:
+    face = FACES.get(check_input.face)
+    if face is None:
+        return None
+
+    count = await repo.increment_usage(session, user_key=check_input.user_key, face=face.id)
+    if count <= face.daily_limit:
+        return None
+
+    return _result(
+        check_input,
+        CheckStatus.rate_limited,
+        text=(
+            "Daily check limit reached for this assistant. "
+            "Please try again tomorrow."
+        ),
+        error_class="DailyLimitExceeded",
+    )
+
+
+def _log_check_started(check_input: CheckInput) -> None:
+    log_event(
+        "check_started",
+        face=check_input.face,
+        input_type=check_input.input_type,
+        language=check_input.language,
+    )
+
+
+def _log_check_finished(check_input: CheckInput, result: CheckResult) -> None:
+    event_name = (
+        "check_completed"
+        if result.status in {CheckStatus.ok, CheckStatus.no_signal}
+        else "check_failed"
+    )
+    fields = {
+        "cost_usd": result.cost_usd,
+        "error_class": result.error_class,
+        "face": check_input.face,
+        "input_tokens": result.input_tokens,
+        "input_type": result.input_type,
+        "language": result.language,
+        "latency_ms": result.latency_ms,
+        "limit": FACES[check_input.face].daily_limit if check_input.face in FACES else None,
+        "llm_ms": result.llm_ms,
+        "no_signal": result.no_signal,
+        "ocr_confidence": result.ocr_confidence,
+        "ocr_ms": result.ocr_ms,
+        "output_tokens": result.output_tokens,
+        "rule_ids": result.rule_ids,
+        "safety_blocked": result.safety_blocked,
+        "status": result.status,
+    }
+    log_event(event_name, **{key: value for key, value in fields.items() if value is not None})
 
 
 async def _run_stages(
@@ -398,8 +467,8 @@ def _result(
 
 async def _record_event(
     session: AsyncSession, check_input: CheckInput, result: CheckResult
-) -> None:
-    await repo.record_check_event(
+) -> UUID:
+    return await repo.record_check_event(
         session,
         user_key=check_input.user_key,
         face=check_input.face,

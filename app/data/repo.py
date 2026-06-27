@@ -14,6 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimit
 
+USEFULNESS_VALUES = {"yes", "partly", "no"}
+NEXT_ACTION_VALUES = {"verify", "delay_stop", "continue", "not_sure"}
+
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
@@ -108,6 +111,11 @@ async def record_feedback(
     next_action: str,
 ) -> None:
     """Store categorical feedback for a completed check."""
+
+    if usefulness not in USEFULNESS_VALUES:
+        raise ValueError(f"Unsupported usefulness value: {usefulness}")
+    if next_action not in NEXT_ACTION_VALUES:
+        raise ValueError(f"Unsupported next_action value: {next_action}")
 
     session.add(
         Feedback(check_id=check_id, usefulness=usefulness, next_action=next_action, ts=_utcnow())

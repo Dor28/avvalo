@@ -4,7 +4,7 @@ No handler stores or echoes submitted content. The consent gate ensures content
 is only accepted after the current privacy notice has been agreed to.
 """
 
-import logging
+from uuid import UUID
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
@@ -16,10 +16,10 @@ from app.bot.states import Onboarding
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGES, t
 from app.config import Settings
 from app.data import repo
+from app.obs.events import log_event
 from app.privacy.consent import grant_consent, is_consent_current
 from app.privacy.user_key import derive_user_key
 
-LOGGER = logging.getLogger(__name__)
 router = Router()
 
 
@@ -61,12 +61,13 @@ async def cmd_privacy(message: Message, state: FSMContext) -> None:
 
 @router.message(Command("delete_my_data"))
 async def cmd_delete_my_data(
-    message: Message, state: FSMContext, settings, session_factory
+    message: Message, state: FSMContext, settings, session_factory, face
 ) -> None:
     user = message.from_user
     if user is None:
         return
     user_key = _user_key(user.id, settings)
+    log_event("deletion_requested", face=face.id)
     async with session_factory() as session:
         await repo.delete_user_data(session, user_key=user_key)
         await session.commit()
@@ -74,7 +75,7 @@ async def cmd_delete_my_data(
     language = await _language(state)
     await state.clear()
     await message.answer(t("data_deleted", language))
-    LOGGER.info("deletion_completed")
+    log_event("deletion_completed", face=face.id)
 
 
 @router.callback_query(F.data.startswith("lang:"))
@@ -91,6 +92,7 @@ async def on_language_chosen(callback: CallbackQuery, state: FSMContext) -> None
             t("privacy_notice", language),
             reply_markup=consent_keyboard(language),
         )
+    log_event("consent_shown", language=language)
     await callback.answer()
 
 
@@ -114,7 +116,48 @@ async def on_consent_accepted(
     if isinstance(callback.message, Message):
         await callback.message.edit_text(t("ready", language))
     await callback.answer()
-    LOGGER.info("consent_accepted face=%s language=%s", face.id, language)
+    log_event("consent_accepted", face=face.id, language=language)
+
+
+@router.callback_query(F.data.startswith("feedback:"))
+async def on_feedback(callback: CallbackQuery, state: FSMContext, session_factory, face) -> None:
+    parts = callback.data.split(":", 2)
+    if len(parts) != 3:
+        await callback.answer()
+        return
+
+    _, kind, value = parts
+    if kind == "usefulness":
+        if value not in repo.USEFULNESS_VALUES:
+            await callback.answer()
+            return
+        await state.update_data(feedback_usefulness=value)
+        log_event("usefulness_answered", face=face.id, usefulness=value)
+        await callback.answer("Saved")
+        return
+
+    if kind != "next_action":
+        await callback.answer()
+        return
+    if value not in repo.NEXT_ACTION_VALUES:
+        await callback.answer()
+        return
+
+    data = await state.get_data()
+    usefulness = data.get("feedback_usefulness")
+    check_id = data.get("last_check_id")
+    if usefulness and check_id:
+        async with session_factory() as session:
+            await repo.record_feedback(
+                session,
+                check_id=UUID(str(check_id)),
+                usefulness=usefulness,
+                next_action=value,
+            )
+            await session.commit()
+
+    log_event("decision_answered", face=face.id, next_action=value)
+    await callback.answer("Saved")
 
 
 @router.message()
