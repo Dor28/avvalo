@@ -1,0 +1,133 @@
+# Avvalo — production stack for a single Hetzner VM.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# This is a SELF-CONTAINED production file (use it INSTEAD of docker-compose.yml,
+# not layered on top of it). It hardens every service, keeps PostgreSQL off the
+# public network, puts the database on a resizable Hetzner Volume, and adds Caddy
+# as the TLS-terminating reverse proxy for the anonymous web channel.
+#
+# All secrets and host-specific values come from a `.env` file in this directory.
+# Start from deploy/env.prod.example. See docs/DEPLOYMENT.md for the full guide.
+
+services:
+  db:
+    image: postgres:16-alpine
+    # NOTE: no `ports:` — PostgreSQL is reachable only on the internal compose
+    # network as host `db`. It is never exposed to the VM's public interface.
+    environment:
+      POSTGRES_DB: avvalo
+      POSTGRES_USER: avvalo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # Force SCRAM-SHA-256 for password auth (stronger than md5).
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    command:
+      - "postgres"
+      # Conservative defaults for a small VM. Raise as you scale up (see the
+      # "Scaling the database" section of docs/DEPLOYMENT.md).
+      - "-c"
+      - "max_connections=100"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=768MB"
+      - "-c"
+      - "work_mem=8MB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+      # Keep enough WAL around to support replication / future PITR.
+      - "-c"
+      - "wal_level=replica"
+      - "-c"
+      - "max_wal_size=1GB"
+    volumes:
+      # Database lives on the Hetzner Volume mounted at /mnt/avvalo-data so it can
+      # be resized and snapshotted independently of the VM's boot disk.
+      - /mnt/avvalo-data/pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U avvalo -d avvalo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    # Apply migrations (idempotent — Alembic tracks the version) then run the
+    # bot(s) + web in one process. For a multi-instance deploy, run migrations as
+    # a separate one-shot step instead (see docs/DEPLOYMENT.md "Scaling").
+    command: ["sh", "-c", "alembic upgrade head && python -m app.main"]
+    env_file:
+      - .env
+    # No published ports: Caddy reaches the web app over the internal network as
+    # http://app:8000. The Telegram bot uses outbound long-polling only.
+    expose:
+      - "8000"
+    volumes:
+      # Google Cloud Vision service-account key, mounted read-only. The path here
+      # must equal GOOGLE_APPLICATION_CREDENTIALS in .env. Omit if OCR is unused.
+      - ./secrets/gcv.json:/run/secrets/gcv.json:ro
+    restart: unless-stopped
+    stop_grace_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          # Tune to your VM. These suit a 2 vCPU / 4 GB box with room for db.
+          cpus: "1.5"
+          memory: 1536M
+    healthcheck:
+      # Requires WEB_ENABLED=true. For a bot-only deploy, delete this block.
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz', timeout=3).status==200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - app
+    # The only ports open to the internet. UFW + Hetzner Cloud Firewall should
+    # also restrict the host to 80/443 (+ your SSH port).
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3 (QUIC)
+    environment:
+      AVVALO_DOMAIN: ${AVVALO_DOMAIN:?set AVVALO_DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:

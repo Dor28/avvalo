@@ -1,0 +1,52 @@
+# Avvalo reverse proxy — automatic HTTPS via Let's Encrypt.
+# Mounted read-only into the caddy container by docker-compose.prod.yml.
+# {$AVVALO_DOMAIN} and {$ACME_EMAIL} are injected from the environment.
+
+{
+	# Contact address for Let's Encrypt expiry notices (optional but recommended).
+	email {$ACME_EMAIL}
+	# Drop the default "Server: Caddy" banner.
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+{$AVVALO_DOMAIN} {
+	encode zstd gzip
+
+	# --- Security headers -----------------------------------------------------
+	header {
+		# Force HTTPS for two years, including subdomains. Only enable preload
+		# once you are certain every subdomain is HTTPS-only.
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		# CSP tuned to the actual web client: a self-hosted stylesheet, one inline
+		# bootstrap script, and (only when configured) Cloudflare Turnstile.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://challenges.cloudflare.com; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+		# Never leak the upstream server identity.
+		-Server
+		defer
+	}
+
+	# --- Static assets: let Caddy serve and cache them -----------------------
+	@static path /static/*
+	header @static Cache-Control "public, max-age=86400"
+
+	# --- Application ----------------------------------------------------------
+	reverse_proxy app:8000 {
+		# Surface the real client IP to the app (used by the abuse / Turnstile
+		# layer). Caddy sets X-Forwarded-* by default.
+		header_up X-Real-IP {remote_host}
+	}
+
+	# Access logs to stdout (captured by Docker's json-file driver). The app is
+	# built never to log submitted content; keep it that way.
+	log {
+		output stdout
+		format console
+	}
+}

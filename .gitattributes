@@ -1,0 +1,7 @@
+# Shell scripts and the Caddyfile run on the Linux server — force LF so a
+# Windows CRLF checkout never produces a "bad interpreter" or parse error.
+*.sh        text eol=lf
+deploy/Caddyfile text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary

@@ -21,5 +21,11 @@ For a one-shot local connectivity check:
 python -m app.main --check
 ```
 
+## Production deployment
+
+To deploy the MVP to a Hetzner VM (hardened Docker stack, TLS, scalable database,
+backups), follow **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**. It uses
+`docker-compose.prod.yml` and the configs under `deploy/`.
+
 Submitted content must never be persisted or logged. See
 `docs/V1_TECHNICAL_PLAN.md` and `docs/PRODUCT_GUIDE.md` before implementation work.
