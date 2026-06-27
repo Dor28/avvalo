@@ -87,6 +87,25 @@ TEXTS: dict[str, dict[str, str]] = {
             "либо опишите ситуацию."
         ),
     },
+    "ready_family_shield": {
+        "uz_latn": "Tayyor. Shubhali xabar, skrinshot yoki vaziyatni yuboring.",
+        "uz_cyrl": "Тайёр. Шубҳали хабар, скриншот ёки вазиятни юборинг.",
+        "ru": "Готово. Пришлите сомнительное сообщение, скриншот или ситуацию.",
+    },
+    "ready_seller_guard": {
+        "uz_latn": (
+            "Tayyor. Xaridor yuborgan to'lov cheki, yetkazish yoki refund so'rovini "
+            "yuboring. Tovarni berishdan oldin tekshiramiz."
+        ),
+        "uz_cyrl": (
+            "Тайёр. Харидор юборган тўлов чеки, етказиш ёки refund сўровини "
+            "юборинг. Товарни беришдан олдин текширамиз."
+        ),
+        "ru": (
+            "Готово. Пришлите чек оплаты, запрос на доставку или refund от "
+            "покупателя. Проверим до того, как отдавать товар."
+        ),
+    },
     "privacy": {
         "uz_latn": (
             "🔒 Maxfiylik\n\n"
@@ -151,3 +170,10 @@ def t(key: str, language: str) -> str:
 
     table = TEXTS[key]
     return table.get(language) or table[DEFAULT_LANGUAGE]
+
+
+def entry_text(face_id: str, language: str) -> str:
+    """Return the face-specific ready message, falling back to the generic one."""
+
+    key = f"ready_{face_id}"
+    return t(key, language) if key in TEXTS else t("ready", language)

@@ -13,7 +13,7 @@ from aiogram.types import CallbackQuery, Message
 
 from app.bot.keyboards import consent_keyboard, language_keyboard
 from app.bot.states import Onboarding
-from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGES, t
+from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGES, entry_text, t
 from app.config import Settings
 from app.data import repo
 from app.obs.events import log_event
@@ -44,7 +44,7 @@ async def cmd_start(message: Message, state: FSMContext, settings, session_facto
     if is_consent_current(consent, settings.notice_version):
         await state.set_state(Onboarding.ready)
         await state.update_data(language=consent.language)
-        await message.answer(t("ready", consent.language))
+        await message.answer(entry_text(face.id, consent.language))
         return
 
     await state.set_state(Onboarding.choosing_language)
@@ -114,7 +114,7 @@ async def on_consent_accepted(
 
     await state.set_state(Onboarding.ready)
     if isinstance(callback.message, Message):
-        await callback.message.edit_text(t("ready", language))
+        await callback.message.edit_text(entry_text(face.id, language))
     await callback.answer()
     log_event("consent_accepted", face=face.id, language=language)
 

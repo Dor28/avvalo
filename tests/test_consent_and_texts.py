@@ -1,6 +1,6 @@
 """T3 — consent gate and UI-text completeness tests."""
 
-from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES, TEXTS, t
+from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES, TEXTS, entry_text, t
 from app.data import repo
 from app.privacy.consent import grant_consent, is_consent_current
 
@@ -25,6 +25,11 @@ def test_language_labels_cover_all_languages() -> None:
 
 def test_t_falls_back_to_default_language() -> None:
     assert t("ready", "xx") == t("ready", DEFAULT_LANGUAGE)
+
+
+def test_face_entry_text_can_target_seller_guard() -> None:
+    assert "покупателя" in entry_text("seller_guard", "ru").lower()
+    assert entry_text("unknown_face", "ru") == t("ready", "ru")
 
 
 def test_is_consent_current_rejects_missing_or_stale() -> None:

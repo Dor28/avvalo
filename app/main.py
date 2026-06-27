@@ -3,9 +3,10 @@
 import argparse
 import asyncio
 import logging
+from dataclasses import dataclass
 
 from app.bot.dispatcher import build_bot, build_dispatcher
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.data.db import (
     check_database_connection,
     create_database_engine,
@@ -16,6 +17,12 @@ from app.engine.faces import FACES
 LOGGER = logging.getLogger(__name__)
 
 PLACEHOLDER_TOKEN = "development-placeholder"
+
+
+@dataclass(frozen=True)
+class BotSpec:
+    face_id: str
+    token: str
 
 
 async def run(*, check_only: bool = False) -> None:
@@ -29,22 +36,44 @@ async def run(*, check_only: bool = False) -> None:
         if check_only:
             return
 
-        token = settings.telegram_token_family_shield.get_secret_value()
-        if not token or token == PLACEHOLDER_TOKEN:
+        bot_specs = configured_bot_specs(settings)
+        if not bot_specs:
             LOGGER.warning(
-                "TELEGRAM_TOKEN_FAMILY_SHIELD is not set; idling without a bot. "
-                "Set a BotFather token to run the Family Shield bot."
+                "No Telegram bot tokens are set; idling without a bot. "
+                "Set TELEGRAM_TOKEN_FAMILY_SHIELD and/or TELEGRAM_TOKEN_SELLER_GUARD."
             )
             await asyncio.Event().wait()
             return
 
         session_factory = create_session_factory(engine)
-        bot = build_bot(token)
-        dispatcher = build_dispatcher(settings, session_factory, FACES["family_shield"])
-        LOGGER.info("Starting Family Shield bot (polling)")
-        await dispatcher.start_polling(bot)
+        pollers = []
+        for spec in bot_specs:
+            bot = build_bot(spec.token)
+            dispatcher = build_dispatcher(settings, session_factory, FACES[spec.face_id])
+            pollers.append(dispatcher.start_polling(bot))
+            LOGGER.info("Starting %s bot (polling)", spec.face_id)
+        await asyncio.gather(*pollers)
     finally:
         await engine.dispose()
+
+
+def configured_bot_specs(settings: Settings) -> list[BotSpec]:
+    """Return one bot spec for each configured face token."""
+
+    specs = [
+        BotSpec(
+            face_id="family_shield",
+            token=settings.telegram_token_family_shield.get_secret_value(),
+        )
+    ]
+    if settings.telegram_token_seller_guard is not None:
+        specs.append(
+            BotSpec(
+                face_id="seller_guard",
+                token=settings.telegram_token_seller_guard.get_secret_value(),
+            )
+        )
+    return [spec for spec in specs if spec.token and spec.token != PLACEHOLDER_TOKEN]
 
 
 def main() -> None:
