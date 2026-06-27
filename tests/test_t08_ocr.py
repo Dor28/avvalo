@@ -9,12 +9,27 @@ import inspect
 
 import pytest
 
+from app.config import Settings
+
+
+def _settings(**overrides) -> Settings:
+    values = {
+        "telegram_token_family_shield": "token",
+        "database_url": "postgresql+asyncpg://avvalo:avvalo@localhost:5432/avvalo",
+        "app_hmac_secret": "test-hmac-secret",
+        "llm_base_url": "http://localhost:11434/v1",
+        "llm_api_key": "ollama",
+        "llm_model": "qwen2.5:7b-instruct",
+        "web_session_secret": "test-web-session-secret",
+    }
+    values.update(overrides)
+    return Settings(_env_file=None, **values)
+
 
 def test_ocr_result_contract() -> None:
-    base = pytest.importorskip("app.engine.ocr.base")
-    ocr_result = getattr(base, "OCRResult", None)
-    if ocr_result is None:
-        pytest.skip("OCRResult not defined yet")
+    from app.engine.ocr.base import OCRResult
+
+    ocr_result = OCRResult
     fields = getattr(ocr_result, "model_fields", {})
     assert "text" in fields and "confidence" in fields
 
@@ -42,4 +57,5 @@ def test_provider_selection_is_configurable(callable_or_skip) -> None:
     select = callable_or_skip(
         "app.engine.ocr", "get_provider", "get_ocr_provider", "build_provider", "provider_for"
     )
-    assert callable(select)
+    provider = select(_settings(ocr_provider="local_stub"))
+    assert provider.__class__.__name__ == "LocalStubOCRProvider"

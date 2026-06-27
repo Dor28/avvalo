@@ -24,6 +24,8 @@ from app.engine.llm import (
     draft_output_schema,
 )
 from app.engine.minimize import minimize
+from app.engine.ocr import OCRProvider, OCRProviderError
+from app.engine.ocr import get_provider as get_ocr_provider
 from app.engine.rules import run_rules
 from app.engine.types import (
     CheckInput,
@@ -38,6 +40,7 @@ from app.obs.cost import estimate_llm_cost_from_settings
 
 _Stage = Callable[[CheckInput], Awaitable[CheckResult]]
 _DEFAULT_MAX_OUTPUT_TOKENS = 600
+_DEFAULT_OCR_MIN_CONFIDENCE = 0.5
 
 
 async def run_check(
@@ -45,6 +48,7 @@ async def run_check(
     session: AsyncSession | None = None,
     *,
     llm_provider: LLMProvider | None = None,
+    ocr_provider: OCRProvider | None = None,
     settings: Settings | None = None,
 ) -> CheckResult:
     """Run one check through the current skeleton stages.
@@ -54,7 +58,12 @@ async def run_check(
     """
 
     started = perf_counter()
-    result = await _run_stages(check_input, llm_provider=llm_provider, settings=settings)
+    result = await _run_stages(
+        check_input,
+        llm_provider=llm_provider,
+        ocr_provider=ocr_provider,
+        settings=settings,
+    )
     result.latency_ms = max(0, round((perf_counter() - started) * 1000))
 
     if session is not None:
@@ -67,19 +76,21 @@ async def _run_stages(
     check_input: CheckInput,
     *,
     llm_provider: LLMProvider | None,
+    ocr_provider: OCRProvider | None,
     settings: Settings | None,
 ) -> CheckResult:
     if check_input.face not in FACES:
         return _result(check_input, CheckStatus.unsupported_media, error_class="unknown_face")
 
-    if check_input.input_type is InputType.image:
-        return _result(
-            check_input,
-            CheckStatus.unsupported_media,
-            text="Image checks are not wired yet. Please paste the text for now.",
-        )
+    content = await _content_from_input(
+        check_input,
+        ocr_provider=ocr_provider,
+        settings=settings,
+    )
+    if content.status is not None:
+        return content.status
 
-    text = _extract_text(check_input)
+    text = content.text or ""
     if not text:
         return _result(check_input, CheckStatus.empty_input, text="Please send some text to check.")
 
@@ -92,6 +103,8 @@ async def _run_stages(
         signals=signals,
         llm_provider=llm_provider,
         settings=settings,
+        ocr_ms=content.ocr_ms,
+        ocr_confidence=content.ocr_confidence,
     )
     if llm_result.status is not None:
         return llm_result.status
@@ -107,6 +120,8 @@ async def _run_stages(
         text=format_result(draft, check_input.language, no_signal=no_signal),
         rule_ids=[hit.rule_id for hit in rule_hits],
         no_signal=no_signal,
+        ocr_ms=content.ocr_ms,
+        ocr_confidence=content.ocr_confidence,
         llm_ms=llm_result.llm_ms,
         input_tokens=llm_result.response.input_tokens,
         output_tokens=llm_result.response.output_tokens,
@@ -117,6 +132,98 @@ async def _run_stages(
 def _extract_text(check_input: CheckInput) -> str:
     parts = [part.strip() for part in (check_input.caption, check_input.raw_text) if part]
     return "\n".join(part for part in parts if part).strip()
+
+
+@dataclass(frozen=True)
+class _ContentStageResult:
+    text: str | None
+    status: CheckResult | None = None
+    ocr_ms: int | None = None
+    ocr_confidence: float | None = None
+
+
+async def _content_from_input(
+    check_input: CheckInput,
+    *,
+    ocr_provider: OCRProvider | None,
+    settings: Settings | None,
+) -> _ContentStageResult:
+    if check_input.input_type is InputType.text:
+        return _ContentStageResult(text=_extract_text(check_input))
+
+    if check_input.input_type is not InputType.image:
+        return _ContentStageResult(
+            text=None,
+            status=_result(check_input, CheckStatus.unsupported_media),
+        )
+
+    if not check_input.image_bytes:
+        return _ContentStageResult(
+            text=None,
+            status=_result(
+                check_input,
+                CheckStatus.unsupported_media,
+                text="Please send a readable image or paste the text.",
+                error_class="missing_image_bytes",
+            ),
+        )
+
+    started = perf_counter()
+    try:
+        provider = ocr_provider or get_ocr_provider(settings)
+        ocr_result = await provider.extract(check_input.image_bytes)
+    except NotImplementedError as exc:
+        ocr_ms = max(0, round((perf_counter() - started) * 1000))
+        return _ContentStageResult(
+            text=None,
+            ocr_ms=ocr_ms,
+            status=_result(
+                check_input,
+                CheckStatus.unsupported_media,
+                text="Image checks are not available yet. Please paste the text.",
+                ocr_ms=ocr_ms,
+                error_class=exc.__class__.__name__,
+            ),
+        )
+    except OCRProviderError as exc:
+        ocr_ms = max(0, round((perf_counter() - started) * 1000))
+        return _ContentStageResult(
+            text=None,
+            ocr_ms=ocr_ms,
+            status=_result(
+                check_input,
+                CheckStatus.unsupported_media,
+                text="We could not read this image. Please paste the important text.",
+                ocr_ms=ocr_ms,
+                error_class=exc.__class__.__name__,
+            ),
+        )
+
+    ocr_ms = max(0, round((perf_counter() - started) * 1000))
+    min_confidence = (
+        settings.ocr_min_confidence if settings is not None else _DEFAULT_OCR_MIN_CONFIDENCE
+    )
+    ocr_text = ocr_result.text.strip()
+    if not ocr_text or ocr_result.confidence < min_confidence:
+        return _ContentStageResult(
+            text=None,
+            ocr_ms=ocr_ms,
+            ocr_confidence=ocr_result.confidence,
+            status=_result(
+                check_input,
+                CheckStatus.low_ocr,
+                text="We could not read the image clearly. Please paste the important text.",
+                ocr_ms=ocr_ms,
+                ocr_confidence=ocr_result.confidence,
+            ),
+        )
+
+    parts = [part.strip() for part in (check_input.caption, ocr_text) if part and part.strip()]
+    return _ContentStageResult(
+        text="\n".join(parts),
+        ocr_ms=ocr_ms,
+        ocr_confidence=ocr_result.confidence,
+    )
 
 
 @dataclass(frozen=True)
@@ -135,6 +242,8 @@ async def _call_llm(
     signals: list[Signal],
     llm_provider: LLMProvider | None,
     settings: Settings | None,
+    ocr_ms: int | None,
+    ocr_confidence: float | None,
 ) -> _LLMStageResult:
     resolved_settings = settings
     provider = llm_provider
@@ -181,6 +290,8 @@ async def _call_llm(
                     text="We could not analyze this message right now. Please try again.",
                     rule_ids=[hit.rule_id for hit in rule_hits],
                     error_class=exc.__class__.__name__,
+                    ocr_ms=ocr_ms,
+                    ocr_confidence=ocr_confidence,
                     llm_ms=llm_ms,
                     input_tokens=total_input_tokens or None,
                     output_tokens=total_output_tokens or None,
@@ -219,6 +330,8 @@ async def _call_llm(
             rule_ids=[hit.rule_id for hit in rule_hits],
             error_class="SafetyValidationError",
             safety_blocked=True,
+            ocr_ms=ocr_ms,
+            ocr_confidence=ocr_confidence,
             llm_ms=llm_ms,
             input_tokens=total_input_tokens,
             output_tokens=total_output_tokens,
@@ -258,6 +371,8 @@ def _result(
     no_signal: bool = False,
     safety_blocked: bool = False,
     error_class: str | None = None,
+    ocr_ms: int | None = None,
+    ocr_confidence: float | None = None,
     llm_ms: int | None = None,
     input_tokens: int | None = None,
     output_tokens: int | None = None,
@@ -272,6 +387,8 @@ def _result(
         language=check_input.language,
         input_type=check_input.input_type,
         error_class=error_class,
+        ocr_ms=ocr_ms,
+        ocr_confidence=ocr_confidence,
         llm_ms=llm_ms,
         input_tokens=input_tokens,
         output_tokens=output_tokens,

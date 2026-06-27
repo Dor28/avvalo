@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     max_output_tokens: int = Field(default=600, ge=1, le=600)
 
     google_application_credentials: str | None = None
+    ocr_provider: str = "gcv"
     ocr_min_confidence: float = Field(default=0.5, ge=0, le=1)
     ocr_timeout_s: float = Field(default=30.0, gt=0)
 
