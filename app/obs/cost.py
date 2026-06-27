@@ -19,6 +19,22 @@ def estimate_llm_cost_usd(
     )
 
 
+def compute_cost(
+    input_tokens: int,
+    output_tokens: int,
+    in_rate_per_m: float,
+    out_rate_per_m: float,
+) -> float:
+    """Compatibility wrapper for the technical-plan cost formula."""
+
+    return estimate_llm_cost_usd(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        in_rate_per_m=in_rate_per_m,
+        out_rate_per_m=out_rate_per_m,
+    )
+
+
 def estimate_llm_cost_from_settings(
     *,
     input_tokens: int,

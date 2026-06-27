@@ -92,6 +92,14 @@ async def on_language_chosen(callback: CallbackQuery, state: FSMContext) -> None
             t("privacy_notice", language),
             reply_markup=consent_keyboard(language),
         )
+    elif callback.bot is not None:
+        # The original message is too old to edit; send a fresh prompt so the
+        # user can still reach the consent button instead of being wedged.
+        await callback.bot.send_message(
+            callback.from_user.id,
+            t("privacy_notice", language),
+            reply_markup=consent_keyboard(language),
+        )
     log_event("consent_shown", language=language)
     await callback.answer()
 
@@ -115,6 +123,8 @@ async def on_consent_accepted(
     await state.set_state(Onboarding.ready)
     if isinstance(callback.message, Message):
         await callback.message.edit_text(entry_text(face.id, language))
+    elif callback.bot is not None:
+        await callback.bot.send_message(callback.from_user.id, entry_text(face.id, language))
     await callback.answer()
     log_event("consent_accepted", face=face.id, language=language)
 
@@ -182,7 +192,10 @@ async def on_content(
         consent = await repo.get_consent(session, user_key=user_key, face=face.id)
 
     if not is_consent_current(consent, settings.notice_version):
-        await message.answer(t("need_consent", await _language(state)))
+        # Prefer the language recorded on any prior (possibly outdated) consent
+        # row; FSM state is lost on restart and would wrongly default to Uzbek.
+        language = consent.language if consent is not None else await _language(state)
+        await message.answer(t("need_consent", language))
         return
 
     await message.answer(t("analysis_pending", consent.language))

@@ -5,9 +5,11 @@ local rule/minimization/LLM/validation boundary and records only privacy-safe
 event metadata already allowed by the schema.
 """
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from time import perf_counter
+from typing import TypeVar
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +45,7 @@ from app.obs.events import log_event
 _Stage = Callable[[CheckInput], Awaitable[CheckResult]]
 _DEFAULT_MAX_OUTPUT_TOKENS = 600
 _DEFAULT_OCR_MIN_CONFIDENCE = 0.5
+_T = TypeVar("_T")
 
 
 async def run_check(
@@ -52,6 +55,7 @@ async def run_check(
     llm_provider: LLMProvider | None = None,
     ocr_provider: OCRProvider | None = None,
     settings: Settings | None = None,
+    rate_limit_override: int | None = None,
 ) -> CheckResult:
     """Run one check through the current skeleton stages.
 
@@ -63,7 +67,7 @@ async def run_check(
     _log_check_started(check_input)
 
     result = (
-        await _rate_limit_result(session, check_input)
+        await _rate_limit_result(session, check_input, limit_override=rate_limit_override)
         if session is not None
         else None
     )
@@ -75,7 +79,7 @@ async def run_check(
             settings=settings,
         )
     result.latency_ms = max(0, round((perf_counter() - started) * 1000))
-    _log_check_finished(check_input, result)
+    _log_check_finished(check_input, result, limit_override=rate_limit_override)
 
     if session is not None:
         result.check_id = await _record_event(session, check_input, result)
@@ -84,14 +88,15 @@ async def run_check(
 
 
 async def _rate_limit_result(
-    session: AsyncSession, check_input: CheckInput
+    session: AsyncSession, check_input: CheckInput, *, limit_override: int | None = None
 ) -> CheckResult | None:
     face = FACES.get(check_input.face)
     if face is None:
         return None
 
     count = await repo.increment_usage(session, user_key=check_input.user_key, face=face.id)
-    if count <= face.daily_limit:
+    limit = limit_override or face.daily_limit
+    if count <= limit:
         return None
 
     return _result(
@@ -114,7 +119,12 @@ def _log_check_started(check_input: CheckInput) -> None:
     )
 
 
-def _log_check_finished(check_input: CheckInput, result: CheckResult) -> None:
+def _log_check_finished(
+    check_input: CheckInput,
+    result: CheckResult,
+    *,
+    limit_override: int | None = None,
+) -> None:
     event_name = (
         "check_completed"
         if result.status in {CheckStatus.ok, CheckStatus.no_signal}
@@ -128,7 +138,7 @@ def _log_check_finished(check_input: CheckInput, result: CheckResult) -> None:
         "input_type": result.input_type,
         "language": result.language,
         "latency_ms": result.latency_ms,
-        "limit": FACES[check_input.face].daily_limit if check_input.face in FACES else None,
+        "limit": _event_limit(check_input, limit_override),
         "llm_ms": result.llm_ms,
         "no_signal": result.no_signal,
         "ocr_confidence": result.ocr_confidence,
@@ -139,6 +149,14 @@ def _log_check_finished(check_input: CheckInput, result: CheckResult) -> None:
         "status": result.status,
     }
     log_event(event_name, **{key: value for key, value in fields.items() if value is not None})
+
+
+def _event_limit(check_input: CheckInput, limit_override: int | None) -> int | None:
+    if limit_override is not None:
+        return limit_override
+    if check_input.face in FACES:
+        return FACES[check_input.face].daily_limit
+    return None
 
 
 async def _run_stages(
@@ -240,7 +258,21 @@ async def _content_from_input(
     started = perf_counter()
     try:
         provider = ocr_provider or get_ocr_provider(settings)
-        ocr_result = await provider.extract(check_input.image_bytes)
+        timeout_s = settings.ocr_timeout_s if settings is not None else 30.0
+        ocr_result = await _with_timeout(provider.extract(check_input.image_bytes), timeout_s)
+    except TimeoutError as exc:
+        ocr_ms = max(0, round((perf_counter() - started) * 1000))
+        return _ContentStageResult(
+            text=None,
+            ocr_ms=ocr_ms,
+            status=_result(
+                check_input,
+                CheckStatus.timeout,
+                text="We could not complete the image check in time. Please try again.",
+                ocr_ms=ocr_ms,
+                error_class=exc.__class__.__name__,
+            ),
+        )
     except NotImplementedError as exc:
         ocr_ms = max(0, round((perf_counter() - started) * 1000))
         return _ContentStageResult(
@@ -340,11 +372,35 @@ async def _call_llm(
     for attempt in range(2):
         attempt_system = system if attempt == 0 else _retry_system_prompt(system, validation_reason)
         try:
-            response = await provider.analyze(
-                system=attempt_system,
-                user=user,
-                schema=draft_output_schema(),
-                max_output_tokens=max_output_tokens,
+            response = await _with_timeout(
+                provider.analyze(
+                    system=attempt_system,
+                    user=user,
+                    schema=draft_output_schema(),
+                    max_output_tokens=max_output_tokens,
+                ),
+                resolved_settings.llm_timeout_s if resolved_settings is not None else 30.0,
+            )
+        except TimeoutError as exc:
+            llm_ms = max(0, round((perf_counter() - started) * 1000))
+            cost_usd = _estimate_cost(total_input_tokens, total_output_tokens, resolved_settings)
+            return _LLMStageResult(
+                response=None,
+                llm_ms=llm_ms,
+                cost_usd=cost_usd,
+                status=_result(
+                    check_input,
+                    CheckStatus.timeout,
+                    text="We could not complete the check in time. Please try again.",
+                    rule_ids=[hit.rule_id for hit in rule_hits],
+                    error_class=exc.__class__.__name__,
+                    ocr_ms=ocr_ms,
+                    ocr_confidence=ocr_confidence,
+                    llm_ms=llm_ms,
+                    input_tokens=total_input_tokens or None,
+                    output_tokens=total_output_tokens or None,
+                    cost_usd=cost_usd,
+                ),
             )
         except LLMProviderError as exc:
             llm_ms = max(0, round((perf_counter() - started) * 1000))
@@ -417,6 +473,15 @@ def _retry_system_prompt(system: str, reason: str) -> str:
         "raw contact details, raw links, secret values, or instructions to use the "
         "suspicious contact path."
     )
+
+
+async def _with_timeout(awaitable: Awaitable[_T], timeout_s: float) -> _T:
+    """Run one provider call with the configured latency guard."""
+
+    try:
+        return await asyncio.wait_for(awaitable, timeout=timeout_s)
+    except TimeoutError as exc:
+        raise TimeoutError("provider call timed out") from exc
 
 
 def _estimate_cost(

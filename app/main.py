@@ -5,6 +5,8 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
+import uvicorn
+
 from app.bot.dispatcher import build_bot, build_dispatcher
 from app.config import Settings, get_settings
 from app.data.db import (
@@ -12,7 +14,9 @@ from app.data.db import (
     create_database_engine,
     create_session_factory,
 )
+from app.data.retention import start_retention_scheduler
 from app.engine.faces import FACES
+from app.web.app import create_app
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,23 +40,33 @@ async def run(*, check_only: bool = False) -> None:
         if check_only:
             return
 
-        bot_specs = configured_bot_specs(settings)
-        if not bot_specs:
-            LOGGER.warning(
-                "No Telegram bot tokens are set; idling without a bot. "
-                "Set TELEGRAM_TOKEN_FAMILY_SHIELD and/or TELEGRAM_TOKEN_SELLER_GUARD."
-            )
-            await asyncio.Event().wait()
-            return
-
         session_factory = create_session_factory(engine)
-        pollers = []
-        for spec in bot_specs:
-            bot = build_bot(spec.token)
-            dispatcher = build_dispatcher(settings, session_factory, FACES[spec.face_id])
-            pollers.append(dispatcher.start_polling(bot))
-            LOGGER.info("Starting %s bot (polling)", spec.face_id)
-        await asyncio.gather(*pollers)
+        scheduler = start_retention_scheduler(session_factory)
+        try:
+            runners = []
+            if settings.web_enabled:
+                runners.append(_run_web(settings, session_factory))
+                LOGGER.info("Starting web app on %s:%s", settings.web_host, settings.web_port)
+
+            bot_specs = configured_bot_specs(settings)
+            if not bot_specs:
+                if not runners:
+                    LOGGER.warning(
+                        "No Telegram bot tokens are set; idling without a bot. "
+                        "Set TELEGRAM_TOKEN_FAMILY_SHIELD and/or TELEGRAM_TOKEN_SELLER_GUARD."
+                    )
+                    await asyncio.Event().wait()
+                    return
+            else:
+                for spec in bot_specs:
+                    bot = build_bot(spec.token)
+                    dispatcher = build_dispatcher(settings, session_factory, FACES[spec.face_id])
+                    runners.append(dispatcher.start_polling(bot))
+                    LOGGER.info("Starting %s bot (polling)", spec.face_id)
+
+            await asyncio.gather(*runners)
+        finally:
+            scheduler.shutdown(wait=False)
     finally:
         await engine.dispose()
 
@@ -74,6 +88,19 @@ def configured_bot_specs(settings: Settings) -> list[BotSpec]:
             )
         )
     return [spec for spec in specs if spec.token and spec.token != PLACEHOLDER_TOKEN]
+
+
+async def _run_web(settings: Settings, session_factory) -> None:
+    """Serve the FastAPI web channel in the shared process."""
+
+    config = uvicorn.Config(
+        create_app(settings=settings, session_factory=session_factory),
+        host=settings.web_host,
+        port=settings.web_port,
+        log_level="info",
+    )
+    server = uvicorn.Server(config)
+    await server.serve()
 
 
 def main() -> None:

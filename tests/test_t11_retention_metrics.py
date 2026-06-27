@@ -1,29 +1,188 @@
-"""T11 — retention TTL jobs & metrics export (V1_TECHNICAL_PLAN §12, §13 T11).
+"""T11 - retention TTL jobs and privacy-safe metrics export."""
 
-Live acceptance specs that skip until retention.py / the metrics export land.
-Both are wired around the DB session, so the deeper TTL-deletes-aged-row check
-is added once the cleanup entry point is known; this pins its surface.
-"""
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
+
+from sqlalchemy import func, select
+
+from app.data import repo
+from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimit
+from app.data.retention import cleanup_expired
+from app.obs.metrics import collect_metrics, export_metrics
 
 
-def test_retention_exposes_a_cleanup_entry_point(callable_or_skip) -> None:
-    cleanup = callable_or_skip(
-        "app.data.retention",
-        "run_retention",
-        "run_cleanup",
-        "cleanup_expired",
-        "purge_expired",
-        "cleanup",
+async def test_retention_deletes_only_expired_metadata_rows(session) -> None:
+    now = datetime(2026, 6, 27, 12, 0, tzinfo=UTC)
+    old_check_id = uuid4()
+    fresh_check_id = uuid4()
+
+    session.add_all(
+        [
+            CheckEvent(
+                id=old_check_id,
+                user_key="old",
+                face="family_shield",
+                ts=now - timedelta(days=91),
+                input_type="text",
+                language="ru",
+                rule_ids=[],
+                no_signal=False,
+                status="ok",
+            ),
+            CheckEvent(
+                id=fresh_check_id,
+                user_key="fresh",
+                face="family_shield",
+                ts=now - timedelta(days=1),
+                input_type="text",
+                language="ru",
+                rule_ids=[],
+                no_signal=False,
+                status="ok",
+            ),
+            Feedback(
+                check_id=old_check_id,
+                usefulness="yes",
+                next_action="verify",
+                ts=now - timedelta(days=91),
+            ),
+            Feedback(
+                check_id=fresh_check_id,
+                usefulness="partly",
+                next_action="delay_stop",
+                ts=now - timedelta(days=1),
+            ),
+            Consent(
+                user_key="old",
+                face="family_shield",
+                notice_version="v1",
+                language="ru",
+                ts=now - timedelta(days=366),
+            ),
+            Consent(
+                user_key="fresh",
+                face="family_shield",
+                notice_version="v1",
+                language="ru",
+                ts=now - timedelta(days=1),
+            ),
+            RateLimit(
+                user_key="old",
+                face="family_shield",
+                day=(now - timedelta(days=3)).date(),
+                count=5,
+            ),
+            RateLimit(
+                user_key="fresh",
+                face="family_shield",
+                day=now.date(),
+                count=1,
+            ),
+            DeletionLog(
+                id=uuid4(),
+                user_key="old",
+                requested_ts=now - timedelta(days=366),
+                completed_ts=now - timedelta(days=366),
+            ),
+            DeletionLog(
+                id=uuid4(),
+                user_key="fresh",
+                requested_ts=now - timedelta(days=1),
+                completed_ts=now - timedelta(days=1),
+            ),
+        ]
     )
-    assert callable(cleanup)
+    await session.flush()
+
+    result = await cleanup_expired(session, now=now)
+
+    assert result.asdict() == {
+        "check_events": 1,
+        "feedback": 1,
+        "consent": 1,
+        "rate_limits": 1,
+        "deletion_logs": 1,
+    }
+    assert await _count(session, CheckEvent) == 1
+    assert await _count(session, Feedback) == 1
+    assert await _count(session, Consent) == 1
+    assert await _count(session, RateLimit) == 1
+    assert await _count(session, DeletionLog) == 1
 
 
-def test_metrics_export_exists(callable_or_skip) -> None:
-    metrics = callable_or_skip(
-        "app.obs.metrics",
-        "export_metrics",
-        "collect_metrics",
-        "metrics_summary",
-        "aggregate",
+async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> None:
+    await repo.upsert_consent(
+        session,
+        user_key="activated-1",
+        face="family_shield",
+        notice_version="v1",
+        language="ru",
     )
-    assert callable(metrics)
+    await repo.upsert_consent(
+        session,
+        user_key="activated-2",
+        face="family_shield",
+        notice_version="v1",
+        language="uz_latn",
+    )
+    ok_check_id = await repo.record_check_event(
+        session,
+        user_key="activated-1",
+        face="family_shield",
+        input_type="text",
+        language="ru",
+        status="ok",
+        cost_usd=0.01,
+        latency_ms=100,
+    )
+    await repo.record_check_event(
+        session,
+        user_key="activated-2",
+        face="seller_guard",
+        input_type="text",
+        language="uz_latn",
+        status="no_signal",
+        no_signal=True,
+        cost_usd=0.02,
+        latency_ms=200,
+    )
+    await repo.record_check_event(
+        session,
+        user_key="activated-2",
+        face="seller_guard",
+        input_type="text",
+        language="uz_latn",
+        status="llm_error",
+        cost_usd=0.00,
+        latency_ms=300,
+        error_class="LLMProviderError",
+    )
+    await repo.record_feedback(
+        session,
+        check_id=ok_check_id,
+        usefulness="yes",
+        next_action="verify",
+    )
+    await session.flush()
+
+    summary = await collect_metrics(session)
+    exported = await export_metrics(session)
+
+    assert summary["checks"]["total"] == 3
+    assert summary["checks"]["completed"] == 2
+    assert summary["checks"]["completion_rate"] == 0.6667
+    assert summary["activation"]["activated_users"] == 2
+    assert summary["activation"]["activation_rate"] == 1.0
+    assert summary["cost"]["total_usd"] == 0.03
+    assert summary["cost"]["avg_success_usd"] == 0.015
+    assert summary["no_signal"]["rate"] == 0.5
+    assert summary["breakdowns"]["status"] == {"llm_error": 1, "no_signal": 1, "ok": 1}
+    assert summary["feedback"]["usefulness"] == {"yes": 1}
+    assert "checks_total=3" in exported
+    assert "cost_avg_success_usd=0.015" in exported
+    assert "activated-1" not in exported
+    assert "user_key" not in exported
+
+
+async def _count(session, model) -> int:
+    return (await session.execute(select(func.count()).select_from(model))).scalar_one()

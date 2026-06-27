@@ -1,36 +1,87 @@
-"""T13 — web channel parity (V1_TECHNICAL_PLAN §13 T13, §15).
+"""T13 - web channel parity and abuse gates."""
 
-Live acceptance specs that skip until the FastAPI web app lands. The plan's
-hard guarantee is parity: the web POST /check builds a CheckInput and calls the
-SAME run_check() as the bot. Captcha-gating and rate-limit assertions are added
-against the live app once its routes are known; this pins the route surface.
-"""
+from fastapi.testclient import TestClient
 
-import pytest
+from app.config import Settings
+from app.engine import CheckResult, CheckStatus, InputType, Language
+from app.web import routes
+from app.web.app import create_app
 
 
-def _web_app():
-    module = pytest.importorskip("app.web.app")
-    app = getattr(module, "app", None)
-    if app is None:
-        factory = getattr(module, "create_app", None)
-        if factory is None:
-            pytest.skip("web app object/factory not found yet")
-        try:
-            app = factory()
-        except Exception as exc:  # needs config we can't supply here
-            pytest.skip(f"create_app needs configuration: {exc}")
-    return app
+def _settings(**overrides) -> Settings:
+    values = {
+        "telegram_token_family_shield": "token",
+        "database_url": "postgresql+asyncpg://avvalo:avvalo@localhost:5432/avvalo",
+        "app_hmac_secret": "test-hmac-secret",
+        "llm_base_url": "http://localhost:11434/v1",
+        "llm_api_key": "ollama",
+        "llm_model": "qwen2.5:7b-instruct",
+        "web_session_secret": "test-web-session-secret",
+    }
+    values.update(overrides)
+    return Settings(_env_file=None, **values)
 
 
 def test_web_app_exposes_core_routes() -> None:
-    app = _web_app()
+    app = create_app(settings=_settings())
     paths = {getattr(route, "path", "") for route in getattr(app, "routes", [])}
-    # §13: GET / , POST /check , GET /privacy , GET /healthz.
-    assert "/check" in paths, f"web app must expose POST /check; saw {sorted(paths)}"
+
+    assert "/" in paths
+    assert "/check" in paths
+    assert "/privacy" in paths
+    assert "/healthz" in paths
 
 
-def test_web_reuses_the_shared_engine() -> None:
-    routes_mod = pytest.importorskip("app.web.routes")
-    source = pytest.importorskip("inspect").getsource(routes_mod)
-    assert "run_check" in source, "web layer must call the shared engine.run_check (§13 parity)"
+def test_web_reuses_the_shared_engine(monkeypatch) -> None:
+    calls = []
+
+    async def fake_run_check(check_input, *args, **kwargs):
+        calls.append((check_input, args, kwargs))
+        return CheckResult(
+            status=CheckStatus.ok,
+            text="checked by shared engine",
+            language=check_input.language,
+            input_type=check_input.input_type,
+        )
+
+    monkeypatch.setattr(routes, "run_check", fake_run_check)
+    client = TestClient(create_app(settings=_settings()))
+
+    response = client.post(
+        "/check",
+        data={
+            "face": "family_shield",
+            "language": "uz_latn",
+            "text": "Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
+            "consent": "yes",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "checked by shared engine" in response.text
+    assert len(calls) == 1
+    check_input, _args, kwargs = calls[0]
+    assert check_input.input_type is InputType.text
+    assert check_input.language is Language.uz_latn
+    assert check_input.raw_text.startswith("Bank xavfsizlik")
+    assert kwargs["rate_limit_override"] == 5
+
+
+def test_image_upload_fails_without_turnstile(monkeypatch) -> None:
+    async def fake_run_check(*_args, **_kwargs):
+        raise AssertionError("image upload must be rejected before run_check")
+
+    monkeypatch.setattr(routes, "run_check", fake_run_check)
+    client = TestClient(create_app(settings=_settings()))
+
+    response = client.post(
+        "/check",
+        data={
+            "face": "family_shield",
+            "language": "uz_latn",
+            "consent": "yes",
+        },
+        files={"image": ("check.png", b"not-empty", "image/png")},
+    )
+
+    assert response.status_code == 400

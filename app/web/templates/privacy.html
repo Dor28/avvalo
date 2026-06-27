@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Avvalo Privacy</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <main class="shell narrow">
+      <section class="workspace" aria-labelledby="privacy-title">
+        <div class="heading">
+          <p class="kicker">Avvalo</p>
+          <h1 id="privacy-title">Privacy</h1>
+        </div>
+        <nav class="language-nav">
+          {% for option in languages %}
+            <a href="/privacy?language={{ option }}">{{ language_labels[option] }}</a>
+          {% endfor %}
+        </nav>
+        <pre class="privacy-text">{{ privacy_text }}</pre>
+      </section>
+    </main>
+  </body>
+</html>
