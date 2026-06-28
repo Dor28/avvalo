@@ -184,5 +184,47 @@ async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> Non
     assert "user_key" not in exported
 
 
+async def test_metrics_feedback_breakdowns_respect_window_and_partial_answers(session) -> None:
+    now = datetime(2026, 6, 28, 12, 0, tzinfo=UTC)
+    fresh_check_id = await repo.record_check_event(
+        session,
+        user_key="fresh-feedback",
+        face="family_shield",
+        input_type="text",
+        language="ru",
+        status="ok",
+    )
+    old_check_id = await repo.record_check_event(
+        session,
+        user_key="old-feedback",
+        face="family_shield",
+        input_type="text",
+        language="ru",
+        status="ok",
+    )
+    session.add_all(
+        [
+            Feedback(
+                check_id=fresh_check_id,
+                usefulness="yes",
+                next_action=None,
+                ts=now - timedelta(hours=1),
+            ),
+            Feedback(
+                check_id=old_check_id,
+                usefulness="no",
+                next_action="continue",
+                ts=now - timedelta(days=40),
+            ),
+        ]
+    )
+    await session.flush()
+
+    summary = await collect_metrics(session, since=now - timedelta(days=7), until=now)
+
+    assert summary["feedback"]["usefulness"] == {"yes": 1}
+    assert summary["feedback"]["next_action"] == {}
+
+
 async def _count(session, model) -> int:
     return (await session.execute(select(func.count()).select_from(model))).scalar_one()

@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.config import Settings
 from app.data.models import CheckEvent
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
-from app.engine.format import format_fallback, format_result
+from app.engine.format import format_fallback, format_result, format_status_message
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput, RuleHit
 from app.engine.validate import validate
@@ -60,6 +60,26 @@ def test_validator_rejects_verdict_words_contacts_and_unsafe_instructions() -> N
         [],
         rule_hits,
         Language.uz_latn,
+    ).ok
+    assert not validate(
+        DraftOutput(
+            red_flags=["Это безопасно."],
+            verify=["Open the official app yourself."],
+            ask=["Who are you?"],
+        ),
+        [],
+        rule_hits,
+        Language.uz_latn,
+    ).ok
+    assert not validate(
+        DraftOutput(
+            red_flags=["Bu xavfsiz."],
+            verify=["Open the official app yourself."],
+            ask=["Who are you?"],
+        ),
+        [],
+        rule_hits,
+        Language.ru,
     ).ok
     assert not validate(
         DraftOutput(
@@ -121,6 +141,11 @@ def test_formatter_adds_structure_limitation_and_no_signal_lead() -> None:
     )
     assert no_signal.startswith("Явных тревожных признаков")
     assert "Это не доказывает отсутствие риска." in no_signal
+
+
+def test_status_messages_are_localized() -> None:
+    assert "Daily" not in format_status_message(CheckStatus.rate_limited, Language.ru)
+    assert "Tekshirish" in format_status_message(CheckStatus.empty_input, Language.uz_latn)
 
 
 async def test_pipeline_retries_once_after_validation_failure(session) -> None:

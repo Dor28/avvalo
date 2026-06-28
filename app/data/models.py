@@ -80,7 +80,7 @@ class Feedback(Base):
 
     check_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     usefulness: Mapped[str] = mapped_column(Text, nullable=False)
-    next_action: Mapped[str] = mapped_column(Text, nullable=False)
+    next_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 

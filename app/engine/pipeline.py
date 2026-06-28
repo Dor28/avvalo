@@ -17,7 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import Settings, get_settings
 from app.data import repo
 from app.engine.faces import FACES, Face
-from app.engine.format import format_fallback, format_result
+from app.engine.format import format_fallback, format_result, format_status_message
+from app.engine.language import resolve_content_language
 from app.engine.llm import (
     LLMProvider,
     LLMProviderError,
@@ -121,10 +122,7 @@ async def _rate_limit_result(
     return _result(
         check_input,
         CheckStatus.rate_limited,
-        text=(
-            "Daily check limit reached for this assistant. "
-            "Please try again tomorrow."
-        ),
+        text=format_status_message(CheckStatus.rate_limited, check_input.language),
         error_class="DailyLimitExceeded",
     )
 
@@ -212,12 +210,19 @@ async def _run_stages(
 
     text = content.text or ""
     if not text:
-        return _result(check_input, CheckStatus.empty_input, text="Please send some text to check.")
+        return _result(
+            check_input,
+            CheckStatus.empty_input,
+            text=format_status_message(CheckStatus.empty_input, check_input.language),
+        )
 
+    effective_input = check_input.model_copy(
+        update={"language": resolve_content_language(text, fallback=check_input.language)}
+    )
     rule_hits, signals = run_rules(text, check_input.face)
     minimized_text = minimize(text, signals)
     llm_result = await _call_llm(
-        check_input,
+        effective_input,
         minimized_text=minimized_text,
         rule_hits=rule_hits,
         signals=signals,
@@ -235,9 +240,9 @@ async def _run_stages(
     status = CheckStatus.no_signal if no_signal else CheckStatus.ok
 
     return _result(
-        check_input,
+        effective_input,
         status,
-        text=format_result(draft, check_input.language, no_signal=no_signal),
+        text=format_result(draft, effective_input.language, no_signal=no_signal),
         rule_ids=[hit.rule_id for hit in rule_hits],
         no_signal=no_signal,
         ocr_ms=content.ocr_ms,
@@ -274,7 +279,11 @@ async def _content_from_input(
     if check_input.input_type is not InputType.image:
         return _ContentStageResult(
             text=None,
-            status=_result(check_input, CheckStatus.unsupported_media),
+            status=_result(
+                check_input,
+                CheckStatus.unsupported_media,
+                text=format_status_message(CheckStatus.unsupported_media, check_input.language),
+            ),
         )
 
     if not check_input.image_bytes:
@@ -283,7 +292,7 @@ async def _content_from_input(
             status=_result(
                 check_input,
                 CheckStatus.unsupported_media,
-                text="Please send a readable image or paste the text.",
+                text=format_status_message(CheckStatus.unsupported_media, check_input.language),
                 error_class="missing_image_bytes",
             ),
         )
@@ -301,7 +310,7 @@ async def _content_from_input(
             status=_result(
                 check_input,
                 CheckStatus.timeout,
-                text="We could not complete the image check in time. Please try again.",
+                text=format_status_message(CheckStatus.timeout, check_input.language),
                 ocr_ms=ocr_ms,
                 error_class=exc.__class__.__name__,
             ),
@@ -314,7 +323,7 @@ async def _content_from_input(
             status=_result(
                 check_input,
                 CheckStatus.unsupported_media,
-                text="Image checks are not available yet. Please paste the text.",
+                text=format_status_message(CheckStatus.unsupported_media, check_input.language),
                 ocr_ms=ocr_ms,
                 error_class=exc.__class__.__name__,
             ),
@@ -327,7 +336,7 @@ async def _content_from_input(
             status=_result(
                 check_input,
                 CheckStatus.unsupported_media,
-                text="We could not read this image. Please paste the important text.",
+                text=format_status_message(CheckStatus.unsupported_media, check_input.language),
                 ocr_ms=ocr_ms,
                 error_class=exc.__class__.__name__,
             ),
@@ -346,7 +355,7 @@ async def _content_from_input(
             status=_result(
                 check_input,
                 CheckStatus.low_ocr,
-                text="We could not read the image clearly. Please paste the important text.",
+                text=format_status_message(CheckStatus.low_ocr, check_input.language),
                 ocr_ms=ocr_ms,
                 ocr_confidence=ocr_result.confidence,
             ),
@@ -424,7 +433,7 @@ async def _call_llm(
                 status=_result(
                     check_input,
                     CheckStatus.timeout,
-                    text="We could not complete the check in time. Please try again.",
+                    text=format_status_message(CheckStatus.timeout, check_input.language),
                     rule_ids=[hit.rule_id for hit in rule_hits],
                     error_class=exc.__class__.__name__,
                     ocr_ms=ocr_ms,
@@ -445,7 +454,7 @@ async def _call_llm(
                 status=_result(
                     check_input,
                     CheckStatus.llm_error,
-                    text="We could not analyze this message right now. Please try again.",
+                    text=format_status_message(CheckStatus.llm_error, check_input.language),
                     rule_ids=[hit.rule_id for hit in rule_hits],
                     error_class=exc.__class__.__name__,
                     ocr_ms=ocr_ms,

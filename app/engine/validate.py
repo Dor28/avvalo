@@ -135,7 +135,8 @@ def _first_rejection_reason(
     text: str, draft: DraftOutput, requires_red_flag: bool, language: Language
 ) -> str | None:
     lower = text.casefold()
-    banned = (*_BANNED_WORDS[language], *_EN_BANNED)
+    _ = language
+    banned = (*_all_banned_words(), *_EN_BANNED)
     for word in banned:
         if re.search(rf"(?<![\w-]){re.escape(word.casefold())}(?![\w-])", lower):
             return f"banned verdict word: {word}"
@@ -158,3 +159,7 @@ def _first_rejection_reason(
     if requires_red_flag and not draft.red_flags:
         return "red_flags block is empty despite detected signals"
     return None
+
+
+def _all_banned_words() -> tuple[str, ...]:
+    return tuple(dict.fromkeys(word for words in _BANNED_WORDS.values() for word in words))

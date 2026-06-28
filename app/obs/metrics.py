@@ -105,8 +105,16 @@ async def collect_metrics(
             "language": await _breakdown(session, CheckEvent.language, event_conditions),
         },
         "feedback": {
-            "usefulness": await _feedback_breakdown(session, Feedback.usefulness),
-            "next_action": await _feedback_breakdown(session, Feedback.next_action),
+            "usefulness": await _feedback_breakdown(
+                session, Feedback.usefulness, since=since, until=until
+            ),
+            "next_action": await _feedback_breakdown(
+                session,
+                Feedback.next_action,
+                since=since,
+                until=until,
+                exclude_null=True,
+            ),
         },
     }
 
@@ -197,13 +205,36 @@ async def _breakdown(
     return {str(key): int(count) for key, count in rows}
 
 
-async def _feedback_breakdown(session: AsyncSession, column: Any) -> dict[str, int]:
+async def _feedback_breakdown(
+    session: AsyncSession,
+    column: Any,
+    *,
+    since: datetime | None,
+    until: datetime | None,
+    exclude_null: bool = False,
+) -> dict[str, int]:
+    conditions = _feedback_window(since=since, until=until)
+    if exclude_null:
+        conditions.append(column.is_not(None))
     rows = (
         await session.execute(
-            select(column, func.count()).select_from(Feedback).group_by(column)
+            select(column, func.count()).select_from(Feedback).where(*conditions).group_by(column)
         )
     ).all()
     return {str(key): int(count) for key, count in rows}
+
+
+def _feedback_window(
+    *,
+    since: datetime | None,
+    until: datetime | None,
+) -> list[Any]:
+    conditions: list[Any] = []
+    if since is not None:
+        conditions.append(Feedback.ts >= since)
+    if until is not None:
+        conditions.append(Feedback.ts < until)
+    return conditions
 
 
 async def _decimal_sum(

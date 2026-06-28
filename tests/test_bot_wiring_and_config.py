@@ -6,6 +6,7 @@ Covers:
       localized.
 - #6  the web session cookie honors the configured Secure flag.
 - #7  record_feedback is idempotent (re-answering does not raise).
+- #8  usefulness feedback can be saved before next-action feedback.
 """
 
 from starlette.responses import Response
@@ -142,3 +143,33 @@ async def test_record_feedback_is_idempotent(session) -> None:
     assert row is not None
     assert row.usefulness == "partly"
     assert row.next_action == "continue"
+
+
+async def test_record_feedback_accepts_usefulness_before_next_action(session) -> None:
+    check_id = await repo.record_check_event(
+        session, user_key="fb-partial", face="family_shield",
+        input_type="text", language="ru", status="ok",
+    )
+    await repo.record_feedback(session, check_id=check_id, usefulness="yes")
+    await repo.record_feedback(session, check_id=check_id, usefulness="yes", next_action="verify")
+    await session.commit()
+
+    row = await session.get(Feedback, check_id)
+    assert row is not None
+    assert row.usefulness == "yes"
+    assert row.next_action == "verify"
+
+
+async def test_usefulness_update_does_not_clear_next_action(session) -> None:
+    check_id = await repo.record_check_event(
+        session, user_key="fb-preserve", face="family_shield",
+        input_type="text", language="ru", status="ok",
+    )
+    await repo.record_feedback(session, check_id=check_id, usefulness="yes", next_action="verify")
+    await repo.record_feedback(session, check_id=check_id, usefulness="partly")
+    await session.commit()
+
+    row = await session.get(Feedback, check_id)
+    assert row is not None
+    assert row.usefulness == "partly"
+    assert row.next_action == "verify"

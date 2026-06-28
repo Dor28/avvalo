@@ -147,6 +147,16 @@ async def on_feedback(callback: CallbackQuery, state: FSMContext, session_factor
         if value not in repo.USEFULNESS_VALUES:
             await callback.answer()
             return
+        data = await state.get_data()
+        check_id = data.get("last_check_id")
+        if check_id:
+            async with session_factory() as session:
+                await repo.record_feedback(
+                    session,
+                    check_id=UUID(str(check_id)),
+                    usefulness=value,
+                )
+                await session.commit()
         await state.update_data(feedback_usefulness=value)
         log_event("usefulness_answered", face=face.id, usefulness=value)
         await callback.answer(t("fb_saved", language))

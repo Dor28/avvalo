@@ -108,13 +108,13 @@ async def record_feedback(
     *,
     check_id: uuid.UUID,
     usefulness: str,
-    next_action: str,
+    next_action: str | None = None,
 ) -> None:
     """Store categorical feedback for a completed check."""
 
     if usefulness not in USEFULNESS_VALUES:
         raise ValueError(f"Unsupported usefulness value: {usefulness}")
-    if next_action not in NEXT_ACTION_VALUES:
+    if next_action is not None and next_action not in NEXT_ACTION_VALUES:
         raise ValueError(f"Unsupported next_action value: {next_action}")
 
     # Upsert on the check_id primary key: a user can revise their answer (tap a
@@ -128,7 +128,8 @@ async def record_feedback(
         )
     else:
         row.usefulness = usefulness
-        row.next_action = next_action
+        if next_action is not None:
+            row.next_action = next_action
         row.ts = _utcnow()
     await session.flush()
 

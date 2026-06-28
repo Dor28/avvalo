@@ -314,6 +314,9 @@ async def check(
 
     web_session = get_or_create_web_session(request, secret=_web_secret(settings))
     session_factory = _session_factory_or_none(request)
+    if session_factory is None:
+        raise HTTPException(status_code=503, detail="Web checks require database wiring.")
+
     image_bytes = await read_limited_upload(image)
     await require_turnstile_for_image(
         image_bytes=image_bytes,
@@ -341,22 +344,6 @@ async def check(
         image_bytes=image_bytes,
         caption=caption or None,
     )
-
-    if session_factory is None:
-        if consent != "yes":
-            return _partial(
-                request,
-                status_code=400,
-                error=copy["consent_error"],
-                copy=copy,
-                web_session=web_session,
-            )
-        result = await run_check(
-            check_input,
-            settings=settings,
-            rate_limit_override=settings.web_daily_limit,
-        )
-        return _partial(request, result=result, copy=copy, web_session=web_session)
 
     async with session_factory() as session:
         if not await _ensure_web_consent(

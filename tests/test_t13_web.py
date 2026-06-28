@@ -8,6 +8,22 @@ from app.web import routes
 from app.web.app import create_app
 
 
+class FakeSession:
+    async def commit(self) -> None:
+        return None
+
+
+class FakeSessionFactory:
+    def __call__(self):
+        return self
+
+    async def __aenter__(self) -> FakeSession:
+        return FakeSession()
+
+    async def __aexit__(self, *_exc) -> None:
+        return None
+
+
 def _settings(**overrides) -> Settings:
     values = {
         "telegram_token_family_shield": "token",
@@ -68,7 +84,12 @@ def test_web_reuses_the_shared_engine(monkeypatch) -> None:
         )
 
     monkeypatch.setattr(routes, "run_check", fake_run_check)
-    client = TestClient(create_app(settings=_settings()))
+
+    async def fake_ensure_web_consent(*_args, **_kwargs) -> bool:
+        return True
+
+    monkeypatch.setattr(routes, "_ensure_web_consent", fake_ensure_web_consent)
+    client = TestClient(create_app(settings=_settings(), session_factory=FakeSessionFactory()))
 
     response = client.post(
         "/check",
@@ -88,6 +109,27 @@ def test_web_reuses_the_shared_engine(monkeypatch) -> None:
     assert check_input.language is Language.uz_latn
     assert check_input.raw_text.startswith("Bank xavfsizlik")
     assert kwargs["rate_limit_override"] == 5
+    assert kwargs["session"].__class__ is FakeSession
+
+
+def test_web_check_fails_closed_without_session_factory(monkeypatch) -> None:
+    async def fake_run_check(*_args, **_kwargs):
+        raise AssertionError("miswired web app must not process checks")
+
+    monkeypatch.setattr(routes, "run_check", fake_run_check)
+    client = TestClient(create_app(settings=_settings()))
+
+    response = client.post(
+        "/check",
+        data={
+            "face": "family_shield",
+            "language": "uz_latn",
+            "text": "Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
+            "consent": "yes",
+        },
+    )
+
+    assert response.status_code == 503
 
 
 def test_image_upload_fails_without_turnstile(monkeypatch) -> None:
@@ -95,7 +137,7 @@ def test_image_upload_fails_without_turnstile(monkeypatch) -> None:
         raise AssertionError("image upload must be rejected before run_check")
 
     monkeypatch.setattr(routes, "run_check", fake_run_check)
-    client = TestClient(create_app(settings=_settings()))
+    client = TestClient(create_app(settings=_settings(), session_factory=FakeSessionFactory()))
 
     response = client.post(
         "/check",

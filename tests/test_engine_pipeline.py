@@ -55,7 +55,7 @@ async def test_run_check_text_returns_result_and_records_event(session) -> None:
     await session.commit()
 
     assert result.status == CheckStatus.ok
-    assert result.language == Language.ru
+    assert result.language == Language.uz_latn
     assert result.input_type == InputType.text
     assert "fs.credential.otp" in result.rule_ids
     assert "fs.authority.impersonation" in result.rule_ids
@@ -65,7 +65,7 @@ async def test_run_check_text_returns_result_and_records_event(session) -> None:
     assert stored_event.user_key == "u1"
     assert stored_event.face == "family_shield"
     assert stored_event.status == "ok"
-    assert stored_event.language == "ru"
+    assert stored_event.language == "uz_latn"
     assert stored_event.input_type == "text"
     assert "fs.credential.otp" in stored_event.rule_ids
 
