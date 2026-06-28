@@ -47,6 +47,21 @@ class Settings(BaseSettings):
     turnstile_secret: SecretStr | None = None
     web_session_secret: SecretStr
     web_daily_limit: int = Field(default=5, ge=1)
+    # Set WEB_COOKIE_SECURE=true behind HTTPS in production so the session
+    # cookie is never sent over plaintext. Defaults off for local http dev.
+    web_cookie_secure: bool = False
+
+    def daily_limit_for(self, face_id: str) -> int | None:
+        """Return the configured daily check limit for *face_id*, or None.
+
+        Lets ``DAILY_LIMIT_FAMILY_SHIELD`` / ``DAILY_LIMIT_SELLER_GUARD`` actually
+        drive the per-face limit instead of being inert configuration.
+        """
+
+        return {
+            "family_shield": self.daily_limit_family_shield,
+            "seller_guard": self.daily_limit_seller_guard,
+        }.get(face_id)
 
 
 @lru_cache

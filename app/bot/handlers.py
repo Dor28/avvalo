@@ -4,6 +4,7 @@ No handler stores or echoes submitted content. The consent gate ensures content
 is only accepted after the current privacy notice has been agreed to.
 """
 
+from io import BytesIO
 from uuid import UUID
 
 from aiogram import F, Router
@@ -11,14 +12,18 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from app.bot.keyboards import consent_keyboard, language_keyboard
+from app.bot.keyboards import consent_keyboard, language_keyboard, post_check_keyboard
 from app.bot.states import Onboarding
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGES, entry_text, t
 from app.config import Settings
 from app.data import repo
+from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
+from app.engine.faces import Face
 from app.obs.events import log_event
 from app.privacy.consent import grant_consent, is_consent_current
 from app.privacy.user_key import derive_user_key
+
+_FEEDBACK_STATUSES = {CheckStatus.ok, CheckStatus.no_signal}
 
 router = Router()
 
@@ -137,13 +142,14 @@ async def on_feedback(callback: CallbackQuery, state: FSMContext, session_factor
         return
 
     _, kind, value = parts
+    language = await _language(state)
     if kind == "usefulness":
         if value not in repo.USEFULNESS_VALUES:
             await callback.answer()
             return
         await state.update_data(feedback_usefulness=value)
         log_event("usefulness_answered", face=face.id, usefulness=value)
-        await callback.answer("Saved")
+        await callback.answer(t("fb_saved", language))
         return
 
     if kind != "next_action":
@@ -167,20 +173,20 @@ async def on_feedback(callback: CallbackQuery, state: FSMContext, session_factor
             await session.commit()
 
     log_event("decision_answered", face=face.id, next_action=value)
-    await callback.answer("Saved")
+    await callback.answer(t("fb_saved", language))
 
 
 @router.message()
 async def on_content(
     message: Message, state: FSMContext, settings, session_factory, face
 ) -> None:
-    """Gate every non-command message on current, DB-backed consent (§12).
+    """Run one check through the shared engine after confirming current consent (§12).
 
     Consent is re-read from the database on each message instead of trusting the
     in-memory FSM state, so a process restart can't wrongly block a user who has
     already consented, and bumping ``NOTICE_VERSION`` immediately forces
-    re-consent. The analysis engine is wired in later tasks; this handler must
-    never store or echo content.
+    re-consent. The engine never stores or echoes submitted content; only
+    privacy-safe metadata is recorded.
     """
 
     user = message.from_user
@@ -198,4 +204,62 @@ async def on_content(
         await message.answer(t("need_consent", language))
         return
 
-    await message.answer(t("analysis_pending", consent.language))
+    language = consent.language
+    check_input = await _build_check_input(message, face=face, user_key=user_key, language=language)
+    if check_input is None:
+        await message.answer(t("unsupported_input", language))
+        return
+
+    async with session_factory() as session:
+        result = await run_check(check_input, session=session, settings=settings)
+        await session.commit()
+
+    # Track the check id for the categorical feedback flow and clear any stale
+    # usefulness from a previous check so it can't attach to this one.
+    await state.update_data(
+        last_check_id=str(result.check_id) if result.check_id else None,
+        feedback_usefulness=None,
+    )
+    keyboard = post_check_keyboard(language) if result.status in _FEEDBACK_STATUSES else None
+    await message.answer(result.text or t("unsupported_input", language), reply_markup=keyboard)
+
+
+async def _build_check_input(
+    message: Message, *, face: Face, user_key: str, language: str
+) -> CheckInput | None:
+    """Build a CheckInput from a photo or text message, or None if unsupported."""
+
+    lang = Language(language)
+    if message.photo:
+        image_bytes = await _download_photo(message)
+        if not image_bytes:
+            return None
+        return CheckInput(
+            face=face.id,
+            user_key=user_key,
+            language=lang,
+            input_type=InputType.image,
+            image_bytes=image_bytes,
+            caption=message.caption,
+        )
+
+    text = message.text or message.caption
+    if text and text.strip():
+        return CheckInput(
+            face=face.id,
+            user_key=user_key,
+            language=lang,
+            input_type=InputType.text,
+            raw_text=text,
+        )
+    return None
+
+
+async def _download_photo(message: Message) -> bytes | None:
+    """Download the largest available photo size into memory."""
+
+    if message.bot is None or not message.photo:
+        return None
+    buffer = BytesIO()
+    await message.bot.download(message.photo[-1], destination=buffer)
+    return buffer.getvalue() or None

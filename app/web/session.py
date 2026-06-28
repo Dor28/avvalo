@@ -43,15 +43,21 @@ def get_or_create_web_session(request: Request, *, secret: str) -> WebSession:
     )
 
 
-def set_web_session_cookie(response: Response, web_session: WebSession) -> None:
-    """Persist the anonymous signed session cookie."""
+def set_web_session_cookie(
+    response: Response, web_session: WebSession, *, secure: bool = False
+) -> None:
+    """Persist the anonymous signed session cookie.
+
+    ``secure`` should be True in production (HTTPS) so the cookie is never sent
+    over plaintext; it defaults False for local http development.
+    """
 
     response.set_cookie(
         COOKIE_NAME,
         web_session.signed_id,
         max_age=COOKIE_MAX_AGE,
         httponly=True,
-        secure=False,
+        secure=secure,
         samesite="lax",
     )
 

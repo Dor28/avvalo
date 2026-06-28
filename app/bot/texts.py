@@ -157,10 +157,55 @@ TEXTS: dict[str, dict[str, str]] = {
             "Пожалуйста, отправьте /start и нажмите «Согласен», прежде чем отправлять что-либо на проверку."
         ),
     },
-    "analysis_pending": {
-        "uz_latn": "✅ Qabul qilindi. Tekshiruvchi hali sozlanmoqda — tahlil tez orada ishga tushadi.",
-        "uz_cyrl": "✅ Қабул қилинди. Текширувчи ҳали созланмоқда — таҳлил тез орада ишга тушади.",
-        "ru": "✅ Принято. Проверка ещё настраивается — анализ скоро заработает.",
+    "unsupported_input": {
+        "uz_latn": "Iltimos, tekshirish uchun matn yoki rasm (skrinshot) yuboring.",
+        "uz_cyrl": "Илтимос, текшириш учун матн ёки расм (скриншот) юборинг.",
+        "ru": "Пожалуйста, пришлите текст или изображение (скриншот) для проверки.",
+    },
+    "fb_saved": {
+        "uz_latn": "Saqlandi",
+        "uz_cyrl": "Сақланди",
+        "ru": "Сохранено",
+    },
+    "fb_useful": {
+        "uz_latn": "Foydali",
+        "uz_cyrl": "Фойдали",
+        "ru": "Полезно",
+    },
+    "fb_partly": {
+        "uz_latn": "Qisman",
+        "uz_cyrl": "Қисман",
+        "ru": "Частично",
+    },
+    "fb_not_useful": {
+        "uz_latn": "Yo'q",
+        "uz_cyrl": "Йўқ",
+        "ru": "Нет",
+    },
+    "fb_verify": {
+        "uz_latn": "Tekshiraman",
+        "uz_cyrl": "Текшираман",
+        "ru": "Проверю",
+    },
+    "fb_stop": {
+        "uz_latn": "To'xtataman",
+        "uz_cyrl": "Тўхтатаман",
+        "ru": "Остановлюсь",
+    },
+    "fb_continue": {
+        "uz_latn": "Davom etaman",
+        "uz_cyrl": "Давом этаман",
+        "ru": "Продолжу",
+    },
+    "fb_not_sure": {
+        "uz_latn": "Bilmadim",
+        "uz_cyrl": "Билмадим",
+        "ru": "Не уверен",
+    },
+    "fb_share": {
+        "uz_latn": "Avvalo'ni ulashish",
+        "uz_cyrl": "Avvalo'ни улашиш",
+        "ru": "Поделиться Avvalo",
     },
 }
 

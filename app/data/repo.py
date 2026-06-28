@@ -117,9 +117,19 @@ async def record_feedback(
     if next_action not in NEXT_ACTION_VALUES:
         raise ValueError(f"Unsupported next_action value: {next_action}")
 
-    session.add(
-        Feedback(check_id=check_id, usefulness=usefulness, next_action=next_action, ts=_utcnow())
-    )
+    # Upsert on the check_id primary key: a user can revise their answer (tap a
+    # different action button) without hitting a duplicate-key IntegrityError.
+    row = await session.get(Feedback, check_id)
+    if row is None:
+        session.add(
+            Feedback(
+                check_id=check_id, usefulness=usefulness, next_action=next_action, ts=_utcnow()
+            )
+        )
+    else:
+        row.usefulness = usefulness
+        row.next_action = next_action
+        row.ts = _utcnow()
     await session.flush()
 
 

@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.data import repo
-from app.engine.faces import FACES
+from app.engine.faces import FACES, Face
 from app.engine.format import format_fallback, format_result
 from app.engine.llm import (
     LLMProvider,
@@ -74,7 +74,9 @@ async def run_check(
     _log_check_started(check_input)
 
     result = (
-        await _rate_limit_result(session, check_input, limit_override=rate_limit_override)
+        await _rate_limit_result(
+            session, check_input, settings=settings, limit_override=rate_limit_override
+        )
         if session is not None
         else None
     )
@@ -86,7 +88,9 @@ async def run_check(
             settings=settings,
         )
     result.latency_ms = max(0, round((perf_counter() - started) * 1000))
-    _log_check_finished(check_input, result, limit_override=rate_limit_override)
+    _log_check_finished(
+        check_input, result, limit_override=rate_limit_override, settings=settings
+    )
 
     if session is not None:
         if check_input.face in FACES and result.status not in _BILLABLE_STATUSES:
@@ -99,14 +103,18 @@ async def run_check(
 
 
 async def _rate_limit_result(
-    session: AsyncSession, check_input: CheckInput, *, limit_override: int | None = None
+    session: AsyncSession,
+    check_input: CheckInput,
+    *,
+    settings: Settings | None = None,
+    limit_override: int | None = None,
 ) -> CheckResult | None:
     face = FACES.get(check_input.face)
     if face is None:
         return None
 
     count = await repo.increment_usage(session, user_key=check_input.user_key, face=face.id)
-    limit = limit_override or face.daily_limit
+    limit = limit_override or _daily_limit(face, settings)
     if count <= limit:
         return None
 
@@ -130,11 +138,22 @@ def _log_check_started(check_input: CheckInput) -> None:
     )
 
 
+def _daily_limit(face: Face, settings: Settings | None) -> int:
+    """Resolve a face's daily limit, honoring configured overrides when present."""
+
+    if settings is not None:
+        configured = settings.daily_limit_for(face.id)
+        if configured is not None:
+            return configured
+    return face.daily_limit
+
+
 def _log_check_finished(
     check_input: CheckInput,
     result: CheckResult,
     *,
     limit_override: int | None = None,
+    settings: Settings | None = None,
 ) -> None:
     event_name = (
         "check_completed"
@@ -149,7 +168,7 @@ def _log_check_finished(
         "input_type": result.input_type,
         "language": result.language,
         "latency_ms": result.latency_ms,
-        "limit": _event_limit(check_input, limit_override),
+        "limit": _event_limit(check_input, limit_override, settings),
         "llm_ms": result.llm_ms,
         "no_signal": result.no_signal,
         "ocr_confidence": result.ocr_confidence,
@@ -162,12 +181,15 @@ def _log_check_finished(
     log_event(event_name, **{key: value for key, value in fields.items() if value is not None})
 
 
-def _event_limit(check_input: CheckInput, limit_override: int | None) -> int | None:
+def _event_limit(
+    check_input: CheckInput, limit_override: int | None, settings: Settings | None
+) -> int | None:
     if limit_override is not None:
         return limit_override
-    if check_input.face in FACES:
-        return FACES[check_input.face].daily_limit
-    return None
+    face = FACES.get(check_input.face)
+    if face is None:
+        return None
+    return _daily_limit(face, settings)
 
 
 async def _run_stages(

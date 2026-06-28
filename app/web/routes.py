@@ -270,7 +270,7 @@ def _face_page(request: Request, *, face: str, language: str) -> HTMLResponse:
             ),
         },
     )
-    set_web_session_cookie(response, web_session)
+    set_web_session_cookie(response, web_session, secure=_cookie_secure(settings))
     return response
 
 
@@ -428,8 +428,14 @@ def _partial(
         status_code=status_code,
     )
     if web_session is not None:
-        set_web_session_cookie(response, web_session)
+        set_web_session_cookie(
+            response, web_session, secure=_cookie_secure(_settings_or_none(request))
+        )
     return response
+
+
+def _cookie_secure(settings: Settings | None) -> bool:
+    return bool(settings.web_cookie_secure) if settings is not None else False
 
 
 def _settings_or_none(request: Request) -> Settings | None:
