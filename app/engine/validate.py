@@ -10,6 +10,13 @@ from app.engine.types import DraftOutput, Language, RuleHit, Signal
 
 _MAX_BULLETS = 3
 
+# Only rule hits at or above this severity are "red flags" that the draft must
+# surface. Lower-severity hits (e.g. Seller Guard's always-on "verify in your
+# bank app" reminder) ground the prompt but must not force an invented flag on
+# an otherwise benign message — doing so pushed clean payment checks into the
+# safety fallback.
+_RED_FLAG_MIN_SEVERITY = 2
+
 _BANNED_WORDS = {
     Language.ru: (
         "безопасно",
@@ -97,9 +104,10 @@ def validate(
     _ = signals
     normalized = _truncate_blocks(draft)
     no_signal = len(rule_hits) == 0 and len(normalized.red_flags) == 0
+    requires_red_flag = any(hit.severity >= _RED_FLAG_MIN_SEVERITY for hit in rule_hits)
     text = _joined_text(normalized)
 
-    reason = _first_rejection_reason(text, normalized, no_signal, language)
+    reason = _first_rejection_reason(text, normalized, requires_red_flag, language)
     return ValidationResult(
         ok=reason is None,
         draft=normalized,
@@ -124,7 +132,7 @@ def _joined_text(draft: DraftOutput) -> str:
 
 
 def _first_rejection_reason(
-    text: str, draft: DraftOutput, no_signal: bool, language: Language
+    text: str, draft: DraftOutput, requires_red_flag: bool, language: Language
 ) -> str | None:
     lower = text.casefold()
     banned = (*_BANNED_WORDS[language], *_EN_BANNED)
@@ -147,6 +155,6 @@ def _first_rejection_reason(
         return "verify block is empty"
     if not draft.ask:
         return "ask block is empty"
-    if not no_signal and not draft.red_flags:
+    if requires_red_flag and not draft.red_flags:
         return "red_flags block is empty despite detected signals"
     return None

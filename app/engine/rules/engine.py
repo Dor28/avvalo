@@ -28,8 +28,10 @@ _URL_RE = re.compile(
 )
 _EMAIL_RE = re.compile(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b")
 _HANDLE_RE = re.compile(r"(?<!\w)@[a-z0-9_]{4,32}\b", re.IGNORECASE)
+# Accept any valid two-digit Uzbek mobile prefix (20, 33, 50, 55, 77, 88,
+# 90-99, …); the old [3679] class silently dropped 50/55/88/20 numbers.
 _PHONE_RE = re.compile(
-    r"(?<!\d)(?:\+?998[\s().-]?)?(?:\(?[3679]\d\)?[\s().-]?)\d{3}"
+    r"(?<!\d)(?:\+?998[\s().-]?)?(?:\(?[2-9]\d\)?[\s().-]?)\d{3}"
     r"[\s().-]?\d{2}[\s().-]?\d{2}(?!\d)"
 )
 _CARD_RE = re.compile(r"(?<!\d)(?:\d[ -]?){13,19}(?!\d)")

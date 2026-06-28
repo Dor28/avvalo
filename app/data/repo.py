@@ -9,7 +9,7 @@ import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimit
@@ -166,6 +166,33 @@ async def increment_usage(
         row.count += 1
     await session.flush()
     return row.count
+
+
+async def refund_usage(
+    session: AsyncSession, *, user_key: str, face: str, day: date | None = None
+) -> None:
+    """Return one daily slot consumed by a non-billable check.
+
+    ``increment_usage`` reserves a slot up front (so concurrent checks can't race
+    past the limit). When the check then fails for a reason that isn't a real
+    completion — empty input, unreadable image, provider timeout/error, or an
+    over-limit rejection — the slot is given back here so a transient fault or a
+    stray empty message doesn't burn the user's daily quota. The atomic
+    ``count > 0`` guard keeps the counter from going negative under concurrency.
+    """
+
+    day = day or _utcnow().date()
+    await session.execute(
+        update(RateLimit)
+        .where(
+            RateLimit.user_key == user_key,
+            RateLimit.face == face,
+            RateLimit.day == day,
+            RateLimit.count > 0,
+        )
+        .values(count=RateLimit.count - 1)
+    )
+    await session.flush()
 
 
 async def delete_user_data(session: AsyncSession, *, user_key: str) -> None:

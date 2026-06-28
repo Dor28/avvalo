@@ -47,6 +47,13 @@ _DEFAULT_MAX_OUTPUT_TOKENS = 600
 _DEFAULT_OCR_MIN_CONFIDENCE = 0.5
 _T = TypeVar("_T")
 
+# Outcomes that consume a daily-limit slot: a real completion (ok / no_signal)
+# or a safety fallback that still ran the model. Every other status is a
+# pre-analysis or system fault and is refunded so it doesn't burn the quota.
+_BILLABLE_STATUSES = frozenset(
+    {CheckStatus.ok, CheckStatus.no_signal, CheckStatus.safety_fallback}
+)
+
 
 async def run_check(
     check_input: CheckInput,
@@ -82,6 +89,10 @@ async def run_check(
     _log_check_finished(check_input, result, limit_override=rate_limit_override)
 
     if session is not None:
+        if check_input.face in FACES and result.status not in _BILLABLE_STATUSES:
+            await repo.refund_usage(
+                session, user_key=check_input.user_key, face=check_input.face
+            )
         result.check_id = await _record_event(session, check_input, result)
 
     return result

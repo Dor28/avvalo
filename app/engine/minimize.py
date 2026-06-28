@@ -16,8 +16,11 @@ _URL_RE = re.compile(
     r"(?:/[^\s<>()]*)?"
 )
 _HANDLE_RE = re.compile(r"(?<!\w)@[a-z0-9_]{4,32}\b", re.IGNORECASE)
+# The operator-code group accepts any valid two-digit Uzbek mobile prefix
+# (20, 33, 50, 55, 77, 88, 90-99, …), not only those starting with 3/6/7/9 —
+# missing 50/55/88/20 leaked raw numbers past minimization into the prompt.
 _PHONE_RE = re.compile(
-    r"(?<!\d)(?:\+?998[\s().-]?)?(?:\(?[3679]\d\)?[\s().-]?)\d{3}"
+    r"(?<!\d)(?:\+?998[\s().-]?)?(?:\(?[2-9]\d\)?[\s().-]?)\d{3}"
     r"[\s().-]?\d{2}[\s().-]?\d{2}(?!\d)"
 )
 _CODE_VALUE_RE = re.compile(
