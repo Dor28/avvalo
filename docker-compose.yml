@@ -32,6 +32,13 @@ services:
       LLM_MODEL: ${LLM_MODEL:-qwen2.5:7b-instruct}
       WEB_SESSION_SECRET: ${WEB_SESSION_SECRET:-development-only-web-secret-change-me}
       WEB_ENABLED: ${WEB_ENABLED:-false}
+      WEB_HOST: ${WEB_HOST:-0.0.0.0}
+      WEB_PORT: ${WEB_PORT:-8000}
+      WEB_DAILY_LIMIT: ${WEB_DAILY_LIMIT:-5}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET: ${TURNSTILE_SECRET:-}
+    ports:
+      - "${WEB_PORT:-8000}:${WEB_PORT:-8000}"
     restart: unless-stopped
 
   ollama:

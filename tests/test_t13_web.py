@@ -27,9 +27,32 @@ def test_web_app_exposes_core_routes() -> None:
     paths = {getattr(route, "path", "") for route in getattr(app, "routes", [])}
 
     assert "/" in paths
+    assert "/family-shield" in paths
+    assert "/seller-guard" in paths
     assert "/check" in paths
     assert "/privacy" in paths
     assert "/healthz" in paths
+
+
+def test_product_pages_are_separate_and_localized() -> None:
+    client = TestClient(create_app(settings=_settings()))
+
+    family = client.get("/family-shield?language=uz_latn")
+    seller = client.get("/seller-guard?language=ru")
+    seller_title_ru = (
+        "\u0417\u0430\u0449\u0438\u0442\u0430 "
+        "\u043f\u0440\u043e\u0434\u0430\u0432\u0446\u0430"
+    )
+
+    assert family.status_code == 200
+    assert seller.status_code == 200
+    assert 'value="family_shield"' in family.text
+    assert 'value="seller_guard"' in seller.text
+    assert "/seller-guard?language=uz_latn" in family.text
+    assert "/family-shield?language=ru" in seller.text
+    assert "type=\"radio\"" not in family.text
+    assert "type=\"radio\"" not in seller.text
+    assert seller_title_ru in seller.text
 
 
 def test_web_reuses_the_shared_engine(monkeypatch) -> None:

@@ -1,23 +1,32 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ copy.html_lang }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Avvalo Privacy</title>
+    <title>{{ copy.title }} · {{ copy.privacy_title }}</title>
     <link rel="stylesheet" href="/static/styles.css">
   </head>
   <body>
-    <main class="shell narrow">
-      <section class="workspace" aria-labelledby="privacy-title">
-        <div class="heading">
-          <p class="kicker">Avvalo</p>
-          <h1 id="privacy-title">Privacy</h1>
-        </div>
-        <nav class="language-nav">
-          {% for option in languages %}
-            <a href="/privacy?language={{ option }}">{{ language_labels[option] }}</a>
-          {% endfor %}
-        </nav>
+    <header class="topbar">
+      <a class="brand" href="/?language={{ language }}" aria-label="Avvalo">
+        <span class="brand-mark">A</span>
+        <span>Avvalo</span>
+      </a>
+      <nav class="product-nav" aria-label="Product">
+        <a href="/family-shield?language={{ language }}">{{ copy.nav_family }}</a>
+        <a href="/seller-guard?language={{ language }}">{{ copy.nav_seller }}</a>
+      </nav>
+      <nav class="language-nav compact" aria-label="{{ copy.language_label }}">
+        {% for option in languages %}
+          <a class="{% if option == language %}active{% endif %}" href="/privacy?language={{ option }}">{{ language_labels[option] }}</a>
+        {% endfor %}
+      </nav>
+    </header>
+
+    <main class="privacy-shell">
+      <section class="privacy-panel" aria-labelledby="privacy-title">
+        <p class="eyebrow">Avvalo</p>
+        <h1 id="privacy-title">{{ copy.privacy_title }}</h1>
         <pre class="privacy-text">{{ privacy_text }}</pre>
       </section>
     </main>

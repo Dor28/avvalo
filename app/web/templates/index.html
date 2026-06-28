@@ -1,71 +1,113 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ copy.html_lang }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Avvalo</title>
+    <title>{{ copy.title }} · {{ face_copy.name }}</title>
     <link rel="stylesheet" href="/static/styles.css">
     {% if turnstile_site_key %}
       <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     {% endif %}
   </head>
   <body>
-    <main class="shell">
-      <section class="workspace" aria-labelledby="app-title">
-        <div class="heading">
-          <p class="kicker">Avvalo</p>
-          <h1 id="app-title">Check Before You Commit</h1>
+    <header class="topbar">
+      <a class="brand" href="/?language={{ language }}" aria-label="Avvalo">
+        <span class="brand-mark">A</span>
+        <span>Avvalo</span>
+      </a>
+      <nav class="product-nav" aria-label="Product">
+        <a class="{% if face == 'family_shield' %}active{% endif %}" href="/family-shield?language={{ language }}">{{ copy.nav_family }}</a>
+        <a class="{% if face == 'seller_guard' %}active{% endif %}" href="/seller-guard?language={{ language }}">{{ copy.nav_seller }}</a>
+      </nav>
+      <nav class="language-nav compact" aria-label="{{ copy.language_label }}">
+        {% for option in languages %}
+          <a class="{% if option == language %}active{% endif %}" href="{{ face_path }}?language={{ option }}">{{ language_labels[option] }}</a>
+        {% endfor %}
+      </nav>
+    </header>
+
+    <main class="app-shell">
+      <section class="hero-panel" aria-labelledby="app-title">
+        <p class="eyebrow">{{ face_copy.eyebrow }}</p>
+        <h1 id="app-title">{{ face_copy.headline }}</h1>
+        <p class="lead">{{ face_copy.subhead }}</p>
+        <ul class="trust-list" aria-label="Trust">
+          {% for item in face_copy.trust %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="check-panel" aria-labelledby="check-title">
+        <div class="panel-heading">
+          <p class="eyebrow">{{ face_copy.name }}</p>
+          <h2 id="check-title">{{ face_copy.prompt }}</h2>
         </div>
 
         <form class="check-form" action="/check" method="post" enctype="multipart/form-data">
-          <fieldset class="segmented">
-            <legend>Mode</legend>
-            {% for face_id, face in faces.items() %}
-              <label>
-                <input type="radio" name="face" value="{{ face_id }}" {% if face_id == "family_shield" %}checked{% endif %}>
-                <span>{{ "Family Shield" if face_id == "family_shield" else "Seller Guard" }}</span>
-              </label>
-            {% endfor %}
-          </fieldset>
+          <input type="hidden" name="face" value="{{ face }}">
+          <input type="hidden" name="language" value="{{ language }}">
 
-          <label class="field">
-            <span>Language</span>
-            <select name="language">
-              {% for language in languages %}
-                <option value="{{ language }}" {% if language == default_language %}selected{% endif %}>{{ language_labels[language] }}</option>
-              {% endfor %}
-            </select>
+          <label class="field primary-field">
+            <span>{{ copy.message_label }}</span>
+            <textarea name="text" rows="9" maxlength="6000" placeholder="{{ face_copy.textarea_placeholder }}"></textarea>
           </label>
 
-          <label class="field">
-            <span>Message text</span>
-            <textarea name="text" rows="8" maxlength="6000"></textarea>
-          </label>
+          <div class="form-grid">
+            <label class="field">
+              <span>{{ copy.caption_label }}</span>
+              <input name="caption" type="text" maxlength="500" placeholder="{{ face_copy.caption_placeholder }}">
+            </label>
 
-          <label class="field">
-            <span>Caption</span>
-            <input name="caption" type="text" maxlength="500">
-          </label>
-
-          <label class="field">
-            <span>Image</span>
-            <input name="image" type="file" accept="image/*">
-          </label>
+            <label class="field file-field">
+              <span>{{ copy.image_label }}</span>
+              <input name="image" type="file" accept="image/*">
+              <small>{{ face_copy.image_hint }}</small>
+            </label>
+          </div>
 
           {% if turnstile_site_key %}
             <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
           {% endif %}
 
+          <details class="privacy-details">
+            <summary>{{ copy.privacy_link }}</summary>
+            <p>{{ privacy_text }}</p>
+          </details>
+
           <label class="consent">
             <input type="checkbox" name="consent" value="yes">
-            <span>{{ privacy_text }}</span>
+            <span>{{ copy.consent_label }}</span>
           </label>
 
-          <button type="submit">Check</button>
+          <button type="submit">{{ copy.submit }}</button>
         </form>
 
         <section id="result" class="result" aria-live="polite"></section>
       </section>
     </main>
+
+    <script>
+      document.querySelectorAll(".check-form").forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const result = document.querySelector("#result");
+          const button = form.querySelector("button");
+          button.disabled = true;
+          result.innerHTML = "";
+          try {
+            const response = await fetch(form.action, {
+              method: "POST",
+              body: new FormData(form),
+            });
+            result.innerHTML = await response.text();
+          } catch (_error) {
+            result.innerHTML = "<div class=\"result-block error\"><strong>{{ copy.result_error_title }}</strong></div>";
+          } finally {
+            button.disabled = false;
+          }
+        });
+      });
+    </script>
   </body>
 </html>

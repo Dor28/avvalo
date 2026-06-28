@@ -54,5 +54,6 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 [tool.ruff.lint.per-file-ignores]
 # Translations carry long lines and Cyrillic glyphs that look like Latin ones.
 "app/bot/texts.py" = ["E501", "RUF001"]
+"app/web/routes.py" = ["E501", "RUF001"]
 "app/engine/format.py" = ["RUF001"]
 "app/engine/validate.py" = ["RUF001"]
