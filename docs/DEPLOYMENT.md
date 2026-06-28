@@ -15,8 +15,8 @@ One Docker host running four-or-fewer containers:
                 Internet
                    │  443/80 (web only)
                    ▼
-            ┌──────────────┐     TLS terminates here; security headers; rate-friendly
-            │    caddy     │     (skip entirely for a bot-only deploy)
+            ┌──────────────┐     TLS terminates here (Let's Encrypt via certbot);
+            │ nginx+certbot│     security headers (skip for a bot-only deploy)
             └──────┬───────┘
                    │ http://app:8000  (private compose network)
                    ▼
@@ -44,7 +44,7 @@ You will use two files added for production:
 | File | Purpose |
 |---|---|
 | [`docker-compose.prod.yml`](../docker-compose.prod.yml) | Hardened, self-contained production stack (use **instead of** `docker-compose.yml`). |
-| [`deploy/`](../deploy) | `Caddyfile`, `env.prod.example`, `backup.sh`, `restore.sh`. |
+| [`deploy/`](../deploy) | `nginx/` (config template + `init-letsencrypt.sh`), `env.prod.example`, `backup.sh`, `restore.sh`. |
 
 ---
 
@@ -248,13 +248,19 @@ Then edit `.env` and fill in:
 ## 8. First boot and verification
 
 ```bash
-# Bot-only deploys: edit docker-compose.prod.yml first and remove the `caddy`
-# service and the app `healthcheck` block (the health check needs the web).
+# Bot-only deploys: edit docker-compose.prod.yml first and remove the `nginx`
+# and `certbot` services and the app `healthcheck` block (the health check
+# needs the web). Then bring the stack up directly:
 
 docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml ps          # all services Up/healthy
 docker compose -f docker-compose.prod.yml logs -f app  # watch it boot
 ```
+
+> **Web deploys:** don't `up -d` nginx by hand the first time — nginx won't
+> start until a certificate exists. Do §9 (run `deploy/nginx/init-letsencrypt.sh`),
+> which creates a temporary cert, brings the whole stack up, and issues the real
+> one. A bot-only deploy has no such step.
 
 You want to see, in order: `Avvalo booted and connected to PostgreSQL`, the retention scheduler start, and `Starting family_shield bot (polling)` (and the web line if enabled).
 
@@ -280,15 +286,19 @@ Then open Telegram, send `/start` to your bot, and complete one real check end-t
 
 Skip this entire section for a bot-only deployment.
 
-1. **DNS.** Create an `A` record for `AVVALO_DOMAIN` → your server's IPv4 (and `AAAA` → IPv6 if you enabled it). Start **DNS-only** (no Cloudflare proxy) so Caddy can obtain a Let's Encrypt certificate via HTTP-01.
-2. **Bring up Caddy.** It's already in `docker-compose.prod.yml`. On first request to your domain it auto-issues and renews TLS. Confirm:
+1. **DNS.** Create an `A` record for `AVVALO_DOMAIN` → your server's IPv4 (and `AAAA` → IPv6 if you enabled it). Start **DNS-only** (no Cloudflare proxy) so certbot can pass the Let's Encrypt HTTP-01 challenge. Set `AVVALO_DOMAIN` and `ACME_EMAIL` in `.env`.
+2. **Issue the certificate.** nginx will not start until a certificate exists, so bootstrap it once with the helper script (run from the repo root, after DNS resolves and ports 80/443 are open):
+   ```bash
+   ./deploy/nginx/init-letsencrypt.sh           # add --staging first for a dry run
+   ```
+   It drops a temporary self-signed cert so nginx can start, brings the whole stack up, then obtains the real Let's Encrypt cert over HTTP-01 (webroot) and reloads nginx. Renewal is automatic afterward: the `certbot` service renews twice daily and nginx reloads every 6 hours to pick up new certs. Confirm:
    ```bash
    curl -fsS https://AVVALO_DOMAIN/healthz
    ```
-   The [`Caddyfile`](../deploy/Caddyfile) already sets HSTS, a tight Content-Security-Policy matching the actual page (self + inline bootstrap + Turnstile), `X-Frame-Options: DENY`, and `nosniff`.
+   The nginx config ([`deploy/nginx/templates/avvalo.conf.template`](../deploy/nginx/templates/avvalo.conf.template)) already sets HSTS, a tight Content-Security-Policy matching the actual page (self + inline bootstrap + Turnstile), `X-Frame-Options: DENY`, and `nosniff`, and redirects all HTTP to HTTPS.
 3. **Turnstile.** Put your site/secret keys in `.env`. Image upload is refused unless a Turnstile token is solved ([`abuse.py`](../app/web/abuse.py)); text checks work without it. Uploads are capped at 10 MB.
-   - *Abuse-control note:* the web daily limit is keyed to the **anonymous session cookie** ([`session.py`](../app/web/session.py)), so clearing cookies resets it — Turnstile is the real gate on automated abuse. Behind Caddy, the app sees the proxy's IP, not the visitor's. If you want accurate client IPs (for Turnstile's optional `remoteip` or a future IP backstop), enable uvicorn proxy headers in [`_run_web`](../app/main.py) (`proxy_headers=True, forwarded_allow_ips="*"` — safe because only Caddy can reach the app) and add a Caddy/Cloudflare rate-limit rule. Not required for launch.
-4. **(Recommended hardening) Put Cloudflare in front.** Once TLS is stable, switch the DNS record to **Proxied (orange cloud)** and set SSL mode **Full (strict)** using a Cloudflare **Origin Certificate** on Caddy. This hides your origin IP, absorbs DDoS, and adds a WAF — a strong fit since you already use Turnstile. (While proxied, certificate renewal should use the DNS challenge or the Origin Cert, not HTTP-01.)
+   - *Abuse-control note:* the web daily limit is keyed to the **anonymous session cookie** ([`session.py`](../app/web/session.py)), so clearing cookies resets it — Turnstile is the real gate on automated abuse. Behind nginx, the app sees the proxy's IP, not the visitor's (nginx forwards it as `X-Real-IP`/`X-Forwarded-For`). If you want the app itself to see accurate client IPs (for Turnstile's optional `remoteip` or a future IP backstop), enable uvicorn proxy headers in [`_run_web`](../app/main.py) (`proxy_headers=True, forwarded_allow_ips="*"` — safe because only nginx can reach the app). Not required for launch.
+4. **(Recommended hardening) Put Cloudflare in front.** Once TLS is stable, switch the DNS record to **Proxied (orange cloud)** and set SSL mode **Full (strict)** using a Cloudflare **Origin Certificate** on nginx. This hides your origin IP, absorbs DDoS, and adds a WAF — a strong fit since you already use Turnstile. (While proxied, swap certbot's HTTP-01 for the DNS-01 challenge or just install the long-lived Cloudflare Origin Cert and stop the `certbot` service.)
 
 ---
 
@@ -309,8 +319,8 @@ Most of this is already baked into the production files; this is the audit list.
 - [x] GCV key mounted **read-only**; `.env` is `chmod 600`; secrets are git-ignored ([`.gitignore`](../.gitignore) covers `.env`, `service-account*.json`).
 - [ ] Run `docker scout cves` (or Trivy) against the built image before launch and periodically.
 
-**Application-level (two recommended one-line code changes)**
-- [ ] **Mark the web session cookie `Secure`.** In [`app/web/session.py`](../app/web/session.py) `set_web_session_cookie`, change `secure=False` → `secure=True` once you serve over HTTPS (it is `False` to allow plain-HTTP local dev). The cookie is anonymous, but a `Secure` flag is correct behind TLS. *(Web deploys only.)*
+**Application-level (recommended pre-deploy checks)**
+- [ ] **Mark the web session cookie `Secure`.** Set `WEB_COOKIE_SECURE=true` in `.env` (already the default in [`deploy/env.prod.example`](../deploy/env.prod.example)). nginx terminates TLS, so the anonymous session cookie should never travel over plain HTTP; leave it `false` only for local http dev. *(Web deploys only.)*
 - [ ] **Confirm the privacy invariant in CI/pre-deploy:** `pytest tests/test_schema_privacy.py` asserts no content columns exist. Keep it green — it is the technical guarantee behind your privacy promise.
 
 **Secrets management (upgrade path)**
@@ -318,7 +328,7 @@ Most of this is already baked into the production files; this is the audit list.
 - To version secrets safely, adopt **SOPS + age**: encrypt `.env` into the repo and decrypt on the host at deploy time. Avoids plaintext secrets sitting on disk indefinitely.
 
 **Operational privacy**
-- The app is built to **never** write submitted text, OCR text, model output, URLs, phone numbers, or file IDs to the DB or logs ([`obs/events.py`](../app/obs/events.py) rejects content-like fields; [`data/models.py`](../app/data/models.py) has no content columns). Do not add verbose logging, request-body logging, or an APM that captures payloads. Caddy access logs record metadata only.
+- The app is built to **never** write submitted text, OCR text, model output, URLs, phone numbers, or file IDs to the DB or logs ([`obs/events.py`](../app/obs/events.py) rejects content-like fields; [`data/models.py`](../app/data/models.py) has no content columns). Do not add verbose logging, request-body logging, or an APM that captures payloads. nginx access logs record metadata only.
 
 ---
 
@@ -388,7 +398,8 @@ For the MVP, **do not add PgBouncer** — direct connections with the default po
 **Logs** (content-free by design):
 ```bash
 docker compose -f docker-compose.prod.yml logs -f app     # app
-docker compose -f docker-compose.prod.yml logs -f caddy   # web access/errors
+docker compose -f docker-compose.prod.yml logs -f nginx   # web access/errors
+docker compose -f docker-compose.prod.yml logs -f certbot  # cert issuance/renewal
 ```
 
 **Health:** `GET /healthz` (web). The compose `app` health check polls it every 30s; `docker compose ps` shows `healthy`.
@@ -441,7 +452,7 @@ docker compose -f docker-compose.prod.yml exec app alembic upgrade head
 
 The app currently runs **bot pollers + web in one process**. Telegram allows **only one poller per bot token**, so you cannot naively run multiple `app` replicas — the extra pollers get `409 Conflict`. The codebase already supports a clean split **with no code change**, driven entirely by env:
 
-| Service | `WEB_ENABLED` | `TELEGRAM_TOKEN_*` | Replicas | Behind Caddy |
+| Service | `WEB_ENABLED` | `TELEGRAM_TOKEN_*` | Replicas | Behind nginx |
 |---|---|---|---|---|
 | `bot` | `false` | set | **exactly 1** | no |
 | `web` | `true` | **empty** | N (scale freely) | yes |
@@ -495,7 +506,8 @@ A bot-only MVP runs for **under €10/month** plus per-check LLM/OCR usage well 
 | App exits at boot, `ValidationError` | A required env var is missing/blank | Check `.env`; `config.py` fails fast on purpose. |
 | `relation "..." does not exist` | Migrations didn't run | `docker compose -f docker-compose.prod.yml exec app alembic upgrade head` |
 | Bot answers, but a second instance gets `409 Conflict` | Two pollers on one token | Only one `app`/`bot` process may poll a token (§14). |
-| Caddy can't get a certificate | DNS not pointing at the VM, or proxied behind Cloudflare during HTTP-01 | Use DNS-only first; verify `A` record; check `logs -f caddy`. |
+| certbot can't get a certificate | DNS not pointing at the VM, ports 80/443 closed, or proxied behind Cloudflare during HTTP-01 | Use DNS-only first; verify the `A` record and firewall; re-run `deploy/nginx/init-letsencrypt.sh` (try `--staging`); check `logs -f certbot`. |
+| nginx exits at boot with `cannot load certificate` | Started before a cert existed | Run `deploy/nginx/init-letsencrypt.sh` (it bootstraps a temporary cert first), don't `up -d nginx` by hand on a fresh host. |
 | Web image upload always fails | Turnstile keys missing/wrong | Set `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET`; check the browser console. |
 | DB container won't start on the Volume | Permissions / non-empty dir | Ensure `/mnt/avvalo-data/pg` exists and was empty on first run. |
 | Disk filling up | Logs/backups on the Volume | Log rotation is set; prune old backups (`KEEP_DAYS`); resize the Volume. |

@@ -1,0 +1,104 @@
+# Avvalo reverse proxy (nginx) — TLS via Let's Encrypt (certbot).
+#
+# This is a TEMPLATE. The official nginx image runs envsubst over
+# /etc/nginx/templates/*.template into /etc/nginx/conf.d/ at container start.
+# Only ${AVVALO_DOMAIN} is substituted (NGINX_ENVSUBST_FILTER in
+# docker-compose.prod.yml), so nginx's own runtime variables ($host,
+# $remote_addr, $scheme, …) are passed through untouched.
+#
+# Certificates are issued/renewed by the certbot service into the shared
+# certbot_certs volume. Run deploy/nginx/init-letsencrypt.sh ONCE to bootstrap
+# the first certificate (see docs/DEPLOYMENT.md §9).
+
+# Re-resolve the app container through Docker's embedded DNS so a restarted app
+# (which gets a new container IP) doesn't leave nginx serving 502s on a stale
+# address. Used together with the $avvalo_upstream variable in proxy_pass below.
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+# --- :80 — ACME HTTP-01 challenge, then redirect everything to HTTPS ---------
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${AVVALO_DOMAIN};
+
+    # certbot writes its challenge files here (shared certbot_www volume). This
+    # must stay served over plain HTTP on port 80.
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type "text/plain";
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- :443 — the application -------------------------------------------------
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${AVVALO_DOMAIN};
+
+    ssl_certificate         /etc/letsencrypt/live/${AVVALO_DOMAIN}/fullchain.pem;
+    ssl_certificate_key     /etc/letsencrypt/live/${AVVALO_DOMAIN}/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/${AVVALO_DOMAIN}/chain.pem;
+
+    # Mozilla "intermediate", ECDHE-only — no dhparam file required.
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:AvvaloTLS:10m;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+    # Never leak the nginx version (≈ Caddy's "-Server").
+    server_tokens off;
+
+    # --- Security headers (mirror the former Caddyfile) ----------------------
+    # "always" so they are sent on error responses too. No `add_header` appears
+    # in the location blocks below, so these are inherited everywhere (an
+    # `add_header` inside a location would silently drop these).
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+    add_header Cross-Origin-Opener-Policy "same-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://challenges.cloudflare.com; base-uri 'none'; form-action 'self'; frame-ancestors 'none'" always;
+
+    # Compression (the stock nginx image has no zstd; gzip matches Caddy's gzip).
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/json application/javascript application/xml image/svg+xml;
+
+    # Match the app's 10 MB image cap, with a little multipart/header headroom.
+    client_max_body_size 12m;
+
+    # Surface the real client IP + scheme to the app (abuse / Turnstile layer).
+    # Inherited by the location blocks (none of them set their own).
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_http_version 1.1;
+
+    set $avvalo_upstream app;
+
+    # Cache static assets at the browser (the app fingerprints nothing; 1 day is
+    # safe). `expires` sets Cache-Control without an add_header, so the security
+    # headers above are still inherited here.
+    location /static/ {
+        proxy_pass http://$avvalo_upstream:8000;
+        expires 1d;
+    }
+
+    location / {
+        proxy_pass http://$avvalo_upstream:8000;
+    }
+}
