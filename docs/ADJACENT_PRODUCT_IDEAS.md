@@ -348,3 +348,42 @@ Start with one shared engine and two deliberately small products:
 - Payment-provider integration only after the basic workflow proves demand.
 
 This combination keeps the soul of Avvalo — useful protection for ordinary people — while creating a believable path to modest, honest revenue.
+
+---
+
+## 13. Future feature — Avvalo Antispam (Telegram group & channel protection)
+
+> Added 2026-06-30. A **feature on the roadmap for the live bot** ([@Avvalo_official_bot](https://t.me/Avvalo_official_bot)), not a launch product. Working name: *Group Guard*.
+
+### Concept
+
+Every Avvalo product so far is **user-initiated**: a person forwards a message and asks "is this safe?" Antispam flips that to **passive, automatic protection inside a Telegram group or channel.** A group admin adds @Avvalo_official_bot as an admin; the bot then screens incoming messages in the background and keeps the community clean.
+
+### What it does
+
+- Detects scam/phishing links, crypto and "investment" spam, fake giveaways, admin-impersonation, and mass-forward flooding — using the **same localized UZ/RU scam-detection engine** (rules + LLM) the checkers already use.
+- Takes a configurable action on a hit: flag for an admin, delete the message, or restrict/mute a repeat offender.
+- CAPTCHA-gates new joiners and rate-limits link posting from brand-new members (the most common spam-bot vector).
+- Gives admins a short, localized reason for each action and an appeal/undo path.
+
+### Why it fits Avvalo
+
+- **Same engine, new surface.** It reuses the rule packs, OCR, and LLM explanation layer — most of the work is already built.
+- **Mission-aligned.** It protects whole communities (family groups, neighborhood chats, merchant channels) from the exact scams Family Shield handles one message at a time — and every protected group is a distribution channel that exposes Avvalo to its members.
+- **Acts on content, not people.** Removing a spam *message* is content moderation, consistent with the §11 principle "verify the situation/process, not the reputation of a person." It must never publish a "this user is a scammer" label.
+
+### What's genuinely different (and needs care)
+
+- **It makes automated decisions, not just advice.** The core product never delivers a verdict; an antispam bot *does* act (delete/restrict). That changes the risk profile: false positives now have a real cost, so it needs a conservative default, an admin override, and an appeal path before it deletes anything automatically.
+- **A different privacy model.** It reads group messages it was not explicitly handed, so it needs its own consent/notice (admin-level, at install time) and must keep the same no-retention discipline — screen in memory, store no message content.
+- **Adversarial.** Spammers adapt; the rules need an update path and per-group tuning.
+
+### Monetization
+
+- Free for small community / family groups (reach + mission).
+- Paid tier for large groups and channels: admin dashboard, custom rules, analytics, priority support.
+- Sponsored / white-label moderation for partners (telecoms, marketplaces, consumer organizations).
+
+### Status
+
+🔬 Future feature — parked behind Family Shield + Seller Guard. See the backlog line in [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §17.

@@ -2,6 +2,8 @@
 
 **Avvalo** — *"check before you commit."* An AI assistant for Uzbekistan (Telegram + web) that verifies a **situation, message, document, payment, link, or deal** — in Uzbek or Russian — before a user commits money, identity, or trust. It verifies the *situation, document, or process — never the reputation of a person.*
 
+**On Telegram:** the official bot is **[@Avvalo_official_bot](https://t.me/Avvalo_official_bot)**.
+
 | Doc | What it is |
 |---|---|
 | [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) | ✅ **The authoritative product direction — start here.** Vision, the shared engine, the three products & build order, monetization, legal posture. |

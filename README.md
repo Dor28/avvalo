@@ -4,6 +4,8 @@ Avvalo is an AI safety assistant for Uzbekistan. Version 1 uses one shared check
 engine for Family Shield and Seller Guard, exposed through Telegram and an anonymous web
 application.
 
+**Live bot:** [@Avvalo_official_bot](https://t.me/Avvalo_official_bot) — the official Avvalo bot on Telegram.
+
 ## T1 development boot
 
 Requirements: Docker with Compose, or Python 3.11+ with PostgreSQL 16.
