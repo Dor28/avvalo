@@ -1,0 +1,21 @@
+# Keep the build context (and the published image) lean. The Dockerfile only
+# COPYs: pyproject.toml, README.md, app/, alembic.ini, alembic/, prompts/, rules/.
+.git
+.github
+.claude
+.gitignore
+docs
+tests
+tools
+deploy
+docker-compose*.yml
+.dockerignore
+.env
+.env.*
+secrets
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.venv
+venv

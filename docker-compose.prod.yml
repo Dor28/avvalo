@@ -61,7 +61,10 @@ services:
         max-file: "3"
 
   app:
-    build: .
+    # Image is built and pushed to GHCR by .github/workflows/deploy.yml.
+    # IMAGE_TAG is pinned in .env by deploy/remote-update.sh; falls back to :latest.
+    # For a local build instead, use docker-compose.yml (dev) or add `build: .` back.
+    image: ghcr.io/dor28/avvalo:${IMAGE_TAG:-latest}
     depends_on:
       db:
         condition: service_healthy

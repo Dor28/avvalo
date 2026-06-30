@@ -54,7 +54,7 @@ You will use two files added for production:
 |---|---|---|
 | Hetzner Cloud account | console.hetzner.cloud | Project + payment method. |
 | SSH keypair | your laptop | `ssh-keygen -t ed25519 -C "avvalo-deploy"` if you don't have one. **Never** put the private key on the server. |
-| Telegram bot token(s) | @BotFather | One per face. Family Shield is required; Seller Guard optional. |
+| Telegram bot token(s) | @BotFather | One per face. Family Shield is required; Seller Guard optional. The production Family Shield bot is **[@Avvalo_official_bot](https://t.me/Avvalo_official_bot)**. |
 | LLM host + API key | OpenRouter / Together / Fireworks | Pick one with a **DPA + no-retention/no-training** clause. |
 | Google Cloud Vision key | console.cloud.google.com | Service-account JSON with the *Cloud Vision API* enabled. Only if OCR is on. |
 | Cloudflare Turnstile keys | dash.cloudflare.com → Turnstile | **Web only** — gates image upload. |
@@ -72,11 +72,44 @@ In the Hetzner Cloud Console → **Add Server**:
 |---|---|---|
 | **Location** | **Helsinki (hel1)** | Best latency to Uzbekistan among Hetzner's EU regions; EU jurisdiction supports the privacy story. (Test Singapore `sin` if your users report lag.) |
 | **Image** | **Ubuntu 24.04 LTS** | Long support window; all commands below assume it. |
-| **Type** | **CX22** (2 vCPU / 4 GB) to start; **CX32** (4 vCPU / 8 GB) for headroom | LLM + OCR are *external*, so the box mostly runs Python + Postgres. 4 GB is enough for the MVP; 8 GB removes all worry. ARM `CAX21` is cheaper and works (pure-Python stack, arm64 wheels exist). |
+| **Type** | **CX22** (2 vCPU / 4 GB) to start; **CX32** (4 vCPU / 8 GB) for headroom. ARM **`CAX11`** (4 GB) / `CAX21` (8 GB) are cheaper and work. | LLM + OCR are *external*, so the box mostly runs Python + Postgres. 4 GB is enough for the MVP; 8 GB removes all worry. See the sizing breakdown below. |
 | **Volume** | Add a **10 GB Volume** now | Holds the database + backups, separate from the boot disk. Resizable later with zero downtime. |
 | **Networking** | Keep public IPv4 (needed for the web). Add a **Private Network** if you plan to split the DB onto its own server later. |
 | **SSH key** | Paste your **public** key | Disables password login from the start. |
 | **Firewall** | Create one now (next step) | |
+
+**Sizing — which VM, and why.** The box does **no heavy compute**: the LLM and OCR are external API calls, so it mostly runs Python (aiogram + FastAPI), Postgres, and nginx. **RAM is the constraint, not CPU**, and the main driver of RAM is *concurrent web image checks* — each holds an upload (≤10 MB) and re-encodes it with Pillow. Bot text checks are tiny.
+
+| Profile | Hetzner type | vCPU / RAM | Good for |
+|---|---|---|---|
+| Bot-only | `CX22` or **`CAX11`** (ARM) | 2 / 4 GB | The grant demo + bots; smallest inbound surface. |
+| **Recommended (bot + web)** | **`CX22`** / **`CAX11`** (ARM, cheaper) | 2 / 4 GB | The full MVP — comfortable into the low thousands of checks/day. |
+| Headroom / bursty web | `CX32` / `CAX21` | 4 / 8 GB | Heavier concurrent image uploads, or "set and forget". |
+
+4 GB is the practical floor (also Hetzner's smallest current shared plan). **ARM `CAX*` is cheaper and fully supported** — the stack is pure-Python with arm64 wheels.
+
+**Where 4 GB goes (web-enabled, under MVP load):**
+
+| Component | Typical RAM | Notes |
+|---|---|---|
+| Postgres | ~0.4–0.7 GB | `shared_buffers=256MB` + per-connection `work_mem`; `effective_cache_size=768MB` is only a planner hint, not an allocation. |
+| `app` (Python) | ~0.3–0.6 GB | Hard-capped at **1.5 GB** in `docker-compose.prod.yml`; spikes with concurrent image processing. |
+| nginx + certbot | ~30–50 MB | Negligible. |
+| OS + Docker daemon | ~0.4–0.6 GB | |
+| **Total** | **~1.5–2.5 GB** | Leaves roughly **1–1.5 GB headroom** on a 4 GB box. |
+
+**Add 2 GB of swap** — cheap insurance against an OOM during `docker compose … --build` (compiling/installing wheels such as Pillow) and against traffic spikes:
+
+```bash
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+sudo sysctl -w vm.swappiness=10        # prefer RAM; swap only under real pressure
+```
+
+**Disk:** the `CX22` boot disk (40 GB) holds the OS + Docker images/layers (~2–4 GB); the **10 GB Volume** holds the Postgres data + local backups. Watch both — `df -h /` and `df -h /mnt/avvalo-data` — and alert at ~80%.
+
+**CPU:** 2 vCPU is ample; request handling is I/O-bound on the external LLM/OCR calls. CPU matters mainly during image builds — build on a beefier box (or push a prebuilt image) if the smallest VM feels slow. When RAM pressure does show up, that's Tier 1 in §11.4: resize in the Console and raise `shared_buffers`/`work_mem` — no rebuild.
 
 ### 2.2 Hetzner Cloud Firewall (network-level, free)
 
@@ -85,7 +118,7 @@ Create a firewall and attach it to the server. This filters traffic **before** i
 | Direction | Port | Source | When |
 |---|---|---|---|
 | Inbound | TCP 22 (or your custom SSH port) | **your IP only**, if static; else `0.0.0.0/0` + rely on key-only auth + fail2ban | always |
-| Inbound | TCP 80, 443 / UDP 443 | `0.0.0.0/0`, `::/0` | **web only** |
+| Inbound | TCP 80, 443 | `0.0.0.0/0`, `::/0` | **web only** |
 | Outbound | all | all | leave open (bot/LLM/OCR need 443; DNS needs 53) |
 
 > A **bot-only** deployment opens *only SSH* inbound. Do not open 80/443 unless you run the web channel.
@@ -137,7 +170,7 @@ ufw default deny incoming
 ufw default allow outgoing
 ufw allow OpenSSH            # or 'ufw allow 2222/tcp' if you changed the port
 # web only:
-ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 443/udp
+ufw allow 80/tcp && ufw allow 443/tcp
 ufw enable
 systemctl enable --now fail2ban
 ```
@@ -178,23 +211,53 @@ sudo systemctl enable --now docker
 
 ## 5. Mount the data Volume (database storage)
 
-The Volume keeps the database off the boot disk so it can be resized and snapshotted on its own. Find the device (Hetzner names it `/dev/sdb` or similar; check the Console or `lsblk`):
+The Volume keeps the database off the boot disk so it can be resized and snapshotted on its own. The compose stack expects it at **`/mnt/avvalo-data`** (the `db` service bind-mounts `/mnt/avvalo-data/pg`).
+
+**First, check what state the Volume is in — this matters.** When you create a Volume in the Hetzner Console, the **"Automount"** option is on by default, and Hetzner then **formats it (ext4) and mounts it for you** at `/mnt/HC_Volume_<id>`, adding a stable by-id entry to `/etc/fstab`. So your Volume is very likely *already formatted and mounted* — in which case you must **not** run `mkfs` (it would needlessly reformat a live filesystem). Look at the `MOUNTPOINTS` column:
 
 ```bash
-lsblk                                 # identify the new ~10G disk, e.g. /dev/sdb
-sudo mkfs.ext4 -F /dev/sdb            # ONLY if brand new and empty — this erases it
+lsblk    # find the ~10G disk (e.g. sdb) and read its MOUNTPOINTS column
+```
+
+- **`sdb` shows a mountpoint like `/mnt/HC_Volume_106189246`** → Hetzner already formatted+mounted it. **Do NOT run `mkfs`.** Just repoint it → **Case A**.
+- **`sdb` shows no mountpoint** → it's a raw, unformatted disk → format and mount it yourself → **Case B**.
+
+### Case A — Hetzner already mounted it (the common default)
+
+Repoint the existing mount from `/mnt/HC_Volume_<id>` to `/mnt/avvalo-data`, reusing the stable by-id device reference Hetzner already put in `/etc/fstab` (paste as a block — it uses a shell variable):
+
+```bash
+grep HC_Volume /etc/fstab                        # inspect Hetzner's entry first
+HCV=$(awk '/HC_Volume/{print $2}' /etc/fstab)    # current mountpoint, e.g. /mnt/HC_Volume_106189246
+sudo umount "$HCV"
+sudo sed -i "s#$HCV#/mnt/avvalo-data#" /etc/fstab  # only the mountpoint changes; the by-id device path is untouched
+sudo mkdir -p /mnt/avvalo-data
+sudo mount -a                                    # MUST return silently — an error means the fstab edit is wrong; fix before continuing
+sudo rmdir "$HCV" 2>/dev/null || true            # remove the now-empty old mountpoint
+```
+
+### Case B — raw, unformatted Volume
+
+```bash
+sudo mkfs.ext4 -F /dev/sdb            # ONLY if brand new and empty — this ERASES the disk
 sudo mkdir -p /mnt/avvalo-data
 
-# Persist the mount across reboots by UUID (safer than device name)
+# Persist the mount across reboots by UUID (safer than the /dev/sdX name, which can change)
 UUID=$(sudo blkid -s UUID -o value /dev/sdb)
 echo "UUID=$UUID /mnt/avvalo-data ext4 discard,nofail,defaults 0 0" | sudo tee -a /etc/fstab
 sudo mount -a
-
-sudo mkdir -p /mnt/avvalo-data/pg /mnt/avvalo-data/backups
-df -h /mnt/avvalo-data                # confirm it's mounted
 ```
 
-> `nofail` ensures the VM still boots if the Volume is ever detached. The `db` container's entrypoint will `chown` the empty `pg/` dir on first start.
+### Both cases — create the data dirs and confirm
+
+```bash
+sudo mkdir -p /mnt/avvalo-data/pg /mnt/avvalo-data/backups
+df -h /mnt/avvalo-data                # confirm the ~10G Volume is mounted here
+```
+
+> `nofail` (present in both Hetzner's entry and the Case B entry) ensures the VM still boots if the Volume is ever detached. The `db` container's entrypoint will `chown` the empty `pg/` dir on first start.
+>
+> **Don't end up with two fstab entries for one Volume.** In Case A you *edit* Hetzner's existing line — do not also add a UUID line, or `mount -a` will try to mount the same disk twice.
 
 ---
 
@@ -421,17 +484,19 @@ These are the numbers you'll show the grant panel. The output is aggregate-only 
 
 ## 13. Routine operations
 
-**Deploy an update:**
+**Deploy an update:** Pushing to `main` deploys automatically via GitHub Actions — see **§18**. To deploy by hand (e.g. CI is down):
 ```bash
-cd ~/avvalo && git pull
-docker compose -f docker-compose.prod.yml up -d --build
+cd ~/avvalo && git pull                              # refresh compose / nginx / scripts
+docker compose -f docker-compose.prod.yml pull       # pull the image CI built & pushed to GHCR
+docker compose -f docker-compose.prod.yml up -d
 # Migrations run automatically on app start (alembic upgrade head). Watch logs.
 ```
 
-**Roll back:**
+**Roll back** to a previous image — no rebuild, just repoint the tag:
 ```bash
-git checkout <previous-good-commit>
-docker compose -f docker-compose.prod.yml up -d --build
+cd ~/avvalo
+sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=sha-<previous-good>/' .env   # tags are in GHCR / the Actions run logs
+docker compose -f docker-compose.prod.yml up -d
 # If a migration must be undone: docker compose ... exec app alembic downgrade -1
 ```
 
@@ -521,6 +586,56 @@ docker compose -f docker-compose.prod.yml exec db psql -U avvalo -d avvalo
 ./deploy/backup.sh
 ./deploy/restore.sh /mnt/avvalo-data/backups/avvalo_<stamp>.sql.gz
 ```
+
+---
+
+## 18. Continuous deployment (GitHub Actions)
+
+Pushes to `main` are tested, built into an image, and deployed to this VM automatically by [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml). Three jobs:
+
+1. **test** — `pip install -e ".[dev]"`, `ruff check` (non-blocking), then `pytest`. **Nothing builds or deploys unless `pytest` is green.**
+2. **build-and-push** — builds the image on GitHub's runners (**not** this box) and pushes it to **GHCR** as `ghcr.io/dor28/avvalo:latest` and `:sha-<commit>`.
+3. **deploy** — rsyncs repo config to the server (excluding `.env` and `secrets/`), then runs [`deploy/remote-update.sh`](../deploy/remote-update.sh): pins `IMAGE_TAG` in `.env`, `docker compose pull`, `up -d`. Migrations run on app start.
+
+This automates **updates**. The **first** bring-up (clone, `.env`, `secrets/gcv.json`, the data Volume, and — for web — the first cert via `init-letsencrypt.sh`) is still the manual §1–§9 flow. CI takes over once the box is running.
+
+### One-time setup
+
+**1. A dedicated CI deploy key** (don't reuse your personal key). On your laptop:
+```bash
+ssh-keygen -t ed25519 -f ci_deploy -N "" -C "github-actions-deploy"
+ssh-copy-id -i ci_deploy.pub -p 2222 deploy@157.180.115.209   # add the PUBLIC half to the server
+```
+Put the **private** half (`ci_deploy`, whole file incl. BEGIN/END lines) into the `DEPLOY_SSH_KEY` secret below.
+
+**2. GitHub repo secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `DEPLOY_HOST` | `157.180.115.209` |
+| `DEPLOY_PORT` | `2222` |
+| `DEPLOY_USER` | `deploy` |
+| `DEPLOY_SSH_KEY` | the **private** `ci_deploy` key |
+
+No GHCR secret is needed for *pushing* — the workflow's built-in `GITHUB_TOKEN` (`packages: write`) handles it.
+
+**3. Let the server pull the private image.** The GHCR package is private, so the box needs a read token. Create a GitHub **PAT** scoped to only `read:packages`, then once on the server:
+```bash
+echo '<YOUR_READ_PACKAGES_PAT>' | docker login ghcr.io -u Dor28 --password-stdin
+```
+This persists in `~/.docker/config.json`.
+
+**4. Ensure rsync is on the server** (usually already): `sudo apt -y install rsync`.
+
+### A deploy, end to end
+`git push origin main` → **test** → **build-and-push** → **deploy**. Watch it in the repo's **Actions** tab. You can also deploy on demand from Actions → *CI / Deploy* → **Run workflow** (`workflow_dispatch`).
+
+### Security notes
+- The deploy key is **dedicated** and only logs into this box — revoke it by deleting its line from `~deploy/.ssh/authorized_keys`.
+- `GITHUB_TOKEN` is scoped to `contents: read` + `packages: write`; the server's GHCR pull PAT is `read:packages` only. Least privilege both directions.
+- CI **never** sends or overwrites `.env` / `secrets/` (rsync excludes them).
+- The workflow trusts the host key on first contact (`ssh-keyscan`). To close that TOFU window, capture the key (`ssh-keyscan -p 2222 157.180.115.209`) into a `DEPLOY_KNOWN_HOSTS` secret and write it to `known_hosts` instead.
+- For stricter supply-chain safety, pin the `actions/*` and `docker/*` actions to commit SHAs rather than `@vN`.
 
 ---
 

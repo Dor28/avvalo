@@ -1,0 +1,105 @@
+name: CI / Deploy
+
+# Test on every push/PR. Build the image, push it to GHCR, and deploy to the
+# Hetzner VM only on push to main (or a manual run). See docs/DEPLOYMENT.md §18.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write          # let GITHUB_TOKEN push the image to GHCR
+
+# Never let two production deploys overlap.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/dor28/avvalo      # GHCR is case-sensitive & lowercase-only
+
+jobs:
+  # ── 1. Gate: nothing ships unless tests pass ────────────────────────────────
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - name: Lint (non-blocking)
+        continue-on-error: true            # surface lint issues without blocking a deploy
+        run: ruff check .
+      - name: Tests
+        run: pytest -q                     # the hard gate (in-memory SQLite, no services)
+
+  # ── 2. Build the image once, push to GHCR ───────────────────────────────────
+  build-and-push:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute immutable tag
+        id: tag
+        run: echo "value=sha-${GITHUB_SHA:0:12}" >> "$GITHUB_OUTPUT"
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ steps.tag.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 3. Deploy: sync config, pull the new image, restart ─────────────────────
+  deploy:
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy over SSH
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_PORT }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Sync repo config to the server. The image is pulled from GHCR, so the
+          # app source on the box is inert — but compose / nginx / deploy scripts
+          # must stay current. .env and secrets/ are excluded so server secrets
+          # are never touched or deleted.
+          rsync -az --delete \
+            --exclude='.git' --exclude='.env' --exclude='secrets/' \
+            --exclude='__pycache__/' --exclude='.github/' \
+            -e "ssh -i ~/.ssh/id_deploy -p $SSH_PORT" \
+            ./ "$SSH_USER@$SSH_HOST:avvalo/"
+
+          # Pin the tag, pull, and restart on the server.
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+            "bash ~/avvalo/deploy/remote-update.sh '$IMAGE_TAG'"
