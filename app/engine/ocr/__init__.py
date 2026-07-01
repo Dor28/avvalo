@@ -4,6 +4,7 @@ from app.config import Settings, get_settings
 from app.engine.ocr.base import OCRProvider, OCRProviderError, OCRResult, strip_image_metadata
 from app.engine.ocr.gcv import GoogleCloudVisionOCRProvider
 from app.engine.ocr.local_stub import LocalStubOCRProvider, OnPremOCRProvider
+from app.engine.ocr.paddleocr import PaddleOCRProvider
 from app.engine.ocr.tesseract import TesseractOCRProvider
 
 
@@ -19,6 +20,8 @@ def get_provider(settings: Settings | None = None) -> OCRProvider:
         )
     if provider == "tesseract":
         return TesseractOCRProvider()
+    if provider == "paddleocr":
+        return PaddleOCRProvider()
     if provider in {"local_stub", "local", "on_prem", "on-prem"}:
         return LocalStubOCRProvider()
 
@@ -35,6 +38,7 @@ __all__ = [
     "OCRProviderError",
     "OCRResult",
     "OnPremOCRProvider",
+    "PaddleOCRProvider",
     "TesseractOCRProvider",
     "build_provider",
     "get_ocr_provider",

@@ -59,3 +59,11 @@ def test_provider_selection_is_configurable(callable_or_skip) -> None:
     )
     provider = select(_settings(ocr_provider="local_stub"))
     assert provider.__class__.__name__ == "LocalStubOCRProvider"
+
+
+def test_paddleocr_provider_selection(callable_or_skip) -> None:
+    select = callable_or_skip(
+        "app.engine.ocr", "get_provider", "get_ocr_provider", "build_provider", "provider_for"
+    )
+    provider = select(_settings(ocr_provider="paddleocr"))
+    assert provider.__class__.__name__ == "PaddleOCRProvider"
