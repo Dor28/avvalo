@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+set -eu
+
+if [ "${SKIP_SECRET_SCAN:-}" = "1" ]; then
+  echo "avvalo secret scan skipped because SKIP_SECRET_SCAN=1"
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if command -v python >/dev/null 2>&1; then
+  python tools/secret_scan.py --staged
+elif command -v python3 >/dev/null 2>&1; then
+  python3 tools/secret_scan.py --staged
+elif command -v py >/dev/null 2>&1; then
+  py -3 tools/secret_scan.py --staged
+else
+  echo "avvalo secret scan failed: Python 3 is required for the pre-commit hook." >&2
+  exit 1
+fi
