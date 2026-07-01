@@ -13,15 +13,22 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES, t
 from app.config import Settings, get_settings
 from app.data import repo
-from app.engine import CheckInput, InputType, Language, run_check
+from app.engine import CheckInput, CheckResult, CheckStatus, InputType, Language, run_check
 from app.engine.faces import FACES
+from app.engine.format import format_status_message
 from app.privacy.consent import is_consent_current
-from app.web.abuse import read_limited_upload, require_turnstile_for_image
+from app.web.abuse import pseudonymous_ip_key, read_limited_upload, require_turnstile_for_image
 from app.web.session import get_or_create_web_session, set_web_session_cookie
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).with_name("templates")))
 DEV_WEB_SESSION_SECRET = "development-web-session-secret"
+WEB_MAX_TEXT_CHARS = 6000
+WEB_MAX_CAPTION_CHARS = 500
+WEB_IP_FACE_PREFIX = "web_ip:"
+WEB_BILLABLE_STATUSES = frozenset(
+    {CheckStatus.ok, CheckStatus.no_signal, CheckStatus.safety_fallback}
+)
 
 WEB_COPY = {
     "uz_latn": {
@@ -43,6 +50,7 @@ WEB_COPY = {
         "meta_latency": "Vaqt",
         "meta_cost": "Narx",
         "empty_error": "Matn kiriting yoki o'qilishi mumkin bo'lgan rasm yuklang.",
+        "too_long_error": "Matn yoki izoh juda uzun. Iltimos, qisqartirib yuboring.",
         "consent_error": "Avval maxfiylik shartlariga rozilik bering.",
         "unknown_face_error": "Noma'lum tekshiruv turi.",
         "faces": {
@@ -103,6 +111,7 @@ WEB_COPY = {
         "meta_latency": "Вақт",
         "meta_cost": "Нарх",
         "empty_error": "Матн киритинг ёки ўқилиши мумкин бўлган расм юкланг.",
+        "too_long_error": "Матн ёки изоҳ жуда узун. Илтимос, қисқартириб юборинг.",
         "consent_error": "Аввал махфийлик шартларига розилик беринг.",
         "unknown_face_error": "Номаълум текширув тури.",
         "faces": {
@@ -163,6 +172,7 @@ WEB_COPY = {
         "meta_latency": "Время",
         "meta_cost": "Стоимость",
         "empty_error": "Вставьте текст или загрузите читаемое изображение.",
+        "too_long_error": "Текст или контекст слишком длинные. Пожалуйста, сократите их.",
         "consent_error": "Сначала примите условия конфиденциальности.",
         "unknown_face_error": "Неизвестный тип проверки.",
         "faces": {
@@ -317,34 +327,6 @@ async def check(
     if session_factory is None:
         raise HTTPException(status_code=503, detail="Web checks require database wiring.")
 
-    image_bytes = await read_limited_upload(image)
-    await require_turnstile_for_image(
-        image_bytes=image_bytes,
-        token=turnstile_token,
-        request=request,
-        settings=settings,
-    )
-
-    if not text.strip() and not image_bytes:
-        return _partial(
-            request,
-            status_code=400,
-            error=copy["empty_error"],
-            copy=copy,
-            web_session=web_session,
-        )
-
-    input_type = InputType.image if image_bytes else InputType.text
-    check_input = CheckInput(
-        face=face,
-        user_key=web_session.user_key,
-        language=Language(language),
-        input_type=input_type,
-        raw_text=text if input_type is InputType.text else None,
-        image_bytes=image_bytes,
-        caption=caption or None,
-    )
-
     async with session_factory() as session:
         if not await _ensure_web_consent(
             session,
@@ -362,12 +344,69 @@ async def check(
                 web_session=web_session,
             )
 
+        limit_error = _form_limit_error(copy, text=text, caption=caption)
+        if limit_error is not None:
+            return _partial(
+                request,
+                status_code=413,
+                error=limit_error,
+                copy=copy,
+                web_session=web_session,
+            )
+
+        image_bytes = await read_limited_upload(image)
+        await require_turnstile_for_image(
+            image_bytes=image_bytes,
+            token=turnstile_token,
+            request=request,
+            settings=settings,
+        )
+
+        if not text.strip() and not image_bytes:
+            return _partial(
+                request,
+                status_code=400,
+                error=copy["empty_error"],
+                copy=copy,
+                web_session=web_session,
+            )
+
+        input_type = InputType.image if image_bytes else InputType.text
+        check_input = CheckInput(
+            face=face,
+            user_key=web_session.user_key,
+            language=Language(language),
+            input_type=input_type,
+            raw_text=text if input_type is InputType.text else None,
+            image_bytes=image_bytes,
+            caption=caption or None,
+        )
+
+        ip_limit = await _reserve_web_ip_limit(
+            session,
+            request=request,
+            settings=settings,
+            face=face,
+            language=Language(language),
+            input_type=input_type,
+        )
+        if isinstance(ip_limit, CheckResult):
+            return _partial(
+                request,
+                result=ip_limit,
+                copy=copy,
+                status_code=429,
+                web_session=web_session,
+            )
+
         result = await run_check(
             check_input,
             session=session,
             settings=settings,
             rate_limit_override=settings.web_daily_limit,
         )
+        if isinstance(ip_limit, str) and result.status not in WEB_BILLABLE_STATUSES:
+            await repo.refund_usage(session, user_key=ip_limit, face=_web_ip_face(face))
         await session.commit()
 
     return _partial(request, result=result, copy=copy, web_session=web_session)
@@ -395,6 +434,44 @@ async def _ensure_web_consent(
         language=language,
     )
     return True
+
+
+def _form_limit_error(copy: dict, *, text: str, caption: str) -> str | None:
+    if len(text) > WEB_MAX_TEXT_CHARS or len(caption) > WEB_MAX_CAPTION_CHARS:
+        return copy["too_long_error"]
+    return None
+
+
+async def _reserve_web_ip_limit(
+    session: AsyncSession,
+    *,
+    request: Request,
+    settings: Settings,
+    face: str,
+    language: Language,
+    input_type: InputType,
+) -> str | CheckResult | None:
+    ip_key = pseudonymous_ip_key(request, secret=_web_secret(settings))
+    if ip_key is None:
+        return None
+
+    ip_face = _web_ip_face(face)
+    count = await repo.increment_usage(session, user_key=ip_key, face=ip_face)
+    if count <= settings.web_daily_limit:
+        return ip_key
+
+    await repo.refund_usage(session, user_key=ip_key, face=ip_face)
+    return CheckResult(
+        status=CheckStatus.rate_limited,
+        text=format_status_message(CheckStatus.rate_limited, language),
+        language=language,
+        input_type=input_type,
+        error_class="WebIpDailyLimitExceeded",
+    )
+
+
+def _web_ip_face(face: str) -> str:
+    return f"{WEB_IP_FACE_PREFIX}{face}"
 
 
 def _partial(

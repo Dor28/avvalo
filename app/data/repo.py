@@ -5,6 +5,8 @@ the caller owns the transaction (commit/rollback). No function accepts or return
 submitted content — only pseudonymous keys, categorical fields, IDs, and metrics.
 """
 
+import hashlib
+import re
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -16,6 +18,22 @@ from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimi
 
 USEFULNESS_VALUES = {"yes", "partly", "no"}
 NEXT_ACTION_VALUES = {"verify", "delay_stop", "continue", "not_sure"}
+CHECK_EVENT_FACES = {"family_shield", "seller_guard"}
+CHECK_EVENT_INPUT_TYPES = {"text", "image"}
+CHECK_EVENT_LANGUAGES = {"uz_latn", "uz_cyrl", "ru"}
+CHECK_EVENT_STATUSES = {
+    "ok",
+    "no_signal",
+    "empty_input",
+    "low_ocr",
+    "rate_limited",
+    "timeout",
+    "llm_error",
+    "safety_fallback",
+    "unsupported_media",
+}
+RULE_ID_RE = re.compile(r"^[a-z][a-z0-9_.-]{0,79}$")
+ERROR_CLASS_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,79}$")
 
 
 def _utcnow() -> datetime:
@@ -78,6 +96,14 @@ async def record_check_event(
 ) -> uuid.UUID:
     """Persist one privacy-safe check event and return its generated id."""
 
+    _validate_check_event_metadata(
+        face=face,
+        input_type=input_type,
+        language=language,
+        status=status,
+        rule_ids=rule_ids or [],
+        error_class=error_class,
+    )
     event = CheckEvent(
         id=uuid.uuid4(),
         user_key=user_key,
@@ -101,6 +127,30 @@ async def record_check_event(
     session.add(event)
     await session.flush()
     return event.id
+
+
+def _validate_check_event_metadata(
+    *,
+    face: str,
+    input_type: str,
+    language: str,
+    status: str,
+    rule_ids: list[str],
+    error_class: str | None,
+) -> None:
+    if face not in CHECK_EVENT_FACES:
+        raise ValueError(f"Unsupported check face: {face}")
+    if input_type not in CHECK_EVENT_INPUT_TYPES:
+        raise ValueError(f"Unsupported input_type: {input_type}")
+    if language not in CHECK_EVENT_LANGUAGES:
+        raise ValueError(f"Unsupported language: {language}")
+    if status not in CHECK_EVENT_STATUSES:
+        raise ValueError(f"Unsupported check status: {status}")
+    for rule_id in rule_ids:
+        if not RULE_ID_RE.fullmatch(rule_id):
+            raise ValueError(f"Unsupported rule_id: {rule_id}")
+    if error_class is not None and not ERROR_CLASS_RE.fullmatch(error_class):
+        raise ValueError(f"Unsupported error_class: {error_class}")
 
 
 async def record_feedback(
@@ -221,5 +271,15 @@ async def delete_user_data(session: AsyncSession, *, user_key: str) -> None:
     await session.execute(delete(Consent).where(Consent.user_key == user_key))
     await session.execute(delete(RateLimit).where(RateLimit.user_key == user_key))
     now = _utcnow()
-    session.add(DeletionLog(user_key=user_key, requested_ts=now, completed_ts=now))
+    session.add(
+        DeletionLog(
+            user_key=_deletion_audit_key(user_key),
+            requested_ts=now,
+            completed_ts=now,
+        )
+    )
     await session.flush()
+
+
+def _deletion_audit_key(user_key: str) -> str:
+    return hashlib.sha256(f"deletion-log:{user_key}".encode()).hexdigest()[:32]

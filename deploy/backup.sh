@@ -20,6 +20,11 @@ KEEP_DAYS="${KEEP_DAYS:-14}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT="${BACKUP_DIR}/avvalo_${STAMP}.sql.gz"
 
+if [[ -n "${STORAGE_BOX:-}" && -z "${GPG_RECIPIENT:-}" ]]; then
+	echo "[backup] refusing offsite copy without GPG_RECIPIENT encryption" >&2
+	exit 2
+fi
+
 mkdir -p "${BACKUP_DIR}"
 chmod 700 "${BACKUP_DIR}"
 

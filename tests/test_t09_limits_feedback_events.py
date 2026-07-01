@@ -102,6 +102,8 @@ def test_log_event_accepts_metadata_and_refuses_content(callable_or_skip) -> Non
     # §12: a content-like field must be refused outright.
     with pytest.raises((ValueError, TypeError, KeyError)):
         log_event("check_completed", raw_text="secret submitted content")
+    with pytest.raises(ValueError):
+        log_event("check_failed", face="family_shield", error_class="+998 90 123 45 67")
 
 
 async def test_run_check_emits_privacy_safe_events(session, caplog) -> None:

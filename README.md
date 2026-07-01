@@ -6,7 +6,7 @@ application.
 
 **Live bot:** [@Avvalo_official_bot](https://t.me/Avvalo_official_bot) — the official Avvalo bot on Telegram.
 
-## T1 development boot
+## Development boot
 
 Requirements: Docker with Compose, or Python 3.11+ with PostgreSQL 16.
 
@@ -14,8 +14,11 @@ Requirements: Docker with Compose, or Python 3.11+ with PostgreSQL 16.
 docker compose up --build
 ```
 
-The `app` service currently performs the T1 database connectivity check and then remains
-running. Telegram, engine, and web behavior are added in later numbered build tasks.
+The local stack applies migrations, starts PostgreSQL, and boots the shared Avvalo
+process. With real Telegram tokens it runs the configured bot face(s). With
+`WEB_ENABLED=true` it also serves the anonymous web channel. Live LLM/OCR quality still
+depends on configured provider credentials and should be smoke-tested before an alpha or
+demo.
 
 For a one-shot local connectivity check:
 

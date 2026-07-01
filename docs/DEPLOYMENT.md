@@ -7,6 +7,36 @@
 
 ---
 
+## ▶ Remaining steps to go live (this box — 157.180.115.209)
+
+> **Already done:** server provisioned (CX23, Helsinki) · SSH hardened on port 2222 · data Volume mounted at `/mnt/avvalo-data` · CI/CD pipeline live · GitHub secrets set. The `test` and `build-and-push` jobs are **green**, and `deploy` already authenticates, rsyncs, and runs on the server. What's left is finishing the server's runtime config so `docker compose` can start.
+
+**1. Finish the server `.env`** (`~/avvalo/.env`). It currently lacks the reverse-proxy vars, so compose stops at `AVVALO_DOMAIN`:
+```bash
+nano ~/avvalo/.env
+#   AVVALO_DOMAIN=your.domain.uz                 # web — or see bot-only in step 4
+#   ACME_EMAIL=you@example.com
+#   TURNSTILE_SITE_KEY= / TURNSTILE_SECRET=       # web, gates image upload
+# then sanity-check every value against deploy/env.prod.example
+```
+
+**2. Log the server into GHCR** so it can pull the private image (compose hits this right after step 1):
+```bash
+echo '<read:packages PAT>' | docker login ghcr.io -u Dor28 --password-stdin
+```
+
+**3. Confirm the OCR secret** is present if OCR is on: `ls -l ~/avvalo/secrets/gcv.json`. (Volume already mounted — `df -h /mnt/avvalo-data`.)
+
+**4. First bring-up — pick one:**
+- **Web** (needs a domain's `A` record → `157.180.115.209`, added at your registrar — see §9.1): once DNS resolves, run `cd ~/avvalo && ./deploy/nginx/init-letsencrypt.sh` to bootstrap the TLS cert and start the full stack. nginx will not start without this one-time step.
+- **Bot-only** (no domain/TLS): set `WEB_ENABLED=false` and run without nginx/certbot — this needs a bot-only deploy variant, so ask and we'll wire it.
+
+**5. Trigger the deploy.** Re-run the latest workflow (Actions → *Re-run jobs*, or `gh run rerun <id> --failed`). After this first green deploy, **every push to `main` auto-deploys** (§18).
+
+**Done when:** `docker compose -f docker-compose.prod.yml ps` shows all services `Up/healthy` and `/start` to the bot completes a real check.
+
+---
+
 ## 0. What you are deploying
 
 One Docker host running four-or-fewer containers:
@@ -349,7 +379,20 @@ Then open Telegram, send `/start` to your bot, and complete one real check end-t
 
 Skip this entire section for a bot-only deployment.
 
-1. **DNS.** Create an `A` record for `AVVALO_DOMAIN` → your server's IPv4 (and `AAAA` → IPv6 if you enabled it). Start **DNS-only** (no Cloudflare proxy) so certbot can pass the Let's Encrypt HTTP-01 challenge. Set `AVVALO_DOMAIN` and `ACME_EMAIL` in `.env`.
+1. **DNS — where to manage it.** You do **not** need Hetzner DNS just because the server runs on Hetzner. Pick one provider:
+
+   - **Your registrar's DNS (recommended — simplest).** Manage records right where you bought the domain (e.g. **aHOST**, Namecheap). Nothing to move; you just add one record.
+   - **Hetzner DNS** (free) — only worth it if you want all infra in one console or API-managed records. It requires changing the domain's **nameservers** at the registrar to Hetzner's and recreating records — extra steps, no benefit for a single A record.
+   - **Cloudflare** (free) — great *later* for proxy/CDN/DDoS/WAF (step 4), but its proxy blocks the first cert. Don't start with it.
+
+   **Add these records** at whichever provider you chose, then set `AVVALO_DOMAIN` + `ACME_EMAIL` in `.env` to match:
+
+   | Type | Name (host) | Value | Notes |
+   |---|---|---|---|
+   | `A` | `app` (subdomain) **or** `@` (root) | `157.180.115.209` | required |
+   | `AAAA` | same name as the `A` record | your server's IPv6 | optional — only if you enabled IPv6 |
+
+   Keep it **DNS-only — no Cloudflare "orange cloud" proxy** — or certbot's Let's Encrypt HTTP-01 challenge can't reach the box. The name you choose (`app.yourdomain.uz` or the bare `yourdomain.uz`) **must equal `AVVALO_DOMAIN`** exactly. DNS usually propagates in minutes (occasionally up to an hour); check with `nslookup AVVALO_DOMAIN` until it returns `157.180.115.209`.
 2. **Issue the certificate.** nginx will not start until a certificate exists, so bootstrap it once with the helper script (run from the repo root, after DNS resolves and ports 80/443 are open):
    ```bash
    ./deploy/nginx/init-letsencrypt.sh           # add --staging first for a dry run

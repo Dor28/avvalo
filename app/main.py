@@ -98,6 +98,7 @@ async def _run_web(settings: Settings, session_factory) -> None:
         host=settings.web_host,
         port=settings.web_port,
         log_level="info",
+        access_log=False,
     )
     server = uvicorn.Server(config)
     await server.serve()

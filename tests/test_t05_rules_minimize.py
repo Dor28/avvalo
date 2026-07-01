@@ -61,6 +61,13 @@ def test_minimize_tokenizes_email_and_handle() -> None:
     assert "support@bank.example" not in out
 
 
+@pytest.mark.parametrize("passport", ["AA1234567", "aa 1234567"])
+def test_minimize_tokenizes_passport_like_ids(passport: str) -> None:
+    out = minimize(f"Pasport ma'lumotini yuboring: {passport}")
+    assert "[PASSPORT]" in out
+    assert passport not in out
+
+
 def test_classify_link_labels_shortener_lookalike_and_legit() -> None:
     assert classify_link("https://bit.ly/abc") == "shortened"
     assert classify_link("https://payme-secure.example") == "lookalike-domain"

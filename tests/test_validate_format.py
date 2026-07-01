@@ -93,6 +93,16 @@ def test_validator_rejects_verdict_words_contacts_and_unsafe_instructions() -> N
     ).ok
     assert not validate(
         DraftOutput(
+            red_flags=["Passport AA1234567 is requested."],
+            verify=["Open the official app yourself."],
+            ask=["Who are you?"],
+        ),
+        [],
+        rule_hits,
+        Language.ru,
+    ).ok
+    assert not validate(
+        DraftOutput(
             red_flags=["It asks for a fee."],
             verify=["Open the link to check the request."],
             ask=["Who are you?"],

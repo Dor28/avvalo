@@ -8,6 +8,7 @@ to content must be rejected before they reach logs or analytics.
 from __future__ import annotations
 
 import logging
+import re
 from enum import Enum
 from typing import Any
 
@@ -71,6 +72,13 @@ CONTENT_FIELD_TOKENS = (
     "url",
     "username",
 )
+CONTENT_VALUE_PATTERNS = (
+    re.compile(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b"),
+    re.compile(r"(?i)\b(?:https?|hxxps?)://[^\s<>()]+|\bwww\.[^\s<>()]+"),
+    re.compile(r"(?<!\d)(?:\+?\d[\d\s().-]{6,}\d)(?!\d)"),
+    re.compile(r"(?<!\d)(?:\d[ -]?){13,19}(?!\d)"),
+    re.compile(r"(?i)(?<![a-z0-9])(?:[a-z]{2}\s?\d{7})(?![a-z0-9])"),
+)
 
 
 def log_event(name: str, **fields: Any) -> dict[str, Any]:
@@ -100,6 +108,28 @@ def _validate_field_name(key: str) -> None:
 def _normalize_value(value: Any) -> Any:
     if isinstance(value, Enum):
         return value.value
+    if isinstance(value, str):
+        _validate_string_value(value)
+        return value
     if isinstance(value, tuple | set):
-        return list(value)
+        normalized = list(value)
+        for item in normalized:
+            _validate_metadata_value(item)
+        return normalized
+    if isinstance(value, list):
+        for item in value:
+            _validate_metadata_value(item)
+        return value
     return value
+
+
+def _validate_metadata_value(value: Any) -> None:
+    if isinstance(value, Enum):
+        value = value.value
+    if isinstance(value, str):
+        _validate_string_value(value)
+
+
+def _validate_string_value(value: str) -> None:
+    if any(pattern.search(value) for pattern in CONTENT_VALUE_PATTERNS):
+        raise ValueError("Content-like event value is forbidden")

@@ -15,6 +15,10 @@
 # address. Used together with the $avvalo_upstream variable in proxy_pass below.
 resolver 127.0.0.11 valid=10s ipv6=off;
 
+# Access logs carry client IPs and request paths; Avvalo keeps only
+# application-level privacy-safe events.
+access_log off;
+
 # --- :80 — ACME HTTP-01 challenge, then redirect everything to HTTPS ---------
 server {
     listen 80;

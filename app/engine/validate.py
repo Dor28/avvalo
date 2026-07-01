@@ -54,12 +54,11 @@ _URL_OR_DOMAIN_RE = re.compile(
     r"(?:/[^\s<>()]*)?"
 )
 _CARD_RE = re.compile(r"(?<!\d)(?:\d[ -]?){13,19}(?!\d)")
+_PASSPORT_RE = re.compile(r"(?i)(?<![a-z0-9])(?:[a-z]{2}\s?\d{7})(?![a-z0-9])")
 _OTP_LABELED_RE = re.compile(
     r"(?iu)\b(?:otp|sms\s*code|sms\s*kod|kod|code|код|смс\s*код)[^\d]{0,20}\d{4,8}(?!\d)"
 )
-_PASSWORD_VALUE_RE = re.compile(
-    r"(?iu)\b(?:password|parol|пароль)[\s:=\-]{0,10}\S{3,}"
-)
+_PASSWORD_VALUE_RE = re.compile(r"(?iu)\b(?:password|parol|пароль)[\s:=\-]{0,10}\S{3,}")
 
 _UNSAFE_PATTERNS = (
     r"(?i)\b(?:open|click|follow|visit)\s+(?:the\s+)?(?:link|url)\b",
@@ -147,6 +146,8 @@ def _first_rejection_reason(
         return "raw phone number leaked"
     if _CARD_RE.search(text):
         return "raw card/account number leaked"
+    if _PASSPORT_RE.search(text):
+        return "passport number leaked"
     if _OTP_LABELED_RE.search(text) or _PASSWORD_VALUE_RE.search(text):
         return "secret value leaked"
     for pattern in _UNSAFE_PATTERNS:

@@ -27,6 +27,7 @@ _CODE_VALUE_RE = re.compile(
     r"(?iu)\b((?:sms\s*)?(?:otp|kod|code|код|парол|password)[^\d]{0,20})"
     r"(\d{4,8})(?!\d)"
 )
+_PASSPORT_RE = re.compile(r"(?i)(?<![a-z0-9])(?:[a-z]{2}\s?\d{7})(?![a-z0-9])")
 _CARD_RE = re.compile(r"(?<!\d)(?:\d[ -]?){13,19}(?!\d)")
 _ADDRESS_RE = re.compile(
     "(?iu)\\b(?:ko['\\u2018\\u2019]chasi|\\u043a\\u0443\\u0447\\u0430\\u0441\\u0438|"
@@ -53,6 +54,7 @@ def minimize(raw_text: str, signals: list[Signal] | None = None) -> str:
     minimized = _HANDLE_RE.sub("[HANDLE]", minimized)
     minimized = _PHONE_RE.sub("[PHONE]", minimized)
     minimized = _CODE_VALUE_RE.sub(lambda match: f"{match.group(1)}[CODE]", minimized)
+    minimized = _PASSPORT_RE.sub("[PASSPORT]", minimized)
     minimized = _CARD_RE.sub(_replace_card, minimized)
     minimized = _ADDRESS_RE.sub("[ADDRESS]", minimized)
     minimized = _NAME_RE.sub("[NAME]", minimized)

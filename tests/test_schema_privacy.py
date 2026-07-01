@@ -2,8 +2,11 @@
 
 import uuid
 
+import pytest
+from sqlalchemy import select
+
 from app.data import repo
-from app.data.models import Base
+from app.data.models import Base, DeletionLog
 from app.privacy.user_key import derive_user_key
 
 # Any column whose name hints at stored user content breaks the privacy promise.
@@ -77,6 +80,30 @@ async def test_repo_creates_consent_and_event_rows(session) -> None:
     assert isinstance(check_id, uuid.UUID)
 
 
+async def test_check_event_metadata_values_are_categorical(session) -> None:
+    with pytest.raises(ValueError):
+        await repo.record_check_event(
+            session,
+            user_key="u1",
+            face="family_shield",
+            input_type="text",
+            language="ru",
+            status="ok",
+            error_class="+998 90 123 45 67",
+        )
+
+    with pytest.raises(ValueError):
+        await repo.record_check_event(
+            session,
+            user_key="u1",
+            face="family_shield",
+            input_type="text",
+            language="ru",
+            status="ok",
+            rule_ids=["https://example.com"],
+        )
+
+
 async def test_delete_user_data_removes_every_row(session) -> None:
     await repo.upsert_consent(
         session,
@@ -102,3 +129,6 @@ async def test_delete_user_data_removes_every_row(session) -> None:
 
     assert await repo.get_consent(session, user_key="u1", face="family_shield") is None
     assert await repo.get_usage(session, user_key="u1", face="family_shield") == 0
+    deletion_log = (await session.execute(select(DeletionLog))).scalar_one()
+    assert deletion_log.user_key != "u1"
+    assert len(deletion_log.user_key) == 32
