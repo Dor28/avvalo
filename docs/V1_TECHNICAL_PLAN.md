@@ -44,8 +44,7 @@
 
 | Var | Purpose |
 |---|---|
-| `TELEGRAM_TOKEN_FAMILY_SHIELD` | Bot token for the Family Shield face |
-| `TELEGRAM_TOKEN_SELLER_GUARD` | Bot token for the Seller Guard face (omit if using one bot + face selector) |
+| `TELEGRAM_TOKEN` | Bot token for the single Telegram channel |
 | `DATABASE_URL` | `postgresql+asyncpg://user:pass@db:5432/avvalo` |
 | `APP_HMAC_SECRET` | Secret for the pseudonymous user-key HMAC (rotate ⇒ keys change; keep stable) |
 | `LLM_BASE_URL` | OpenAI-compatible endpoint of the chosen neutral host, e.g. `https://openrouter.ai/api/v1` (or Together / Fireworks) |
@@ -60,7 +59,7 @@
 | `LLM_TIMEOUT_S` / `OCR_TIMEOUT_S` | latency guards (§14) |
 | `MAX_OUTPUT_TOKENS` | default `600` |
 | `OPERATOR_ALERT_CHAT_ID` | where to alert on a critical safety violation (§9) |
-| `WEB_ENABLED` | `true` to serve the web app alongside the bot(s) |
+| `WEB_ENABLED` | `true` to serve the web app alongside the bot |
 | `WEB_HOST` / `WEB_PORT` | uvicorn bind for FastAPI |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | Cloudflare Turnstile (captcha) keys |
 | `WEB_SESSION_SECRET` | signs the anonymous web session cookie (pseudonymous web key) |
@@ -178,7 +177,7 @@ Merge an optional `caption` into the analyzed text (caption + body) before stage
 ```
 avvalo/
 ├─ app/
-│  ├─ main.py                 # entrypoint: start bot(s) + scheduler
+│  ├─ main.py                 # entrypoint: start bot + scheduler
 │  ├─ config.py               # pydantic Settings (env)
 │  ├─ bot/
 │  │  ├─ dispatcher.py        # aiogram setup, FSM storage
@@ -393,9 +392,31 @@ class LLMProvider(Protocol):
 - NEVER invent facts, policies, contact details, prices, or legal conclusions.
 - (Seller Guard) NEVER state that money arrived/was received based on a screenshot.
 
-### 8.1 Model selection — run the eval first
+### 8.1 Model selection — current default + eval gate
 
-Before committing to Gemini Flash, run `tools/eval_models.py` (self-contained; see its header). It calls every configured provider — Gemini, DeepSeek, Qwen, and any local OpenAI-compatible endpoint — with the real prompts over the 8 golden fixtures, and scores a mechanical rubric (valid JSON, correct script, no verdict words, no leaked contacts, structure, length). It cannot score whether the *advice is good* — read `eval_out/<provider>/` by eye for that, especially the Uzbek outputs. Pick the cheapest provider that passes the rubric **and** reads as natural, grounded Uzbek. The chosen provider is just one `LLMProvider` adapter (§8); the rest of the engine does not change. See [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md) §4 (item 5) for why Uzbek quality — not price — is the deciding factor.
+**Research snapshot, 2026-07-01:** use **OpenRouter first** for hosted-model validation, with Zero Data Retention enforced. The current best default to evaluate is `qwen/qwen3-235b-a22b-2507`: OpenRouter lists it as a multilingual Qwen3 235B A22B Instruct model, non-thinking mode, OpenAI-compatible, with `response_format` / structured-output support, and current list pricing around `$0.09/M` input and `$0.10/M` output tokens. At Avvalo's prompt shape (~1k input tokens, bounded ≤600 output tokens), this is far below the `$0.03/check` hard ceiling.
+
+Recommended alpha env:
+
+```env
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_MODEL=qwen/qwen3-235b-a22b-2507
+LLM_IN_RATE_PER_M=0.09
+LLM_OUT_RATE_PER_M=0.10
+```
+
+Fallbacks to evaluate:
+
+| Candidate | Why try it | Use if |
+|---|---|---|
+| `qwen/qwen3-235b-a22b-2507` via OpenRouter ZDR | Best current balance: open-weight Qwen, strong multilingual odds, cheap, JSON/structured-output support | It passes Uzbek/Russian quality, JSON, latency, and safety evals |
+| `qwen/qwen3-32b` via OpenRouter ZDR | Smaller/faster Qwen fallback, also cheap | 235B latency or availability is poor |
+| `google/gemini-2.5-flash-lite` via paid/ZDR route | Cheap non-Qwen comparator | Qwen Uzbek quality fails or JSON reliability is poor |
+| Local `qwen2.5:7b-instruct` via Ollama | Zero API cost and best privacy for dev plumbing | Local smoke tests only; Uzbek quality is not enough to decide production |
+
+Do **not** choose the cheapest model blindly. Direct DeepSeek pricing is competitive, but its public privacy posture is a poor fit for Avvalo's trust story; avoid direct DeepSeek for production unless a separate no-training/no-retention contract exists. The long-term roadmap remains self-hosted Qwen in-region behind the same OpenAI-compatible adapter.
+
+Before locking any model, run `tools/eval_models.py` (self-contained; see its header). It calls every configured provider — Gemini, DeepSeek, Qwen, and any local OpenAI-compatible endpoint — with the real prompts over the 8 golden fixtures, and scores a mechanical rubric (valid JSON, correct script, no verdict words, no leaked contacts, structure, length). It cannot score whether the *advice is good* — read `eval_out/<provider>/` by eye for that, especially the Uzbek outputs. Pick the cheapest provider that passes the rubric **and** reads as natural, grounded Uzbek. The chosen provider is just one `LLMProvider` adapter (§8); the rest of the engine does not change. See [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md) §4 (item 5) for why Uzbek quality — not price — is the deciding factor.
 
 ---
 
@@ -529,7 +550,7 @@ volumes: { pg: {}, ollama_models: {} }
 **T9 — Limits, feedback, share, events.** Daily limit per face; post-check feedback buttons → `feedback` rows; share button (link only); wire all privacy-safe events.
 *Accept:* 6th FS check same day is refused with a reset message; feedback recorded categorically; events emitted for the full happy path; logger rejects a content field (test).
 
-**T10 — Seller Guard face.** SG rule pack (§11), `prompts/seller_guard.txt`, SG entry copy, second bot token wiring.
+**T10 — Seller Guard face.** SG rule pack (§11), `prompts/seller_guard.txt`, SG entry copy, and shared engine wiring.
 *Accept:* ≥3 SG golden examples (author them in `tests/fixtures/golden`) pass end-to-end; SG output **never** says money arrived; same engine path used (assert pipeline code is unchanged).
 
 **T11 — Retention jobs & metrics export.** APScheduler TTL jobs; a protected `metrics` query/CLI that returns event counts, activation, completion, cost, no-signal fire-rate.

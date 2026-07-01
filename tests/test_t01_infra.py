@@ -15,8 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # §1.1 environment surface that .env.example must document.
 REQUIRED_ENV_VARS = (
-    "TELEGRAM_TOKEN_FAMILY_SHIELD",
-    "TELEGRAM_TOKEN_SELLER_GUARD",
+    "TELEGRAM_TOKEN",
     "DATABASE_URL",
     "APP_HMAC_SECRET",
     "LLM_BASE_URL",

@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from app.config import Settings
 
 REQUIRED_SETTINGS = {
-    "telegram_token_family_shield": "test-token",
+    "telegram_token": "test-token",
     "database_url": "postgresql+asyncpg://avvalo:avvalo@localhost:5432/avvalo",
     "app_hmac_secret": "test-hmac-secret",
     "llm_base_url": "https://example.invalid/v1",

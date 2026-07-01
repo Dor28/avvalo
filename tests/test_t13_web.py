@@ -26,7 +26,7 @@ class FakeSessionFactory:
 
 def _settings(**overrides) -> Settings:
     values = {
-        "telegram_token_family_shield": "token",
+        "telegram_token": "token",
         "database_url": "postgresql+asyncpg://avvalo:avvalo@localhost:5432/avvalo",
         "app_hmac_secret": "test-hmac-secret",
         "llm_base_url": "http://localhost:11434/v1",

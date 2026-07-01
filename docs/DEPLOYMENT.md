@@ -9,7 +9,7 @@
 
 ## ▶ Remaining steps to go live (this box — 157.180.115.209)
 
-> **Already done:** server provisioned (CX23, Helsinki) · SSH hardened on port 2222 · data Volume mounted at `/mnt/avvalo-data` · CI/CD pipeline live · GitHub secrets set. The `test` and `build-and-push` jobs are **green**, and `deploy` already authenticates, rsyncs, and runs on the server. What's left is finishing the server's runtime config so `docker compose` can start.
+> **Already done:** server provisioned (CX33, Helsinki — resized 2026-07-01 from the original CX23) · SSH hardened on port 2222 · data Volume mounted at `/mnt/avvalo-data` · CI/CD pipeline live · GitHub secrets set. The `test` and `build-and-push` jobs are **green**, and `deploy` already authenticates, rsyncs, and runs on the server. What's left is finishing the server's runtime config so `docker compose` can start.
 
 **1. Finish the server `.env`** (`~/avvalo/.env`). It currently lacks the reverse-proxy vars, so compose stops at `AVVALO_DOMAIN`:
 ```bash
@@ -50,7 +50,7 @@ One Docker host running four-or-fewer containers:
             └──────┬───────┘
                    │ http://app:8000  (private compose network)
                    ▼
-            ┌──────────────┐     Telegram bot(s)  ── outbound long-poll ──▶ api.telegram.org
+            ┌──────────────┐     Telegram bot     ── outbound long-poll ──▶ api.telegram.org
             │     app      │     FastAPI web        LLM  ── outbound ──▶ OpenAI-compatible host
             │ (bot + web)  │     APScheduler TTL    OCR  ── outbound ──▶ Google Cloud Vision
             └──────┬───────┘
@@ -102,7 +102,7 @@ In the Hetzner Cloud Console → **Add Server**:
 |---|---|---|
 | **Location** | **Helsinki (hel1)** | Best latency to Uzbekistan among Hetzner's EU regions; EU jurisdiction supports the privacy story. (Test Singapore `sin` if your users report lag.) |
 | **Image** | **Ubuntu 24.04 LTS** | Long support window; all commands below assume it. |
-| **Type** | **CX22** (2 vCPU / 4 GB) to start; **CX32** (4 vCPU / 8 GB) for headroom. ARM **`CAX11`** (4 GB) / `CAX21` (8 GB) are cheaper and work. | LLM + OCR are *external*, so the box mostly runs Python + Postgres. 4 GB is enough for the MVP; 8 GB removes all worry. See the sizing breakdown below. |
+| **Type** | **CX33** (4 vCPU / 8 GB) — what production actually runs on. **CX23** (2 vCPU / 4 GB) still works for a bot-only demo. ARM **`CAX21`** (8 GB) is a cheaper equivalent. | LLM + OCR are *external*, so the box mostly runs Python + Postgres. 8 GB gives comfortable headroom for concurrent web image checks. See the sizing breakdown below. |
 | **Volume** | Add a **10 GB Volume** now | Holds the database + backups, separate from the boot disk. Resizable later with zero downtime. |
 | **Networking** | Keep public IPv4 (needed for the web). Add a **Private Network** if you plan to split the DB onto its own server later. |
 | **SSH key** | Paste your **public** key | Disables password login from the start. |
@@ -112,21 +112,21 @@ In the Hetzner Cloud Console → **Add Server**:
 
 | Profile | Hetzner type | vCPU / RAM | Good for |
 |---|---|---|---|
-| Bot-only | `CX22` or **`CAX11`** (ARM) | 2 / 4 GB | The grant demo + bots; smallest inbound surface. |
-| **Recommended (bot + web)** | **`CX22`** / **`CAX11`** (ARM, cheaper) | 2 / 4 GB | The full MVP — comfortable into the low thousands of checks/day. |
-| Headroom / bursty web | `CX32` / `CAX21` | 4 / 8 GB | Heavier concurrent image uploads, or "set and forget". |
+| Bot-only | `CX23` or **`CAX11`** (ARM) | 2 / 4 GB | The grant demo + bots; smallest inbound surface. |
+| **Recommended (bot + web) — current production** | **`CX33`** / **`CAX21`** (ARM, cheaper) | 4 / 8 GB | The full MVP — comfortable headroom for concurrent web image checks. |
+| Headroom / bursty web | next size up via the Console (§11.4) | — | Resize live, no rebuild, if load grows further. |
 
-4 GB is the practical floor (also Hetzner's smallest current shared plan). **ARM `CAX*` is cheaper and fully supported** — the stack is pure-Python with arm64 wheels.
+4 GB is the practical floor for a bot-only demo (also Hetzner's smallest current shared plan). Production runs at **8 GB (CX33)** for headroom. **ARM `CAX*` is cheaper and fully supported** — the stack is pure-Python with arm64 wheels.
 
-**Where 4 GB goes (web-enabled, under MVP load):**
+**Where 8 GB goes (web-enabled, under MVP load):**
 
 | Component | Typical RAM | Notes |
 |---|---|---|
 | Postgres | ~0.4–0.7 GB | `shared_buffers=256MB` + per-connection `work_mem`; `effective_cache_size=768MB` is only a planner hint, not an allocation. |
-| `app` (Python) | ~0.3–0.6 GB | Hard-capped at **1.5 GB** in `docker-compose.prod.yml`; spikes with concurrent image processing. |
+| `app` (Python) | ~0.3–0.6 GB | Hard-capped at **3 GB** in `docker-compose.prod.yml`; spikes with concurrent image processing. |
 | nginx + certbot | ~30–50 MB | Negligible. |
 | OS + Docker daemon | ~0.4–0.6 GB | |
-| **Total** | **~1.5–2.5 GB** | Leaves roughly **1–1.5 GB headroom** on a 4 GB box. |
+| **Total** | **~1.1–2 GB** | Leaves roughly **6–7 GB headroom** on the 8 GB box. |
 
 **Add 2 GB of swap** — cheap insurance against an OOM during `docker compose … --build` (compiling/installing wheels such as Pillow) and against traffic spikes:
 
@@ -137,9 +137,9 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 sudo sysctl -w vm.swappiness=10        # prefer RAM; swap only under real pressure
 ```
 
-**Disk:** the `CX22` boot disk (40 GB) holds the OS + Docker images/layers (~2–4 GB); the **10 GB Volume** holds the Postgres data + local backups. Watch both — `df -h /` and `df -h /mnt/avvalo-data` — and alert at ~80%.
+**Disk:** the `CX33` boot disk (80 GB) holds the OS + Docker images/layers (~2–4 GB); the **10 GB Volume** holds the Postgres data + local backups. Watch both — `df -h /` and `df -h /mnt/avvalo-data` — and alert at ~80%.
 
-**CPU:** 2 vCPU is ample; request handling is I/O-bound on the external LLM/OCR calls. CPU matters mainly during image builds — build on a beefier box (or push a prebuilt image) if the smallest VM feels slow. When RAM pressure does show up, that's Tier 1 in §11.4: resize in the Console and raise `shared_buffers`/`work_mem` — no rebuild.
+**CPU:** 4 vCPU is ample; request handling is I/O-bound on the external LLM/OCR calls. CPU matters mainly during image builds — build on a beefier box (or push a prebuilt image) if the smallest VM feels slow. When RAM pressure does show up, that's Tier 1 in §11.4: resize in the Console and raise `shared_buffers`/`work_mem` — no rebuild.
 
 ### 2.2 Hetzner Cloud Firewall (network-level, free)
 
@@ -326,15 +326,59 @@ openssl rand -base64 36     # -> POSTGRES_PASSWORD
 
 Then edit `.env` and fill in:
 
-- `TELEGRAM_TOKEN_FAMILY_SHIELD` (+ `TELEGRAM_TOKEN_SELLER_GUARD` if used)
+- `TELEGRAM_TOKEN`
 - `POSTGRES_PASSWORD` **and the matching password inside `DATABASE_URL`** (they must be identical)
 - `APP_HMAC_SECRET`, `WEB_SESSION_SECRET`
 - `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, and the `LLM_*_RATE_PER_M` from your host's pricing
-- `OPERATOR_ALERT_CHAT_ID` (get yours from @userinfobot) — **wire this up; it's how the bot tells you about safety blocks**
 - **Web only:** `WEB_ENABLED=true`, `AVVALO_DOMAIN`, `ACME_EMAIL`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET`
 - **Bot only:** set `WEB_ENABLED=false` and leave the Turnstile/domain values blank
 
 > ⚠️ **`APP_HMAC_SECRET` is permanent.** It derives every pseudonymous user key. Rotating it orphans all consent rows and resets every rate-limit counter. Generate it once and treat it like a database — include it in your secrets backup.
+
+### 7.1 Protect API keys from leaking
+
+Treat `LLM_API_KEY`, Telegram tokens, Turnstile secret, `APP_HMAC_SECRET`, `WEB_SESSION_SECRET`, `POSTGRES_PASSWORD`, and OCR credentials as production secrets.
+
+**OpenRouter / LLM key setup**
+
+- Create a **separate OpenRouter key for production**. Do not reuse a personal testing key.
+- Keep the starting balance small during alpha (`$5-$10`) and set any provider-side spend limits/alerts available.
+- Enable **Zero Data Retention** routing for the key/account and prefer ZDR endpoints.
+- Rotate the key immediately if it appears in chat, Git, terminal screenshots, CI logs, or a shared support bundle.
+
+**Where secrets may live**
+
+- Production secrets live only in `~/avvalo/.env`, GitHub Actions secrets, and provider dashboards.
+- `.env.example` and `deploy/env.prod.example` must contain placeholders only.
+- Never paste real secrets into docs, issue comments, PR descriptions, screenshots, or test fixtures.
+- Never expose `LLM_API_KEY` to the browser. The web page calls Avvalo's backend; only the backend calls the LLM host.
+
+**Server file permissions**
+
+```bash
+cd ~/avvalo
+touch .env
+chown deploy:deploy .env
+chmod 600 .env
+
+mkdir -p secrets
+chmod 700 secrets
+chmod 600 secrets/gcv.json 2>/dev/null || true
+```
+
+Anyone with root access or Docker daemon access can still inspect container environment variables. Keep the server single-operator, keep SSH key-only, and do not add extra users to the `docker` group.
+
+**CI / deploy hygiene**
+
+- Store deploy credentials and registry tokens in **GitHub Secrets**, not repository variables.
+- Do not print `.env`, `docker inspect` output, or full process environments in CI logs.
+- Avoid commands such as `echo $LLM_API_KEY`; use `printenv | grep -v KEY` style diagnostics if needed.
+- Run secret scanning before public commits or releases:
+
+```bash
+git status --short
+git grep -n -E "sk-or-v1-|[0-9]{8,}:[A-Za-z0-9_-]{20,}" -- ':!docs/DEPLOYMENT.md'
+```
 
 ---
 
@@ -521,7 +565,7 @@ These are the numbers you'll show the grant panel. The output is aggregate-only 
 **Uptime & disk alerts (do this):**
 - Point an external monitor (UptimeRobot, Better Stack — free tiers) at `https://AVVALO_DOMAIN/healthz`, or use a Telegram "dead-man's switch" for bot-only.
 - Watch the Volume: `df -h /mnt/avvalo-data`. Alert at 80%. The DB is tiny, but logs and backups live here too.
-- **Safety alerts:** `OPERATOR_ALERT_CHAT_ID` makes the bot message you on repeated safety blocks (per [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) §9). Don't leave it blank.
+- **Safety alerts (not yet wired up):** `OPERATOR_ALERT_CHAT_ID` is reserved for paging you on repeated safety blocks (per [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) §9), but no code currently sends that message. Safe to leave blank until it's implemented.
 
 ---
 
@@ -558,9 +602,9 @@ docker compose -f docker-compose.prod.yml exec app alembic upgrade head
 
 ## 14. Scaling the app tier (when one VM isn't enough)
 
-The app currently runs **bot pollers + web in one process**. Telegram allows **only one poller per bot token**, so you cannot naively run multiple `app` replicas — the extra pollers get `409 Conflict`. The codebase already supports a clean split **with no code change**, driven entirely by env:
+The app currently runs **the bot poller + web in one process**. Telegram allows **only one poller per bot token**, so you cannot naively run multiple `app` replicas — the extra pollers get `409 Conflict`. The codebase already supports a clean split **with no code change**, driven entirely by env:
 
-| Service | `WEB_ENABLED` | `TELEGRAM_TOKEN_*` | Replicas | Behind nginx |
+| Service | `WEB_ENABLED` | `TELEGRAM_TOKEN` | Replicas | Behind nginx |
 |---|---|---|---|---|
 | `bot` | `false` | set | **exactly 1** | no |
 | `web` | `true` | **empty** | N (scale freely) | yes |
@@ -579,16 +623,16 @@ Beyond that: a Hetzner **Load Balancer** in front of the `web` replicas, and the
 
 | Component | Spec | ~Cost |
 |---|---|---|
-| Cloud server | CX22 (2 vCPU / 4 GB) | ~€4 |
+| Cloud server | CX33 (4 vCPU / 8 GB) | ~€6.49 (~$9) |
 | Volume | 10 GB | ~€0.50 |
 | Snapshots | a few GB | ~€0.10 |
 | Storage Box (offsite backups) | BX11, 1 TB | ~€3.80 |
-| **Hetzner subtotal** | | **~€8–9/mo** |
+| **Hetzner subtotal** | | **~€11/mo** |
 | LLM (Qwen via host) | ≤ $0.03/check budget | usage-based |
 | Cloud Vision OCR | first 1k units/mo free, then ~$1.50/1k | usage-based |
 | Domain + Cloudflare | free tier works | ~€10/yr domain |
 
-A bot-only MVP runs for **under €10/month** plus per-check LLM/OCR usage well within the ≤$0.03/check ceiling.
+The MVP (bot + web on CX33) runs for **~€11/month** plus per-check LLM/OCR usage well within the ≤$0.03/check ceiling.
 
 ---
 
@@ -601,7 +645,7 @@ A bot-only MVP runs for **under €10/month** plus per-check LLM/OCR usage well 
 - [ ] One full check completed in Telegram (and on the web, if enabled).
 - [ ] **Web:** HTTPS valid, security headers present, Turnstile gates image upload, session cookie `Secure`.
 - [ ] Backups scheduled in cron **and a test restore performed**.
-- [ ] Uptime monitor + disk alert configured; `OPERATOR_ALERT_CHAT_ID` set.
+- [ ] Uptime monitor + disk alert configured.
 - [ ] `pytest` green locally, especially `tests/test_schema_privacy.py`.
 - [ ] `/privacy` and `/delete_my_data` work end-to-end.
 

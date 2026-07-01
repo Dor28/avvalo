@@ -91,31 +91,34 @@ async def test_seller_guard_goldens_pass_same_run_check_path(session, golden) ->
     assert len(provider.calls) == len(fixtures)
 
 
-def test_process_can_select_both_face_bots_from_tokens() -> None:
-    settings = _settings(
-        telegram_token_family_shield="family-token",
-        telegram_token_seller_guard="seller-token",
-    )
+def test_process_uses_single_telegram_token_for_family_shield() -> None:
+    settings = _settings(telegram_token="bot-token")
 
     specs = configured_bot_specs(settings)
 
-    assert [spec.face_id for spec in specs] == ["family_shield", "seller_guard"]
+    assert [spec.face_id for spec in specs] == ["family_shield"]
+    assert [spec.token for spec in specs] == ["bot-token"]
 
 
-def test_process_can_run_seller_guard_only_when_family_token_is_placeholder() -> None:
-    settings = _settings(
-        telegram_token_family_shield=PLACEHOLDER_TOKEN,
-        telegram_token_seller_guard="seller-token",
-    )
+def test_process_ignores_placeholder_telegram_token() -> None:
+    settings = _settings(telegram_token=PLACEHOLDER_TOKEN)
 
     specs = configured_bot_specs(settings)
 
-    assert [spec.face_id for spec in specs] == ["seller_guard"]
+    assert specs == []
+
+
+def test_process_ignores_empty_telegram_token() -> None:
+    settings = _settings(telegram_token="")
+
+    specs = configured_bot_specs(settings)
+
+    assert specs == []
 
 
 def _settings(**overrides) -> Settings:
     values = {
-        "telegram_token_family_shield": "family-token",
+        "telegram_token": "bot-token",
         "database_url": "postgresql+asyncpg://avvalo:avvalo@localhost:5432/avvalo",
         "app_hmac_secret": "test-hmac-secret",
         "llm_base_url": "http://localhost:11434/v1",

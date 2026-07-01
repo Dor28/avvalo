@@ -52,8 +52,8 @@ async def run(*, check_only: bool = False) -> None:
             if not bot_specs:
                 if not runners:
                     LOGGER.warning(
-                        "No Telegram bot tokens are set; idling without a bot. "
-                        "Set TELEGRAM_TOKEN_FAMILY_SHIELD and/or TELEGRAM_TOKEN_SELLER_GUARD."
+                        "No Telegram bot token is set; idling without a bot. "
+                        "Set TELEGRAM_TOKEN."
                     )
                     await asyncio.Event().wait()
                     return
@@ -72,22 +72,12 @@ async def run(*, check_only: bool = False) -> None:
 
 
 def configured_bot_specs(settings: Settings) -> list[BotSpec]:
-    """Return one bot spec for each configured face token."""
+    """Return the configured Telegram bot spec, if the token is usable."""
 
-    specs = [
-        BotSpec(
-            face_id="family_shield",
-            token=settings.telegram_token_family_shield.get_secret_value(),
-        )
-    ]
-    if settings.telegram_token_seller_guard is not None:
-        specs.append(
-            BotSpec(
-                face_id="seller_guard",
-                token=settings.telegram_token_seller_guard.get_secret_value(),
-            )
-        )
-    return [spec for spec in specs if spec.token and spec.token != PLACEHOLDER_TOKEN]
+    token = settings.telegram_token.get_secret_value()
+    if not token or token == PLACEHOLDER_TOKEN:
+        return []
+    return [BotSpec(face_id="family_shield", token=token)]
 
 
 async def _run_web(settings: Settings, session_factory) -> None:

@@ -89,9 +89,9 @@ services:
     deploy:
       resources:
         limits:
-          # Tune to your VM. These suit a 2 vCPU / 4 GB box with room for db.
-          cpus: "1.5"
-          memory: 1536M
+          # Tune to your VM. These suit a 4 vCPU / 8 GB box (Hetzner CX33) with room for db.
+          cpus: "3"
+          memory: 3072M
     healthcheck:
       # Requires WEB_ENABLED=true. For a bot-only deploy, delete this block.
       test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz', timeout=3).status==200 else 1)\""]

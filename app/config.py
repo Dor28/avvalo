@@ -16,8 +16,7 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    telegram_token_family_shield: SecretStr
-    telegram_token_seller_guard: SecretStr | None = None
+    telegram_token: SecretStr
 
     database_url: str
     app_hmac_secret: SecretStr
