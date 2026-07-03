@@ -6,6 +6,7 @@
 
 | Doc | What it is |
 |---|---|
+| [ROADMAP.md](ROADMAP.md) | 🚀 **START HERE for the next work session.** Post-deployment launch roadmap: live-verification checklist (Phase A), numbered launch features R1–R5 with acceptance criteria, launch ops, and evidence gates. Written for handoff to agents; founder-only tasks marked. |
 | [PRODUCT_VISION.md](PRODUCT_VISION.md) | 🧭 **Product vision (2026-07-04): "Check · Learn · Share."** Reconciles the original design, the pivot, and the built v1; adds the content/community layer (scam library, curated stories, Scam Pulse) and the legal data-asset story. |
 | [PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md) | 🔭 **3-year option map + ranked feature shortlist (2026-07-04).** Tiered future bets — voice checks, agentic verification, awareness training, payment-context API, Group Guard, JobPass, sovereign model, escrow — with scoring, hard pull-forward criteria, and the senior-PM build order (§7). Options, not a to-do list. |
 | [V1_CURRENT_PM_REVIEW.md](V1_CURRENT_PM_REVIEW.md) | **Current senior-PM review** - weak spots, product risks, and the improvement backlog as of 2026-06-30. |
