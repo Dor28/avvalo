@@ -34,7 +34,7 @@ WEB_COPY = {
     "uz_latn": {
         "html_lang": "uz-Latn",
         "nav_family": "Oila himoyasi",
-        "nav_seller": "Sotuvchi himoyasi",
+        "nav_merchants": "Sotuvchi himoyasi",
         "privacy_link": "Maxfiylik",
         "language_label": "Til",
         "title": "Avvalo",
@@ -54,7 +54,7 @@ WEB_COPY = {
         "consent_error": "Avval maxfiylik shartlariga rozilik bering.",
         "unknown_face_error": "Noma'lum tekshiruv turi.",
         "faces": {
-            "family_shield": {
+            "family": {
                 "eyebrow": "Oilalar uchun",
                 "name": "Oila himoyasi",
                 "headline": "Shubhali xabarni yuboring, keyin harakat qiling.",
@@ -72,7 +72,7 @@ WEB_COPY = {
                     "Yuborilgan matn saqlanmaydi",
                 ],
             },
-            "seller_guard": {
+            "merchants": {
                 "eyebrow": "Sotuvchilar uchun",
                 "name": "Sotuvchi himoyasi",
                 "headline": "Tovarni berishdan oldin xaridor yuborgan dalilni tekshiring.",
@@ -95,7 +95,7 @@ WEB_COPY = {
     "uz_cyrl": {
         "html_lang": "uz-Cyrl",
         "nav_family": "Оила ҳимояси",
-        "nav_seller": "Сотувчи ҳимояси",
+        "nav_merchants": "Сотувчи ҳимояси",
         "privacy_link": "Махфийлик",
         "language_label": "Тил",
         "title": "Avvalo",
@@ -115,7 +115,7 @@ WEB_COPY = {
         "consent_error": "Аввал махфийлик шартларига розилик беринг.",
         "unknown_face_error": "Номаълум текширув тури.",
         "faces": {
-            "family_shield": {
+            "family": {
                 "eyebrow": "Оилалар учун",
                 "name": "Оила ҳимояси",
                 "headline": "Шубҳали хабарни юборинг, кейин ҳаракат қилинг.",
@@ -133,7 +133,7 @@ WEB_COPY = {
                     "Юборилган матн сақланмайди",
                 ],
             },
-            "seller_guard": {
+            "merchants": {
                 "eyebrow": "Сотувчилар учун",
                 "name": "Сотувчи ҳимояси",
                 "headline": "Товарни беришдан олдин харидор юборган далилни текширинг.",
@@ -156,7 +156,7 @@ WEB_COPY = {
     "ru": {
         "html_lang": "ru",
         "nav_family": "Защита семьи",
-        "nav_seller": "Защита продавца",
+        "nav_merchants": "Защита продавца",
         "privacy_link": "Конфиденциальность",
         "language_label": "Язык",
         "title": "Avvalo",
@@ -176,7 +176,7 @@ WEB_COPY = {
         "consent_error": "Сначала примите условия конфиденциальности.",
         "unknown_face_error": "Неизвестный тип проверки.",
         "faces": {
-            "family_shield": {
+            "family": {
                 "eyebrow": "Для семей",
                 "name": "Защита семьи",
                 "headline": "Проверьте сомнительное сообщение до ответа или оплаты.",
@@ -194,7 +194,7 @@ WEB_COPY = {
                     "Отправленный текст не сохраняется",
                 ],
             },
-            "seller_guard": {
+            "merchants": {
                 "eyebrow": "Для продавцов",
                 "name": "Защита продавца",
                 "headline": "Проверьте доказательство от покупателя до передачи товара.",
@@ -217,8 +217,8 @@ WEB_COPY = {
 }
 
 FACE_PATHS = {
-    "family_shield": "/family-shield",
-    "seller_guard": "/seller-guard",
+    "family": "/",
+    "merchants": "/merchants",
 }
 
 
@@ -231,23 +231,16 @@ async def healthz() -> dict[str, bool]:
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
-    """Render the default Family Shield check page."""
+    """Render the Avvalo family check page (the default, unbranded root)."""
 
-    return _face_page(request, face="family_shield", language=language)
-
-
-@router.get("/family-shield", response_class=HTMLResponse)
-async def family_shield(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
-    """Render the Family Shield check page."""
-
-    return _face_page(request, face="family_shield", language=language)
+    return _face_page(request, face="family", language=language)
 
 
-@router.get("/seller-guard", response_class=HTMLResponse)
-async def seller_guard(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
-    """Render the Seller Guard check page."""
+@router.get("/merchants", response_class=HTMLResponse)
+async def merchants(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
+    """Render the Avvalo Merchants check page."""
 
-    return _face_page(request, face="seller_guard", language=language)
+    return _face_page(request, face="merchants", language=language)
 
 
 def _face_page(request: Request, *, face: str, language: str) -> HTMLResponse:
@@ -265,9 +258,9 @@ def _face_page(request: Request, *, face: str, language: str) -> HTMLResponse:
             "face": face,
             "face_copy": copy["faces"][face],
             "face_path": FACE_PATHS[face],
-            "other_face": "seller_guard" if face == "family_shield" else "family_shield",
+            "other_face": "merchants" if face == "family" else "family",
             "other_face_path": FACE_PATHS[
-                "seller_guard" if face == "family_shield" else "family_shield"
+                "merchants" if face == "family" else "family"
             ],
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
@@ -306,7 +299,7 @@ async def privacy(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRes
 @router.post("/check", response_class=HTMLResponse)
 async def check(
     request: Request,
-    face: Annotated[str, Form()] = "family_shield",
+    face: Annotated[str, Form()] = "family",
     language: Annotated[str, Form()] = DEFAULT_LANGUAGE,
     text: Annotated[str, Form()] = "",
     caption: Annotated[str, Form()] = "",

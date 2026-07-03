@@ -46,7 +46,7 @@ def test_pipeline_has_a_timeout_wrapper() -> None:
 async def test_llm_timeout_returns_timeout_without_safety_conclusion() -> None:
     result = await run_check(
         CheckInput(
-            face="family_shield",
+            face="family",
             user_key="timeout-user",
             language=Language.uz_latn,
             input_type=InputType.text,
@@ -65,7 +65,7 @@ async def test_llm_timeout_returns_timeout_without_safety_conclusion() -> None:
 async def test_ocr_timeout_returns_timeout_before_llm_call() -> None:
     result = await run_check(
         CheckInput(
-            face="family_shield",
+            face="family",
             user_key="ocr-timeout-user",
             language=Language.uz_latn,
             input_type=InputType.image,

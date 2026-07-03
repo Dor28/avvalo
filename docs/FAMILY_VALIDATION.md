@@ -1,12 +1,12 @@
-# Avvalo Family Shield — Validation Spec
+# Avvalo — Validation Spec
 
 > **Status:** Ready to build · validation version 1.0 · 2026-06-21  
-> **Authority:** Implements the Family Shield micro-MVP defined in [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). If this document conflicts with the guide's vision or safety rules, the guide wins.  
+> **Authority:** Implements the Avvalo micro-MVP defined in [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). If this document conflicts with the guide's vision or safety rules, the guide wins.  
 > **Experiment length:** 2–4 weeks to build, followed by a 21-day measured private alpha.
 
 ## 1. Decision this experiment must make
 
-Family Shield is not being validated as a universal fraud assistant. It is testing one repeatable behaviour:
+Avvalo is not being validated as a universal fraud assistant. It is testing one repeatable behaviour:
 
 > **Before responding, paying, or sharing data, a user forwards a suspicious message or screenshot to Avvalo and receives a useful UZ/RU check.**
 
@@ -424,9 +424,9 @@ Score each audited response for:
 
 Apply these only after the minimum sample in §11.
 
-### Green — continue Family Shield
+### Green — continue Avvalo
 
-Continue to the next Family Shield iteration only if:
+Continue to the next Avvalo iteration only if:
 
 - **14-day repeat use ≥ 25%;**
 - **usefulness `Yes` ≥ 70%** with at least a 30% feedback-response rate;
@@ -449,9 +449,9 @@ Run one additional, maximum two-week iteration when guardrails pass but demand i
 
 Choose one diagnosed problem, change one major variable, and rerun. Do not add new products or features to rescue the metric.
 
-### Red — stop Family Shield-first or pivot the wedge
+### Red — stop Avvalo-first or pivot the wedge
 
-Stop investing in Family Shield-first when, after one focused iteration:
+Stop investing in Avvalo-first when, after one focused iteration:
 
 - 14-day repeat use remains below 10%; or
 - usefulness remains below 50%; or
@@ -460,9 +460,9 @@ Stop investing in Family Shield-first when, after one focused iteration:
 
 A critical privacy leak, unsafe instruction, or repeated person-level accusation **pauses the alpha immediately**. Fix and re-audit before deciding whether demand passed; safety failures are not averaged away by good engagement.
 
-### Commercial override toward Seller Guard
+### Commercial override toward Avvalo Merchants
 
-Run at least 10 structured merchant interviews during the build/alpha. If at least **three independent merchants accept a named price and commit to a dated paid pilot**—not merely say the idea is interesting—prioritize Seller Guard next even if Family Shield is green. Family Shield may remain the free acquisition surface.
+Run at least 10 structured merchant interviews during the build/alpha. If at least **three independent merchants accept a named price and commit to a dated paid pilot**—not merely say the idea is interesting—prioritize Avvalo Merchants next even if Avvalo is green. Avvalo may remain the free acquisition surface.
 
 Telco/bank interest does not count as validated revenue until there is a named owner, next procurement step, and written pilot intent.
 
@@ -488,7 +488,7 @@ The experiment is complete when:
 - the 14-day return window has elapsed;
 - cost, latency, demand, safety, and privacy results are calculated from the definitions above;
 - merchant-validation results are reviewed alongside consumer results;
-- the founder records one explicit decision: `continue Family Shield`, `one focused iteration`, `prioritize Seller Guard`, or `stop/pivot`;
+- the founder records one explicit decision: `continue Avvalo`, `one focused iteration`, `prioritize Avvalo Merchants`, or `stop/pivot`;
 - raw alpha analytics are scheduled for aggregation/deletion under §9.
 
 The next artifact after a **green** decision is a technical production spec and engine schema. The next artifact after **yellow/red** is a short experiment review explaining the evidence and the single chosen change or pivot.

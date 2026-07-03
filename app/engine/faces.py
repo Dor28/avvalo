@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Face:
-    """A product face (Family Shield or Seller Guard)."""
+    """A product face (family or merchants)."""
 
     id: str
     rule_pack_dir: str
@@ -18,16 +18,16 @@ class Face:
 
 
 FACES: dict[str, Face] = {
-    "family_shield": Face(
-        id="family_shield",
-        rule_pack_dir="rules/family_shield",
-        prompt_template="prompts/family_shield.txt",
+    "family": Face(
+        id="family",
+        rule_pack_dir="rules/family",
+        prompt_template="prompts/family.txt",
         daily_limit=5,
     ),
-    "seller_guard": Face(
-        id="seller_guard",
-        rule_pack_dir="rules/seller_guard",
-        prompt_template="prompts/seller_guard.txt",
+    "merchants": Face(
+        id="merchants",
+        rule_pack_dir="rules/merchants",
+        prompt_template="prompts/merchants.txt",
         daily_limit=20,
     ),
 }

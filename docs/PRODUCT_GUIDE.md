@@ -30,13 +30,13 @@ Why this category is worth building now: Uzbekistan's e-commerce market was ~$1.
 **🔒 Locked — build on these:**
 - The **vision** (§1) and **safety principles** (§4).
 - The **shared engine** (§3).
-- The **Family Shield micro-MVP** (§7) — one entry behaviour.
-- **Seller Guard as the revenue hypothesis** (§8) — start merchant interviews now.
+- The **Avvalo micro-MVP** (§7) — one entry behaviour.
+- **Avvalo Merchants as the revenue hypothesis** (§8) — start merchant interviews now.
 - **No accusation database** (§14).
 
 **🔬 Open — hypotheses to validate, NOT settled:**
 - **Telco/bank sponsorship** as a payer (§7, §11) — unproven; enterprise sales is slow.
-- **The product sequence after Family Shield** (§10) — let merchant demand, not this plan, decide the order.
+- **The product sequence after Avvalo** (§10) — let merchant demand, not this plan, decide the order.
 - **The Deal Check vertical** (§9) — choose vehicles *or* electronics only once a usable data source exists.
 - **"Pattern database = moat"** (§3) — it's a useful asset, not a moat.
 - **Database-registration & foreign-processing conclusions** (§12) — confirm with counsel / the regulator.
@@ -73,7 +73,7 @@ All products are thin packages over **one backend**. Build the engine once; pack
 - **OCR — local-first ✅:** run **OCR locally / on-prem for v1**. A cloud OCR sees the *raw* screenshot (full cards, faces, third parties) *before* any redaction is possible — a cross-border-transfer problem SCCs don't fully solve (§12). Do OCR on home soil; send only minimized text onward.
 - **Minimization:** strip/minimize PII and **never store full card numbers**; strip EXIF/GPS from images; send only **genuinely minimized text** to the LLM.
 - **Hybrid analysis (the locally-tuned asset):** a deterministic, versioned, per-category **rule checklist** with UZ/RU keyword sets runs first and is authoritative; the **LLM** adds nuance and writes the UZ/RU output. The LLM never emits a score or a "safe/scammer" verdict. *(Engine detail: [PRODUCT_DESIGN.md](PRODUCT_DESIGN.md) §8a.)*
-- **Pattern capture (later; useful asset — 🔬 not the moat):** the Family Shield micro-MVP retains **no submitted content or pattern examples by default**. After validation, Avvalo may retain only an **explicitly opt-in, manually reviewed, genuinely de-identified derivative** that improves the rules and powers community pattern-alerts (*"a new fake-delivery scam is circulating"*). The submitter's consent alone does **not** cover every person appearing in a forwarded message or screenshot. Useful — but **competitors can reproduce rules, anonymized examples, and alerts**, so don't mistake it for defensibility. The **stronger future moats** are: local **payment-provider integrations**, **merchant workflows + historical outcomes**, **labeled receipt/document examples**, **distribution partnerships**, and a **trusted UZ/RU safety brand**.
+- **Pattern capture (later; useful asset — 🔬 not the moat):** the Avvalo micro-MVP retains **no submitted content or pattern examples by default**. After validation, Avvalo may retain only an **explicitly opt-in, manually reviewed, genuinely de-identified derivative** that improves the rules and powers community pattern-alerts (*"a new fake-delivery scam is circulating"*). The submitter's consent alone does **not** cover every person appearing in a forwarded message or screenshot. Useful — but **competitors can reproduce rules, anonymized examples, and alerts**, so don't mistake it for defensibility. The **stronger future moats** are: local **payment-provider integrations**, **merchant workflows + historical outcomes**, **labeled receipt/document examples**, **distribution partnerships**, and a **trusted UZ/RU safety brand**.
   - **De-identification caveat:** removing obvious identifiers (names/phones/cards/usernames/faces) does **not** guarantee de-identification — distinctive wording and transaction context can still re-identify a person. Do not retain the derivative unless manual review confirms that re-identification risk is acceptably low; treat every retained example as still-sensitive.
 
 ---
@@ -110,15 +110,15 @@ Three products, one engine. The order below is the **current working hypothesis 
 
 | # | Product | Audience | Role | Who pays | Legal risk |
 |---|---|---|---|---|---|
-| **1** | **Family Shield** | Families / consumers | Free community wedge — reach, mission, brand | Family plan + sponsor *(both hypotheses)* | 🟢 Low |
-| **2** | **Seller Guard** | Small TG/IG merchants | The revenue engine — recurring B2B | Merchant subscription | 🟡 Low–med |
+| **1** | **Avvalo** | Families / consumers | Free community wedge — reach, mission, brand | Family plan + sponsor *(both hypotheses)* | 🟢 Low |
+| **2** | **Avvalo Merchants** (avvalo.uz/merchants) | Small TG/IG merchants | The revenue engine — recurring B2B | Merchant subscription | 🟡 Low–med |
 | **3** | **Deal Check** | Big-ticket buyers | Parked until a vertical + data source exist | Per-report + referral fees | 🟡 Low–med |
 
 Parked for later (don't build now): **JobPass, Fine Print, Complaint, LinkSafe** — see §17.
 
 ---
 
-## 7. Phase 1 — Avvalo Family Shield (free / community)
+## 7. Phase 1 — Avvalo (free / community)
 
 **Concept.** A Telegram-first safety assistant for protecting parents, relatives, and less digitally confident family members.
 
@@ -134,13 +134,13 @@ The user does one thing; Avvalo replies with the 🚩/✅/❓ read in UZ/RU. **I
 
 **Paid family plan (later, 🔬 a hypothesis):** up to 5 family members · higher/unlimited checks · shared family alerts (with explicit consent) · priority analysis · monthly "new scams affecting families" digest.
 
-**Who pays — 🔬 primary monetization hypothesis to validate, NOT an assumption:** the family subscription is one option; the bigger bet is a **telecom/bank bundle or sponsored digital-safety campaign** (B2B2C). Enterprise sponsorship can take **months** and may require procurement, security review, and significant traction. **Do not build Family Shield assuming a sponsor will appear.** Keep costs near zero, and validate willingness-to-pay (family plan) and merchant revenue (Seller Guard) **in parallel.**
+**Who pays — 🔬 primary monetization hypothesis to validate, NOT an assumption:** the family subscription is one option; the bigger bet is a **telecom/bank bundle or sponsored digital-safety campaign** (B2B2C). Enterprise sponsorship can take **months** and may require procurement, security review, and significant traction. **Do not build Avvalo assuming a sponsor will appear.** Keep costs near zero, and validate willingness-to-pay (family plan) and merchant revenue (Avvalo Merchants) **in parallel.**
 
 **Proves:** whether the one-behaviour wedge earns reach and repeat use, cheaply — and seeds the scam-pattern content.
 
 ---
 
-## 8. Phase 2 — Avvalo Seller Guard (paid / merchant) ✅ *(the revenue hypothesis)*
+## 8. Phase 2 — Avvalo Merchants (paid / merchant, avvalo.uz/merchants) ✅ *(the revenue hypothesis)*
 
 **Concept.** A Telegram assistant for small merchants selling via Instagram, Telegram, and informal channels — the **revenue bet**.
 
@@ -156,9 +156,9 @@ The user does one thing; Avvalo replies with the 🚩/✅/❓ read in UZ/RU. **I
 
 **Why it's the revenue bet:** the only idea with all four of **payer + frequency + ROI + retention** — merchants face suspicious orders repeatedly (recurring need, not a one-time fear product), and one caught fake-payment pays for a year.
 
-> **🔬 Validate now, in parallel with Family Shield:** interview merchants and test willingness-to-pay from week 1. **If merchants offer to pay before consumers develop repeat usage, move Seller Guard forward immediately** — the §10 order is not locked.
+> **🔬 Validate now, in parallel with Avvalo:** interview merchants and test willingness-to-pay from week 1. **If merchants offer to pay before consumers develop repeat usage, move Avvalo Merchants forward immediately** — the §10 order is not locked.
 
-**Note:** merchants are a **different audience and go-to-market** from Family Shield's families — the engine is shared, the GTM is not.
+**Note:** merchants are a **different audience and go-to-market** from Avvalo's families — the engine is shared, the GTM is not.
 
 ---
 
@@ -178,19 +178,19 @@ The user does one thing; Avvalo replies with the 🚩/✅/❓ read in UZ/RU. **I
 
 ## 10. Build order & sequencing 🔶 (working hypothesis — not locked)
 
-**Current hypothesis: Family Shield → Seller Guard → Deal Check — but the order after Family Shield is decided by evidence, not by this plan.**
+**Current hypothesis: Avvalo → Avvalo Merchants → Deal Check — but the order after Avvalo is decided by evidence, not by this plan.**
 
-- **Family Shield is a 2–4 week experiment**, not a multi-month build — ship the one-behaviour micro-MVP (§7), then measure the success/failure gates (§16).
-- **Interview merchants in parallel from week 1.** **If merchants offer to pay before consumers develop repeat usage, move Seller Guard forward immediately.**
+- **Avvalo is a 2–4 week experiment**, not a multi-month build — ship the one-behaviour micro-MVP (§7), then measure the success/failure gates (§16).
+- **Interview merchants in parallel from week 1.** **If merchants offer to pay before consumers develop repeat usage, move Avvalo Merchants forward immediately.**
 - **Deal Check stays parked** until a vertical (vehicles or electronics) is selected and a useful data source is available (§9).
 
 | Phase | Ships | Proves |
 |---|---|---|
-| **1 — Family Shield** *(2–4 wk experiment)* | Shared engine + one-behaviour checker + first community alert | Cheap reach + repeat use? |
-| **2 — Seller Guard** *(unlock on merchant demand)* | Merchant analysis + verification checklist + subscription (+ payment integration later) | Recurring revenue + retention |
+| **1 — Avvalo** *(2–4 wk experiment)* | Shared engine + one-behaviour checker + first community alert | Cheap reach + repeat use? |
+| **2 — Avvalo Merchants** *(unlock on merchant demand)* | Merchant analysis + verification checklist + subscription (+ payment integration later) | Recurring revenue + retention |
 | **3 — Deal Check** *(unlock on vertical + data)* | Deal report (checklist first; data integrations later) + referrals | High-value transactional revenue |
 
-> **Honest watch-item:** Family Shield-first defers revenue, and its payer is an unproven sponsorship hypothesis (§7). So keep running costs near zero, run **merchant validation alongside** from day one, and be ready to flip to Seller Guard the moment the evidence says so.
+> **Honest watch-item:** Avvalo-first defers revenue, and its payer is an unproven sponsorship hypothesis (§7). So keep running costs near zero, run **merchant validation alongside** from day one, and be ready to flip to Avvalo Merchants the moment the evidence says so.
 
 **Parallel, non-engineering (start in Phase 1):** merchant interviews · telco/bank sponsorship discovery · scam-pattern content authoring (rules + education, UZ-Latin/Cyrillic + RU) · the legal confirmations in §12.
 
@@ -200,8 +200,8 @@ The user does one thing; Avvalo replies with the 🚩/✅/❓ read in UZ/RU. **I
 
 Free for the core action; the money comes from elsewhere. Consumers are the **audience**, not the main **payer**. Each line below is a hypothesis to validate, not booked revenue.
 
-- **Merchant subscriptions** (Seller Guard) — the **primary** revenue bet; validate willingness-to-pay now.
-- **Telco/bank bundles & sponsored campaigns** (Family Shield) — *a hypothesis; unproven and slow (§7). Don't depend on it.*
+- **Merchant subscriptions** (Avvalo Merchants) — the **primary** revenue bet; validate willingness-to-pay now.
+- **Telco/bank bundles & sponsored campaigns** (Avvalo) — *a hypothesis; unproven and slow (§7). Don't depend on it.*
 - **Paid deal reports + referral fees** (Deal Check) — after unparking.
 - **White-label** checkers for consumer organizations, employers, schools.
 - **Optional tips / Telegram Stars** — cost-offset only, never the model.
@@ -232,8 +232,8 @@ The §1 principle (verify the situation, not the person) **materially reduces** 
 
 ## 13. Metrics
 
-- **Family Shield:** weekly active users, checks/user, **repeat use** (2nd check in 14 days), share/invite rate, "confirmed avoided a payment," cost per check.
-- **Seller Guard:** merchant-interview → willingness-to-pay signal, trial→paid conversion, monthly churn, revenue/ARPU, checks/merchant/week.
+- **Avvalo:** weekly active users, checks/user, **repeat use** (2nd check in 14 days), share/invite rate, "confirmed avoided a payment," cost per check.
+- **Avvalo Merchants:** merchant-interview → willingness-to-pay signal, trial→paid conversion, monthly churn, revenue/ARPU, checks/merchant/week.
 - **Deal Check:** (after unparking) reports sold, referral revenue, repeat rate.
 - **Cross-cutting:** cost per check trending **down**; rule-coverage & education freshness.
 
@@ -246,7 +246,7 @@ The §1 principle (verify the situation, not the person) **materially reduces** 
 - ❌ **Risk scores** or **"safe" verdicts**.
 - ❌ Selling personal data; letting sponsors influence results.
 - ❌ Public/shareable accusation pages.
-- ❌ Building all the products at once, or presenting Family Shield as six features (build one wedge / one behaviour first).
+- ❌ Building all the products at once, or presenting Avvalo as six features (build one wedge / one behaviour first).
 
 ---
 
@@ -268,10 +268,10 @@ The §1 principle (verify the situation, not the person) **materially reduces** 
 ## 16. Open decisions / next deliverable
 
 1. **Tech stack** — Telegram framework; **OCR — local/on-prem for v1** (§12), UZ Latin/Cyrillic + RU; LLM provider (fed only minimized text); a **relational DB is enough** (no graph DB — there's no accusation graph); web framework; UZ-or-compliant hosting.
-2. **Pricing** — Seller Guard monthly tier; size it **bottoms-up** (active UZ TG/IG merchants × realistic paying % × price), not from the $2B TAM.
+2. **Pricing** — Avvalo Merchants monthly tier; size it **bottoms-up** (active UZ TG/IG merchants × realistic paying % × price), not from the $2B TAM.
 3. **Legal confirmations** (§12) — the registration trigger and foreign-processing path, with a local lawyer.
 
-> **Completed 2026-06-21:** [FAMILY_SHIELD_VALIDATION.md](FAMILY_SHIELD_VALIDATION.md) is the Family Shield *validation* spec—not a full technical build spec. It defines:
+> **Completed 2026-06-21:** [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md) is the Avvalo *validation* spec—not a full technical build spec. It defines:
 > 1. **one entry flow** (the single "forward a suspicious message" path),
 > 2. **five example outputs** (five real pasted scenarios → the exact 🚩/✅/❓ reply),
 > 3. **retention rules** (what's kept, minimized, or discarded, and for how long),
@@ -289,5 +289,5 @@ Kept for later; each reuses the same engine:
 - **JobPass** — job/visa/migration-scam checks. High community impact (large UZ labor-migration market); monetization is lumpy/partner-funded (migration orgs, recruiters, sponsored worker-safety). The mission-first alternative to Deal Check.
 - **Fine Print** — plain-language contract explainer (loans, rentals, services). Broad/horizontal; pay-per-doc + white-label. Must stay an explanation tool, not a lawyer substitute.
 - **Complaint** — consumer-rights assistant that drafts a structured complaint in UZ/RU. A feature or grant-funded module more than a standalone business.
-- **LinkSafe** — link/QR/phishing checker. Globally commoditized — keep it as a **free feature inside Family Shield**, not a standalone product.
+- **LinkSafe** — link/QR/phishing checker. Globally commoditized — keep it as a **free feature inside Avvalo**, not a standalone product.
 - **Antispam / Group Guard** — automatic anti-scam protection for Telegram **groups & channels**: add the live bot ([@Avvalo_official_bot](https://t.me/Avvalo_official_bot)) as an admin and it screens incoming messages with the shared engine, removing scam links / phishing / spam and CAPTCHA-gating new joiners. Reuses the engine but flips from *user-initiated checks* to *passive monitoring + automated content moderation* — so it needs a conservative default, an admin appeal path, and its own install-time privacy notice (it reads group messages, not private forwards). Detail in [ADJACENT_PRODUCT_IDEAS.md](ADJACENT_PRODUCT_IDEAS.md) §13. 🔬 future.

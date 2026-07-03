@@ -77,7 +77,7 @@ def configured_bot_specs(settings: Settings) -> list[BotSpec]:
     token = settings.telegram_token.get_secret_value()
     if not token or token == PLACEHOLDER_TOKEN:
         return []
-    return [BotSpec(face_id="family_shield", token=token)]
+    return [BotSpec(face_id="family", token=token)]
 
 
 async def _run_web(settings: Settings, session_factory) -> None:

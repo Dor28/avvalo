@@ -35,7 +35,7 @@ class FakeLLMProvider:
 
 
 async def test_daily_limit_boundary_is_reachable(session) -> None:
-    face = "family_shield"
+    face = "family"
     limit = FACES[face].daily_limit
     counts = [
         await repo.increment_usage(session, user_key="capped", face=face) for _ in range(limit)
@@ -44,10 +44,10 @@ async def test_daily_limit_boundary_is_reachable(session) -> None:
     assert await repo.get_usage(session, user_key="capped", face=face) == limit
 
 
-async def test_sixth_family_shield_check_is_rate_limited(session) -> None:
+async def test_sixth_family_check_is_rate_limited(session) -> None:
     provider = FakeLLMProvider()
     check_input = CheckInput(
-        face="family_shield",
+        face="family",
         user_key="daily-limit",
         language=Language.ru,
         input_type=InputType.text,
@@ -56,7 +56,7 @@ async def test_sixth_family_shield_check_is_rate_limited(session) -> None:
 
     results = [
         await run_check(check_input, session=session, llm_provider=provider)
-        for _ in range(FACES["family_shield"].daily_limit + 1)
+        for _ in range(FACES["family"].daily_limit + 1)
     ]
 
     assert [result.status for result in results[:-1]] == [CheckStatus.ok] * 5
@@ -66,7 +66,7 @@ async def test_sixth_family_shield_check_is_rate_limited(session) -> None:
 
 async def test_feedback_is_stored_categorically(session) -> None:
     check_id = await repo.record_check_event(
-        session, user_key="fb", face="family_shield", input_type="text", language="ru", status="ok"
+        session, user_key="fb", face="family", input_type="text", language="ru", status="ok"
     )
     await repo.record_feedback(
         session, check_id=check_id, usefulness="partly", next_action="verify"
@@ -77,7 +77,7 @@ async def test_feedback_is_stored_categorically(session) -> None:
 
 async def test_feedback_rejects_non_categorical_values(session) -> None:
     check_id = await repo.record_check_event(
-        session, user_key="fb2", face="family_shield", input_type="text", language="ru", status="ok"
+        session, user_key="fb2", face="family", input_type="text", language="ru", status="ok"
     )
     with pytest.raises(ValueError):
         await repo.record_feedback(
@@ -95,7 +95,7 @@ def test_log_event_accepts_metadata_and_refuses_content(callable_or_skip) -> Non
         pytest.skip(f"log_event does not take **fields: {inspect.signature(log_event)}")
 
     try:
-        log_event("check_completed", language="ru", face="family_shield", status="ok")
+        log_event("check_completed", language="ru", face="family", status="ok")
     except TypeError as exc:
         pytest.skip(f"log_event metadata signature differs from §12: {exc}")
 
@@ -103,14 +103,14 @@ def test_log_event_accepts_metadata_and_refuses_content(callable_or_skip) -> Non
     with pytest.raises((ValueError, TypeError, KeyError)):
         log_event("check_completed", raw_text="secret submitted content")
     with pytest.raises(ValueError):
-        log_event("check_failed", face="family_shield", error_class="+998 90 123 45 67")
+        log_event("check_failed", face="family", error_class="+998 90 123 45 67")
 
 
 async def test_run_check_emits_privacy_safe_events(session, caplog) -> None:
     caplog.set_level(logging.INFO, logger="app.obs.events")
     await run_check(
         CheckInput(
-            face="family_shield",
+            face="family",
             user_key="evented",
             language=Language.uz_latn,
             input_type=InputType.text,

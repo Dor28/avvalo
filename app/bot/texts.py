@@ -87,12 +87,12 @@ TEXTS: dict[str, dict[str, str]] = {
             "либо опишите ситуацию."
         ),
     },
-    "ready_family_shield": {
+    "ready_family": {
         "uz_latn": "Tayyor. Shubhali xabar, skrinshot yoki vaziyatni yuboring.",
         "uz_cyrl": "Тайёр. Шубҳали хабар, скриншот ёки вазиятни юборинг.",
         "ru": "Готово. Пришлите сомнительное сообщение, скриншот или ситуацию.",
     },
-    "ready_seller_guard": {
+    "ready_merchants": {
         "uz_latn": (
             "Tayyor. Xaridor yuborgan to'lov cheki, yetkazish yoki refund so'rovini "
             "yuboring. Tovarni berishdan oldin tekshiramiz."

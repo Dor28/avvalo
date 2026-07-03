@@ -1,6 +1,6 @@
-# Avvalo — Seller Guard rule pack (merchant-side scam families)
+# Avvalo — merchants rule pack (merchant-side scam families)
 #
-# Same format as the Family Shield pack. These fire on what a CUSTOMER sends a small
+# Same format as the family pack. These fire on what a CUSTOMER sends a small
 # merchant. The hard product rule: never conclude money arrived — `verify_in_bank_app`
 # is an always-on reminder so every payment-related check ends with "confirm it yourself
 # in your real bank app before shipping."

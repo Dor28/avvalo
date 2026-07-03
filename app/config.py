@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     ocr_timeout_s: float = Field(default=30.0, gt=0)
 
     notice_version: str = "2026-06-24-v1"
-    daily_limit_family_shield: int = Field(default=5, ge=1)
-    daily_limit_seller_guard: int = Field(default=20, ge=1)
+    daily_limit_family: int = Field(default=5, ge=1)
+    daily_limit_merchants: int = Field(default=20, ge=1)
     operator_alert_chat_id: int | None = None
 
     web_enabled: bool = False
@@ -53,13 +53,13 @@ class Settings(BaseSettings):
     def daily_limit_for(self, face_id: str) -> int | None:
         """Return the configured daily check limit for *face_id*, or None.
 
-        Lets ``DAILY_LIMIT_FAMILY_SHIELD`` / ``DAILY_LIMIT_SELLER_GUARD`` actually
+        Lets ``DAILY_LIMIT_FAMILY`` / ``DAILY_LIMIT_MERCHANTS`` actually
         drive the per-face limit instead of being inert configuration.
         """
 
         return {
-            "family_shield": self.daily_limit_family_shield,
-            "seller_guard": self.daily_limit_seller_guard,
+            "family": self.daily_limit_family,
+            "merchants": self.daily_limit_merchants,
         }.get(face_id)
 
 

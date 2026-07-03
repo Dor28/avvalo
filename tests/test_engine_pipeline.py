@@ -41,7 +41,7 @@ class FakeOCRProvider:
 
 async def test_run_check_text_returns_result_and_records_event(session) -> None:
     check_input = CheckInput(
-        face="family_shield",
+        face="family",
         user_key="u1",
         language=Language.ru,
         input_type=InputType.text,
@@ -63,7 +63,7 @@ async def test_run_check_text_returns_result_and_records_event(session) -> None:
 
     stored_event = (await session.execute(select(CheckEvent))).scalar_one()
     assert stored_event.user_key == "u1"
-    assert stored_event.face == "family_shield"
+    assert stored_event.face == "family"
     assert stored_event.status == "ok"
     assert stored_event.language == "uz_latn"
     assert stored_event.input_type == "text"
@@ -76,7 +76,7 @@ async def test_run_check_image_uses_ocr_and_records_only_metadata(session) -> No
         "Hozir SMS orqali kelgan 6 xonali kodni yuboring."
     )
     check_input = CheckInput(
-        face="family_shield",
+        face="family",
         user_key="u-img",
         language=Language.ru,
         input_type=InputType.image,
@@ -114,7 +114,7 @@ async def test_run_check_low_ocr_returns_without_llm(session) -> None:
     llm = FakeLLMProvider()
     result = await run_check(
         CheckInput(
-            face="family_shield",
+            face="family",
             user_key="u-low-ocr",
             language=Language.uz_latn,
             input_type=InputType.image,
@@ -133,7 +133,7 @@ async def test_run_check_low_ocr_returns_without_llm(session) -> None:
 async def test_run_check_never_persists_ephemeral_input(session) -> None:
     raw_text = "Transfer to raw-card 8600123412345678 and call +998901234567."
     check_input = CheckInput(
-        face="family_shield",
+        face="family",
         user_key="u2",
         language=Language.uz_latn,
         input_type=InputType.text,
@@ -160,7 +160,7 @@ async def test_run_check_never_persists_ephemeral_input(session) -> None:
 async def test_run_check_empty_text_returns_empty_input(session) -> None:
     result = await run_check(
         CheckInput(
-            face="family_shield",
+            face="family",
             user_key="u3",
             language=Language.uz_cyrl,
             input_type=InputType.text,

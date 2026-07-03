@@ -1,7 +1,7 @@
 """Golden-fixture integrity tests (V1_TECHNICAL_PLAN §13 T5/T10, §8).
 
-The golden fixtures are the mandatory acceptance set: 5 Family Shield + >=3
-Seller Guard examples. End-to-end engine evaluation against them lands with the
+The golden fixtures are the mandatory acceptance set: 5 family + >=3
+merchants examples. End-to-end engine evaluation against them lands with the
 LLM (T6/T7/T10); until then these tests validate the fixtures' own structure and
 cross-check them against the rule packs so an example can't expect a family that
 no rule pack models.
@@ -31,8 +31,8 @@ REQUIRED_KEYS = {
     "no_signal",
 }
 
-# §8: Seller Guard must never imply a payment was actually received. Each SG
-# fixture must forbid at least one "money confirmed" phrasing. Apostrophes are
+# §8: the merchants face must never imply a payment was actually received. Each
+# merchants fixture must forbid at least one "money confirmed" phrasing. Apostrophes are
 # normalized so curly/straight variants compare equal.
 SG_MONEY_CONFIRMED = {
     "деньги пришли",
@@ -70,12 +70,12 @@ def _families_for(face: str) -> set[str]:
 
 
 def test_minimum_golden_counts() -> None:
-    # §13: "5 FS + >=3 SG golden examples".
-    assert len(_load("family_shield")) == 5
-    assert len(_load("seller_guard")) >= 3
+    # §13: "5 family + >=3 merchants golden examples".
+    assert len(_load("family")) == 5
+    assert len(_load("merchants")) >= 3
 
 
-@pytest.mark.parametrize("face", ["family_shield", "seller_guard"])
+@pytest.mark.parametrize("face", ["family", "merchants"])
 def test_fixture_shape_and_values(face: str) -> None:
     valid_languages = {lang.value for lang in Language}
     valid_input_types = {it.value for it in InputType}
@@ -103,7 +103,7 @@ def test_fixture_shape_and_values(face: str) -> None:
             )
 
 
-@pytest.mark.parametrize("face", ["family_shield", "seller_guard"])
+@pytest.mark.parametrize("face", ["family", "merchants"])
 def test_expected_families_exist_in_the_rule_pack(face: str) -> None:
     """Every expected family must be modeled by the face's rule pack (else it can never fire)."""
     pack_families = _families_for(face)
@@ -115,9 +115,9 @@ def test_expected_families_exist_in_the_rule_pack(face: str) -> None:
     assert not problems, "\n".join(problems)
 
 
-def test_seller_guard_fixtures_forbid_claiming_money_arrived() -> None:
+def test_merchants_fixtures_forbid_claiming_money_arrived() -> None:
     confirmed = {_norm(phrase) for phrase in SG_MONEY_CONFIRMED}
-    for fixture in _load("seller_guard"):
+    for fixture in _load("merchants"):
         forbidden = {_norm(item) for item in fixture["must_not_contain"]}
         assert forbidden & confirmed, (
             f"{fixture['id']}: must_not_contain should forbid a 'money arrived' phrase (§8)"

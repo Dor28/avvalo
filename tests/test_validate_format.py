@@ -168,7 +168,7 @@ async def test_pipeline_retries_once_after_validation_failure(session) -> None:
 
     result = await run_check(
         CheckInput(
-            face="family_shield",
+            face="family",
             user_key="u-t7-retry",
             language=Language.uz_latn,
             input_type=InputType.text,
@@ -206,7 +206,7 @@ async def test_pipeline_returns_safety_fallback_after_double_validation_failure(
 
     result = await run_check(
         CheckInput(
-            face="family_shield",
+            face="family",
             user_key="u-t7-fallback",
             language=Language.uz_latn,
             input_type=InputType.text,

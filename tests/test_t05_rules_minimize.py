@@ -1,7 +1,7 @@
-"""T5 — rule engine, Family Shield rules & minimization (V1_TECHNICAL_PLAN §10, §11, §13 T5).
+"""T5 — rule engine, family rules & minimization (V1_TECHNICAL_PLAN §10, §11, §13 T5).
 
 Acceptance criteria covered:
-- each FS golden input fires its expected rule families (and yields >=1 hit);
+- each family golden input fires its expected rule families (and yields >=1 hit);
 - minimization tokenizes PII while preserving the link signal (§10 unit test);
 - structural extractors classify links and transfer-to-card phrasing into signals.
 """
@@ -18,7 +18,7 @@ from app.engine.rules.engine import (
 
 
 def test_rule_packs_load_with_description_map() -> None:
-    for face in ("family_shield", "seller_guard"):
+    for face in ("family", "merchants"):
         pack = load_rule_pack(face)
         assert pack.rules, f"{face}: no rules loaded"
         for rule in pack.rules:
@@ -30,9 +30,9 @@ def test_unknown_face_is_rejected() -> None:
         load_rule_pack("no_such_face")
 
 
-def test_family_shield_goldens_fire_expected_families(golden) -> None:
-    for fixture in golden("family_shield"):
-        hits, _ = run_rules(fixture["input"], "family_shield")
+def test_family_goldens_fire_expected_families(golden) -> None:
+    for fixture in golden("family"):
+        hits, _ = run_rules(fixture["input"], "family")
         assert hits, f"{fixture['id']}: expected at least one rule hit"
         families = {hit.family for hit in hits}
         missing = set(fixture["expected_rule_families"]) - families

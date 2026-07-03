@@ -91,11 +91,11 @@ def test_build_prompt_renders_rule_descriptions_and_minimized_content() -> None:
         "Bank xavfsizlik xizmatidanmiz. SMS kod 123456 ni yuboring. "
         "Tel: +998 90 123 45 67, karta 8600 1234 1234 5678."
     )
-    hits, signals = run_rules(raw_text, "family_shield")
+    hits, signals = run_rules(raw_text, "family")
     minimized = minimize(raw_text, signals)
 
     system, user = build_prompt(
-        face_id="family_shield",
+        face_id="family",
         language=Language.uz_latn,
         minimized_text=minimized,
         rule_hits=hits,
@@ -159,7 +159,7 @@ async def test_pipeline_records_llm_usage_and_cost_without_content(session) -> N
 
     result = await run_check(
         CheckInput(
-            face="family_shield",
+            face="family",
             user_key="u-llm",
             language=Language.uz_latn,
             input_type=InputType.text,
@@ -195,7 +195,7 @@ async def test_pipeline_records_llm_usage_and_cost_without_content(session) -> N
 async def test_pipeline_llm_error_keeps_deterministic_rule_ids() -> None:
     result = await run_check(
         CheckInput(
-            face="family_shield",
+            face="family",
             user_key="u-llm-fail",
             language=Language.uz_latn,
             input_type=InputType.text,

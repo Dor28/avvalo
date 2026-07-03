@@ -84,7 +84,7 @@ You will use two files added for production:
 |---|---|---|
 | Hetzner Cloud account | console.hetzner.cloud | Project + payment method. |
 | SSH keypair | your laptop | `ssh-keygen -t ed25519 -C "avvalo-deploy"` if you don't have one. **Never** put the private key on the server. |
-| Telegram bot token(s) | @BotFather | One per face. Family Shield is required; Seller Guard optional. The production Family Shield bot is **[@Avvalo_official_bot](https://t.me/Avvalo_official_bot)**. |
+| Telegram bot token(s) | @BotFather | One per face. Avvalo (family) is required; Avvalo Merchants optional. The production Avvalo bot is **[@Avvalo_official_bot](https://t.me/Avvalo_official_bot)**. |
 | LLM host + API key | OpenRouter / Together / Fireworks | Pick one with a **DPA + no-retention/no-training** clause. |
 | Google Cloud Vision key | console.cloud.google.com | Service-account JSON with the *Cloud Vision API* enabled. Only if OCR is on. |
 | Cloudflare Turnstile keys | dash.cloudflare.com → Turnstile | **Web only** — gates image upload. |
@@ -399,7 +399,7 @@ docker compose -f docker-compose.prod.yml logs -f app  # watch it boot
 > which creates a temporary cert, brings the whole stack up, and issues the real
 > one. A bot-only deploy has no such step.
 
-You want to see, in order: `Avvalo booted and connected to PostgreSQL`, the retention scheduler start, and `Starting family_shield bot (polling)` (and the web line if enabled).
+You want to see, in order: `Avvalo booted and connected to PostgreSQL`, the retention scheduler start, and `Starting family bot (polling)` (and the web line if enabled).
 
 **Verify:**
 

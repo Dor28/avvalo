@@ -18,7 +18,7 @@ from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimi
 
 USEFULNESS_VALUES = {"yes", "partly", "no"}
 NEXT_ACTION_VALUES = {"verify", "delay_stop", "continue", "not_sure"}
-CHECK_EVENT_FACES = {"family_shield", "seller_guard"}
+CHECK_EVENT_FACES = {"family", "merchants"}
 CHECK_EVENT_INPUT_TYPES = {"text", "image"}
 CHECK_EVENT_LANGUAGES = {"uz_latn", "uz_cyrl", "ru"}
 CHECK_EVENT_STATUSES = {

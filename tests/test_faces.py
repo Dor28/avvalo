@@ -15,23 +15,23 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_exactly_the_two_documented_faces() -> None:
-    assert set(FACES) == {"family_shield", "seller_guard"}
+    assert set(FACES) == {"family", "merchants"}
     for key, face in FACES.items():
         assert isinstance(face, Face)
         assert face.id == key, f"FACES['{key}'].id must equal its key"
 
 
 def test_daily_limits_match_the_spec_and_config_defaults() -> None:
-    # §5.1: Family Shield = 5, Seller Guard = 20 (merchant checks more).
-    assert FACES["family_shield"].daily_limit == 5
-    assert FACES["seller_guard"].daily_limit == 20
+    # §5.1: family = 5, merchants = 20 (merchant checks more).
+    assert FACES["family"].daily_limit == 5
+    assert FACES["merchants"].daily_limit == 20
 
     # The registry must not disagree with the configurable defaults in config.py.
-    assert FACES["family_shield"].daily_limit == Settings.model_fields[
-        "daily_limit_family_shield"
+    assert FACES["family"].daily_limit == Settings.model_fields[
+        "daily_limit_family"
     ].default
-    assert FACES["seller_guard"].daily_limit == Settings.model_fields[
-        "daily_limit_seller_guard"
+    assert FACES["merchants"].daily_limit == Settings.model_fields[
+        "daily_limit_merchants"
     ].default
 
 

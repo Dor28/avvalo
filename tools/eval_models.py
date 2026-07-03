@@ -189,8 +189,8 @@ def build_providers():
 def main():
     system = load(PROMPTS / "system_safety.txt")
     templates = {
-        "family_shield": load(PROMPTS / "family_shield.txt"),
-        "seller_guard": load(PROMPTS / "seller_guard.txt"),
+        "family": load(PROMPTS / "family.txt"),
+        "merchants": load(PROMPTS / "merchants.txt"),
     }
     fixtures = []
     for f in sorted(glob.glob(str(FIXTURES / "*.json"))):

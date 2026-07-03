@@ -4,7 +4,7 @@ Covers three bugs found during review that the existing suite did not exercise:
 
 1. ``minimize`` left raw phone numbers with operator codes 50/55/88/20 in the
    text sent to the model (privacy leak).
-2. Seller Guard's always-on severity-1 reminder forced the validator to reject
+2. The merchants face's always-on severity-1 reminder forced the validator to reject
    benign payment checks for having no red flags, pushing them to the fallback.
 3. Failed / empty checks consumed a daily-limit slot.
 """
@@ -51,9 +51,9 @@ def test_phone_signal_emitted_for_previously_missed_prefixes(prefix: str) -> Non
 
 # --- Fix #2: severity-gated red_flags requirement ---------------------------
 
-def test_benign_seller_guard_message_passes_with_no_red_flags() -> None:
+def test_benign_merchants_message_passes_with_no_red_flags() -> None:
     benign = "Assalomu alaykum, men karta orqali to'lov qildim, rahmat."
-    hits, signals = run_rules(benign, "seller_guard")
+    hits, signals = run_rules(benign, "merchants")
 
     # Only the always-on severity-1 reminder should fire here.
     assert [hit.rule_id for hit in hits] == ["sg.verify.always"]
@@ -101,10 +101,10 @@ class _EmptyRedFlagsLLM:
         )
 
 
-async def test_benign_seller_guard_check_is_ok_not_safety_fallback(session) -> None:
+async def test_benign_merchants_check_is_ok_not_safety_fallback(session) -> None:
     result = await run_check(
         CheckInput(
-            face="seller_guard",
+            face="merchants",
             user_key="sg-benign",
             language=Language.uz_latn,
             input_type=InputType.text,
@@ -140,20 +140,20 @@ class _BoomLLM:
 async def test_empty_input_does_not_consume_quota(session) -> None:
     result = await run_check(
         CheckInput(
-            face="family_shield", user_key="q-empty", language=Language.ru,
+            face="family", user_key="q-empty", language=Language.ru,
             input_type=InputType.text, raw_text="   ",
         ),
         session=session,
         llm_provider=_OkLLM(),
     )
     assert result.status == CheckStatus.empty_input
-    assert await repo.get_usage(session, user_key="q-empty", face="family_shield") == 0
+    assert await repo.get_usage(session, user_key="q-empty", face="family") == 0
 
 
 async def test_llm_error_does_not_consume_quota(session) -> None:
     result = await run_check(
         CheckInput(
-            face="family_shield", user_key="q-err", language=Language.ru,
+            face="family", user_key="q-err", language=Language.ru,
             input_type=InputType.text,
             raw_text="Bank xavfsizlik xizmati. SMS kodni yuboring.",
         ),
@@ -161,28 +161,28 @@ async def test_llm_error_does_not_consume_quota(session) -> None:
         llm_provider=_BoomLLM(),
     )
     assert result.status == CheckStatus.llm_error
-    assert await repo.get_usage(session, user_key="q-err", face="family_shield") == 0
+    assert await repo.get_usage(session, user_key="q-err", face="family") == 0
 
 
 async def test_successful_check_consumes_quota(session) -> None:
     await run_check(
         CheckInput(
-            face="family_shield", user_key="q-ok", language=Language.ru,
+            face="family", user_key="q-ok", language=Language.ru,
             input_type=InputType.text,
             raw_text="Bank xavfsizlik xizmati. SMS kodni yuboring.",
         ),
         session=session,
         llm_provider=_OkLLM(),
     )
-    assert await repo.get_usage(session, user_key="q-ok", face="family_shield") == 1
+    assert await repo.get_usage(session, user_key="q-ok", face="family") == 1
 
 
 async def test_rate_limited_attempts_do_not_grow_the_counter(session) -> None:
     from app.engine.faces import FACES
 
-    limit = FACES["family_shield"].daily_limit
+    limit = FACES["family"].daily_limit
     check_input = CheckInput(
-        face="family_shield", user_key="q-cap", language=Language.ru,
+        face="family", user_key="q-cap", language=Language.ru,
         input_type=InputType.text,
         raw_text="Bank xavfsizlik xizmati. SMS kodni yuboring.",
     )
@@ -194,4 +194,4 @@ async def test_rate_limited_attempts_do_not_grow_the_counter(session) -> None:
     assert statuses[limit:] == [CheckStatus.rate_limited] * 3
     # Over-limit rejections are refunded, so the counter pins at the limit
     # instead of growing without bound.
-    assert await repo.get_usage(session, user_key="q-cap", face="family_shield") == limit
+    assert await repo.get_usage(session, user_key="q-cap", face="family") == limit

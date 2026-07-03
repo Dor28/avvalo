@@ -27,8 +27,8 @@ def test_t_falls_back_to_default_language() -> None:
     assert t("ready", "xx") == t("ready", DEFAULT_LANGUAGE)
 
 
-def test_face_entry_text_can_target_seller_guard() -> None:
-    assert "покупателя" in entry_text("seller_guard", "ru").lower()
+def test_face_entry_text_can_target_merchants() -> None:
+    assert "покупателя" in entry_text("merchants", "ru").lower()
     assert entry_text("unknown_face", "ru") == t("ready", "ru")
 
 
@@ -40,13 +40,13 @@ async def test_grant_consent_writes_current_version(session) -> None:
     await grant_consent(
         session,
         user_key="u1",
-        face="family_shield",
+        face="family",
         language="ru",
         notice_version=NOTICE,
     )
     await session.commit()
 
-    consent = await repo.get_consent(session, user_key="u1", face="family_shield")
+    consent = await repo.get_consent(session, user_key="u1", face="family")
     assert consent is not None
     assert consent.notice_version == NOTICE
     assert consent.language == "ru"

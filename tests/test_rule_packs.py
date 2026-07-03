@@ -25,18 +25,18 @@ ALLOWED_SIGNALS = {
 }
 
 # Required + allowed families per face (§11 "Required rule families").
-FAMILY_SHIELD_REQUIRED = {
+FAMILY_REQUIRED = {
     "credential_theft",
     "urgency_secrecy",
     "authority_impersonation",
     "upfront_payment",
     "verification_avoidance",
 }
-FAMILY_SHIELD_ALLOWED = FAMILY_SHIELD_REQUIRED | {
+FAMILY_ALLOWED = FAMILY_REQUIRED | {
     "implausible_promise",
     "suspicious_link_qr",
 }
-SELLER_GUARD_REQUIRED = {
+MERCHANTS_REQUIRED = {
     "receipt_inconsistency",
     "amount_mismatch",
     "edited_screenshot_hint",
@@ -45,17 +45,17 @@ SELLER_GUARD_REQUIRED = {
 }
 
 PACKS = {
-    "family_shield": {
-        "dir": "rules/family_shield",
+    "family": {
+        "dir": "rules/family",
         "id_prefix": "fs.",
-        "required_families": FAMILY_SHIELD_REQUIRED,
-        "allowed_families": FAMILY_SHIELD_ALLOWED,
+        "required_families": FAMILY_REQUIRED,
+        "allowed_families": FAMILY_ALLOWED,
     },
-    "seller_guard": {
-        "dir": "rules/seller_guard",
+    "merchants": {
+        "dir": "rules/merchants",
         "id_prefix": "sg.",
-        "required_families": SELLER_GUARD_REQUIRED,
-        "allowed_families": SELLER_GUARD_REQUIRED,
+        "required_families": MERCHANTS_REQUIRED,
+        "allowed_families": MERCHANTS_REQUIRED,
     },
 }
 
@@ -148,9 +148,9 @@ def test_each_rule_matches_the_schema(face: str) -> None:
     assert not problems, "rule schema violations:\n" + "\n".join(problems)
 
 
-def test_seller_guard_has_always_on_bank_verify_reminder() -> None:
-    """SG's hard rule: every payment check ends with 'verify in your own bank app' (§11)."""
-    families = {f["family"]: f for f in _load_families(PACKS["seller_guard"]["dir"])}
+def test_merchants_has_always_on_bank_verify_reminder() -> None:
+    """merchants' hard rule: every payment check ends with 'verify in your own bank app' (§11)."""
+    families = {f["family"]: f for f in _load_families(PACKS["merchants"]["dir"])}
     assert "verify_in_bank_app" in families
     rule_ids = {rule["id"] for rule in families["verify_in_bank_app"]["rules"]}
     assert rule_ids, "verify_in_bank_app family must define at least one always-on rule"

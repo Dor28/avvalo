@@ -1,7 +1,7 @@
 [
   {
     "id": "sg_01_fake_payment_screenshot",
-    "face": "seller_guard",
+    "face": "merchants",
     "language": "ru",
     "input_type": "text",
     "input": "Здравствуйте! Оплату отправила, вот скриншот перевода на 850 000 сум. Деньги придут в течение дня, банк иногда задерживает. Отдайте товар курьеру сейчас, я очень спешу.",
@@ -13,7 +13,7 @@
   },
   {
     "id": "sg_02_overpayment_refund",
-    "face": "seller_guard",
+    "face": "merchants",
     "language": "uz_latn",
     "input_type": "text",
     "input": "Akangiz men. Xato qilib ikki marta to‘lab yuboribman, 1 200 000 o‘rniga 2 400 000 ketdi. Iltimos, ortig‘ini shu kartaga qaytarib bering, skrinshot mana. Tezroq bo‘lsa yaxshi edi.",
@@ -25,7 +25,7 @@
   },
   {
     "id": "sg_03_name_mismatch_ship_now",
-    "face": "seller_guard",
+    "face": "merchants",
     "language": "uz_cyrl",
     "input_type": "text",
     "input": "Тўловни қилдим, чек мана. Лекин банк иловамда бошқа исм чиқяпти, унчалик муҳим эмас, пул барибир тушади. Тезроқ жўнатинг, харидор кутиб турибди.",

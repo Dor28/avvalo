@@ -1,4 +1,4 @@
-# Avvalo — Family Shield rule pack (consumer scam families)
+# Avvalo — family rule pack (consumer scam families)
 #
 # Format: a top-level `families:` list. The loader iterates every family in every YAML
 # file under this directory; each rule has a stable, globally-unique `id`.

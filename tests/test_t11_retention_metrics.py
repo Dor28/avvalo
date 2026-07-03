@@ -21,7 +21,7 @@ async def test_retention_deletes_only_expired_metadata_rows(session) -> None:
             CheckEvent(
                 id=old_check_id,
                 user_key="old",
-                face="family_shield",
+                face="family",
                 ts=now - timedelta(days=91),
                 input_type="text",
                 language="ru",
@@ -32,7 +32,7 @@ async def test_retention_deletes_only_expired_metadata_rows(session) -> None:
             CheckEvent(
                 id=fresh_check_id,
                 user_key="fresh",
-                face="family_shield",
+                face="family",
                 ts=now - timedelta(days=1),
                 input_type="text",
                 language="ru",
@@ -54,27 +54,27 @@ async def test_retention_deletes_only_expired_metadata_rows(session) -> None:
             ),
             Consent(
                 user_key="old",
-                face="family_shield",
+                face="family",
                 notice_version="v1",
                 language="ru",
                 ts=now - timedelta(days=366),
             ),
             Consent(
                 user_key="fresh",
-                face="family_shield",
+                face="family",
                 notice_version="v1",
                 language="ru",
                 ts=now - timedelta(days=1),
             ),
             RateLimit(
                 user_key="old",
-                face="family_shield",
+                face="family",
                 day=(now - timedelta(days=3)).date(),
                 count=5,
             ),
             RateLimit(
                 user_key="fresh",
-                face="family_shield",
+                face="family",
                 day=now.date(),
                 count=1,
             ),
@@ -114,21 +114,21 @@ async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> Non
     await repo.upsert_consent(
         session,
         user_key="activated-1",
-        face="family_shield",
+        face="family",
         notice_version="v1",
         language="ru",
     )
     await repo.upsert_consent(
         session,
         user_key="activated-2",
-        face="family_shield",
+        face="family",
         notice_version="v1",
         language="uz_latn",
     )
     ok_check_id = await repo.record_check_event(
         session,
         user_key="activated-1",
-        face="family_shield",
+        face="family",
         input_type="text",
         language="ru",
         status="ok",
@@ -138,7 +138,7 @@ async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> Non
     await repo.record_check_event(
         session,
         user_key="activated-2",
-        face="seller_guard",
+        face="merchants",
         input_type="text",
         language="uz_latn",
         status="no_signal",
@@ -149,7 +149,7 @@ async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> Non
     await repo.record_check_event(
         session,
         user_key="activated-2",
-        face="seller_guard",
+        face="merchants",
         input_type="text",
         language="uz_latn",
         status="llm_error",
@@ -189,7 +189,7 @@ async def test_metrics_feedback_breakdowns_respect_window_and_partial_answers(se
     fresh_check_id = await repo.record_check_event(
         session,
         user_key="fresh-feedback",
-        face="family_shield",
+        face="family",
         input_type="text",
         language="ru",
         status="ok",
@@ -197,7 +197,7 @@ async def test_metrics_feedback_breakdowns_respect_window_and_partial_answers(se
     old_check_id = await repo.record_check_event(
         session,
         user_key="old-feedback",
-        face="family_shield",
+        face="family",
         input_type="text",
         language="ru",
         status="ok",

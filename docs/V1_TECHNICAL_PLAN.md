@@ -2,7 +2,7 @@
 
 > **Status:** Technical architecture · ready to implement · 2026-06-24
 > **Audience:** The implementing engineer / coding model. **This document makes the decisions so you don't have to.** Where it says "MUST," do exactly that. Where it says "verify," check current external docs before coding (APIs change). Do not introduce new dependencies, services, or patterns not listed here without flagging it.
-> **Implements:** [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md) — one engine, two faces (Family Shield + Seller Guard). Safety/vision authority: [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). Engine behaviour & golden examples: [FAMILY_SHIELD_VALIDATION.md](FAMILY_SHIELD_VALIDATION.md).
+> **Implements:** [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md) — one engine, two faces (Avvalo + Avvalo Merchants). Safety/vision authority: [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). Engine behaviour & golden examples: [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md).
 
 ---
 
@@ -13,7 +13,7 @@
 3. The contracts in §6–§9 are the source of truth for function signatures and data shapes. Match them exactly so modules compose.
 4. **Golden rule:** submitted content (text, images, OCR text, model output) is *ephemeral* — it must **never** be written to a database, log, analytics event, or backup. If you are about to persist a string that came from the user, stop.
 5. If a requirement here conflicts with [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md)'s safety rules, the guide wins — flag the conflict.
-6. **Pre-authored assets already exist — use them, do not regenerate.** The safety-critical content was written by hand and reviewed: the three prompt files (`prompts/system_safety.txt`, `prompts/family_shield.txt`, `prompts/seller_guard.txt`), the trilingual rule packs (`rules/family_shield/families.yaml`, `rules/seller_guard/families.yaml`), the golden fixtures (`tests/fixtures/golden/family_shield.json` = 5 examples, `tests/fixtures/golden/seller_guard.json` = 3 examples), and the model eval (`tools/eval_models.py`). Wire the code to load these. You may *extend* rule keywords or fix bugs, but do not rewrite the prompts or weaken the safety wording without flagging it.
+6. **Pre-authored assets already exist — use them, do not regenerate.** The safety-critical content was written by hand and reviewed: the three prompt files (`prompts/system_safety.txt`, `prompts/family.txt`, `prompts/merchants.txt`), the trilingual rule packs (`rules/family/families.yaml`, `rules/merchants/families.yaml`), the golden fixtures (`tests/fixtures/golden/family.json` = 5 examples, `tests/fixtures/golden/merchants.json` = 3 examples), and the model eval (`tools/eval_models.py`). Wire the code to load these. You may *extend* rule keywords or fix bugs, but do not rewrite the prompts or weaken the safety wording without flagging it.
 
 ---
 
@@ -55,7 +55,7 @@
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to Cloud Vision service-account JSON (only when `OCR_PROVIDER=gcv`) |
 | `OCR_MIN_CONFIDENCE` | default `0.5` |
 | `NOTICE_VERSION` | consent notice version string; bump ⇒ re-consent |
-| `DAILY_LIMIT_FAMILY_SHIELD` / `DAILY_LIMIT_SELLER_GUARD` | defaults 5 / 20 |
+| `DAILY_LIMIT_FAMILY` / `DAILY_LIMIT_MERCHANTS` | defaults 5 / 20 |
 | `LLM_TIMEOUT_S` / `OCR_TIMEOUT_S` | latency guards (§14) |
 | `MAX_OUTPUT_TOKENS` | default `600` |
 | `OPERATOR_ALERT_CHAT_ID` | where to alert on a critical safety violation (§9) |
@@ -108,7 +108,7 @@ Postgres, the bot, and the web app already run locally via `docker compose`, so 
 
 ```
         ┌─────────── Telegram (aiogram) ───────────┐   ┌──── Web (FastAPI + HTMX) ────┐
-        │ Family Shield face    Seller Guard face   │   │ anonymous check; Turnstile-  │
+        │ Avvalo face      Avvalo Merchants face    │   │ anonymous check; Turnstile-  │
         │ (handlers, FSM, Telegram identity)        │   │ gated image upload           │
         └─────────────────────┬─────────────────────┘   └──────────────┬───────────────┘
                               │       same CheckInput → run_check()      │
@@ -138,7 +138,7 @@ Postgres, the bot, and the web app already run locally via `docker compose`, so 
 
 **Key ordering decision (resolves the review's privacy-vs-analysis tension):** the **rule engine runs on the RAW local text first** (it never leaves the server), extracts structured signals (links, phone "newness", card destination, etc.), *then* the text is minimized for the LLM. The LLM receives **minimized text + the structured signals as grounded facts.** This is why it can still explain "lookalike link" without the raw URL leaving in the prompt.
 
-**The two faces share 100% of this pipeline.** A `Face` value (`family_shield` | `seller_guard`) selects (a) which rule pack loads and (b) which output template/prompt is used. Nothing else differs.
+**The two faces share 100% of this pipeline.** A `Face` value (`family` | `merchants`) selects (a) which rule pack loads and (b) which output template/prompt is used. Nothing else differs.
 
 **Both channels (Telegram, Web) share 100% of the engine too.** Each channel builds the same `CheckInput` and calls the same `run_check()`. No analysis logic ever lives in a channel — the web layer only adds anonymous identity (a signed-cookie pseudonymous key instead of a Telegram ID) and the abuse controls Telegram provides for free (captcha, IP rate-limit, upload caps).
 
@@ -215,14 +215,14 @@ avvalo/
 │     ├─ events.py            # log_event() — privacy-safe only
 │     └─ cost.py              # token→cost accounting per provider
 ├─ rules/
-│  ├─ family_shield/*.yaml    # 5 consumer families (§ rule format)
-│  └─ seller_guard/*.yaml     # ~5 merchant families
+│  ├─ family/*.yaml           # 5 consumer families (§ rule format)
+│  └─ merchants/*.yaml        # ~5 merchant families
 ├─ prompts/
 │  ├─ system_safety.txt       # shared system prompt (output contract + prohibitions)
-│  ├─ family_shield.txt       # consumer task template
-│  └─ seller_guard.txt        # merchant task template
+│  ├─ family.txt              # consumer task template
+│  └─ merchants.txt           # merchant task template
 ├─ tests/
-│  ├─ fixtures/golden/*.json  # 5 FS + ≥3 SG golden examples
+│  ├─ fixtures/golden/*.json  # 5 family + ≥3 merchants golden examples
 │  ├─ fixtures/adversarial/*.json
 │  └─ test_*.py
 ├─ alembic/
@@ -243,14 +243,14 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Face:
-    id: str                  # "family_shield" | "seller_guard"
-    rule_pack_dir: str       # "rules/family_shield"
-    prompt_template: str     # "prompts/family_shield.txt"
-    daily_limit: int         # FS=5, SG=20 (merchant checks more)
+    id: str                  # "family" | "merchants"
+    rule_pack_dir: str       # "rules/family"
+    prompt_template: str     # "prompts/family.txt"
+    daily_limit: int         # family=5, merchants=20 (merchant checks more)
 
 FACES = {
-    "family_shield": Face("family_shield", "rules/family_shield", "prompts/family_shield.txt", 5),
-    "seller_guard":  Face("seller_guard",  "rules/seller_guard",  "prompts/seller_guard.txt", 20),
+    "family":    Face("family",    "rules/family",    "prompts/family.txt", 5),
+    "merchants": Face("merchants", "rules/merchants", "prompts/merchants.txt", 20),
 }
 ```
 Bot selection: simplest is **two bot tokens** (one per face) sharing one process and DB; `main.py` starts both dispatchers and tags each with its `Face`. (Alternative: one bot, a `/start` button to choose face — store the choice on the FSM. Two tokens is cleaner for the demo and lets you brand each.)
@@ -390,7 +390,7 @@ class LLMProvider(Protocol):
 - NEVER repeat a full card/OTP/password/passport/secret.
 - NEVER tell the user to open the link, scan the QR, call the number in the message, or reply to "test" the sender.
 - NEVER invent facts, policies, contact details, prices, or legal conclusions.
-- (Seller Guard) NEVER state that money arrived/was received based on a screenshot.
+- (Avvalo Merchants) NEVER state that money arrived/was received based on a screenshot.
 
 ### 8.1 Model selection — current default + eval gate
 
@@ -475,12 +475,12 @@ rules:
       ru: ["в течение часа", "сейчас же", "только сегодня"]
 ```
 - `engine.py`: `run_rules(text, face) -> (hits: list[RuleHit], signals: list[Signal])`. Lowercase + normalize the text per language; match keyword/regex groups; dedupe by `rule_id`. Also run **structural extractors** (regex for URLs/phones/cards) that classify into `Signal`s (lookalike = brand-name-substring heuristic or known-brand list; shortened = known shortener domains; card-personal = transfer-to-card phrasing nearby).
-- `loader.py`: load all YAML in the face's `rule_pack_dir` at startup; validate schema; expose by face. **A YAML file uses a top-level `families:` list** (each entry has `family:` + `rules:`); the loader flattens all families across all files in the directory. (The shipped packs `rules/family_shield/families.yaml` and `rules/seller_guard/families.yaml` use this shape.) Each rule carries `id`, `desc` (neutral English meaning → the prompt), `message_key`, `severity`, optional `emits_signal`, and a `match` block with `uz_latn`/`uz_cyrl`/`ru` keyword lists.
+- `loader.py`: load all YAML in the face's `rule_pack_dir` at startup; validate schema; expose by face. **A YAML file uses a top-level `families:` list** (each entry has `family:` + `rules:`); the loader flattens all families across all files in the directory. (The shipped packs `rules/family/families.yaml` and `rules/merchants/families.yaml` use this shape.) Each rule carries `id`, `desc` (neutral English meaning → the prompt), `message_key`, `severity`, optional `emits_signal`, and a `match` block with `uz_latn`/`uz_cyrl`/`ru` keyword lists.
 - **Authoritative:** a rule hit is a fact. The LLM may explain/dedupe but may not erase or invent one (enforced by passing hits as grounded input and by the validator not removing them).
 
 ### Required rule families
-- **Family Shield (5):** `credential_theft`, `urgency_secrecy`, `authority_impersonation`, `upfront_payment`, `verification_avoidance` (+ `implausible_promise`, `suspicious_link_qr` from the guide's 7 — include all 7 if cheap). Source: [FAMILY_SHIELD_VALIDATION.md](FAMILY_SHIELD_VALIDATION.md) §8.
-- **Seller Guard (~5):** `receipt_inconsistency` (amount/date/bank fields don't line up), `amount_mismatch` (order total ≠ claimed paid), `edited_screenshot_hint` (textual signs only — font/spacing claims; do NOT do image forensics in v1), `fake_courier_refund` (chat patterns), `verify_in_bank_app` (always-emit reminder family).
+- **Avvalo (5):** `credential_theft`, `urgency_secrecy`, `authority_impersonation`, `upfront_payment`, `verification_avoidance` (+ `implausible_promise`, `suspicious_link_qr` from the guide's 7 — include all 7 if cheap). Source: [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md) §8.
+- **Avvalo Merchants (~5):** `receipt_inconsistency` (amount/date/bank fields don't line up), `amount_mismatch` (order total ≠ claimed paid), `edited_screenshot_hint` (textual signs only — font/spacing claims; do NOT do image forensics in v1), `fake_courier_refund` (chat patterns), `verify_in_bank_app` (always-emit reminder family).
 
 ---
 
@@ -535,23 +535,23 @@ volumes: { pg: {}, ollama_models: {} }
 **T4 — Engine types & pipeline skeleton.** `types.py` (§6), `pipeline.run_check` wired with stub stages returning canned data; `faces.py`.
 *Accept:* `run_check` on a text input returns a `CheckResult` through all stages; ephemeral fields never touch DB (test asserts event row has no text).
 
-**T5 — Rule engine + Family Shield rules.** `rules/engine.py`, `loader.py`, the FS YAML families (§11), structural signal extractors, `minimize.py` (§10).
-*Accept:* unit tests: each FS golden input fires the expected `rule_ids`; minimization tokenizes PII and preserves link signal; the 5 golden raw inputs each yield ≥1 rule hit.
+**T5 — Rule engine + Avvalo rules.** `rules/engine.py`, `loader.py`, the family YAML families (§11), structural signal extractors, `minimize.py` (§10).
+*Accept:* unit tests: each family golden input fires the expected `rule_ids`; minimization tokenizes PII and preserves link signal; the 5 golden raw inputs each yield ≥1 rule hit.
 
 **T6 — LLM integration.** `llm/base.py`, `gemini.py` (JSON mode), `prompt.py`, `prompts/*.txt`, `obs/cost.py`.
 *Accept:* given minimized text + rule hits for golden example 1, the model returns a `DraftOutput`; cost is computed and recorded; output is in the requested language/script.
 
 **T7 — Safety validator + format.** `validate.py` (all §9 checks), `format.py` (assemble block + limitation line + no-signal lead).
-*Accept:* validator rejects crafted bad drafts (verdict word; fabricated phone; "open the link"); on double-fail returns `safety_fallback`; the 5 FS golden outputs pass validation and match the golden structure/facts (wording may differ, facts/actions/safety must not).
+*Accept:* validator rejects crafted bad drafts (verdict word; fabricated phone; "open the link"); on double-fail returns `safety_fallback`; the 5 family golden outputs pass validation and match the golden structure/facts (wording may differ, facts/actions/safety must not).
 
 **T8 — OCR.** `ocr/base.py` interface + `OCR_PROVIDER` selection; `ocr/gcv.py` (prod) and `ocr/tesseract.py` (offline dev); EXIF strip; low-confidence path; `local_stub.py` placeholder.
 *Accept:* with `OCR_PROVIDER=gcv`, an image of golden example 3 (UZ-Cyrl) OCRs to usable text → full pipeline produces a valid output; with `OCR_PROVIDER=tesseract` the same image runs **offline** (lower quality acceptable); a blurry image returns `low_ocr` with no LLM call; EXIF is stripped (test on a GPS-tagged image).
 
 **T9 — Limits, feedback, share, events.** Daily limit per face; post-check feedback buttons → `feedback` rows; share button (link only); wire all privacy-safe events.
-*Accept:* 6th FS check same day is refused with a reset message; feedback recorded categorically; events emitted for the full happy path; logger rejects a content field (test).
+*Accept:* 6th family check same day is refused with a reset message; feedback recorded categorically; events emitted for the full happy path; logger rejects a content field (test).
 
-**T10 — Seller Guard face.** SG rule pack (§11), `prompts/seller_guard.txt`, SG entry copy, and shared engine wiring.
-*Accept:* ≥3 SG golden examples (author them in `tests/fixtures/golden`) pass end-to-end; SG output **never** says money arrived; same engine path used (assert pipeline code is unchanged).
+**T10 — Avvalo Merchants face.** Merchants rule pack (§11), `prompts/merchants.txt`, merchants entry copy, and shared engine wiring.
+*Accept:* ≥3 merchants golden examples (author them in `tests/fixtures/golden`) pass end-to-end; merchants output **never** says money arrived; same engine path used (assert pipeline code is unchanged).
 
 **T11 — Retention jobs & metrics export.** APScheduler TTL jobs; a protected `metrics` query/CLI that returns event counts, activation, completion, cost, no-signal fire-rate.
 *Accept:* TTL job deletes an artificially-aged row; metrics command prints the privacy-safe aggregate the pitch needs.
@@ -559,7 +559,7 @@ volumes: { pg: {}, ollama_models: {} }
 **T12 — Hardening & demo polish.** Timeouts (p90 budget §14), one retry on LLM/transient, graceful failure messages, README with run + demo script.
 *Accept:* the §15 demo script runs clean end-to-end in both faces, all 3 languages, text + image.
 
-**T13 — Web client (bot + web).** A FastAPI app in the same process, sharing the engine and DB. `GET /` renders a page with a language selector, a face toggle (Family Shield default), a consent gate, a text box, and an image upload. `POST /check` builds a `CheckInput` and calls **the same `run_check()`** — no analysis logic in the web layer — and returns the result as an HTMX partial. `GET /privacy`. Image upload is gated by **Cloudflare Turnstile**; all checks are **IP/session rate-limited** (reuse the `rate_limit` table with a web `user_key` = HMAC of a signed session cookie). Reuse `bot/texts.py` for the three languages. Web is **anonymous** — no accounts, no history. *(Can be built any time after T10; it adds zero engine logic.)*
+**T13 — Web client (bot + web).** A FastAPI app in the same process, sharing the engine and DB. `GET /` renders a page with a language selector, a face toggle (Avvalo default), a consent gate, a text box, and an image upload. `POST /check` builds a `CheckInput` and calls **the same `run_check()`** — no analysis logic in the web layer — and returns the result as an HTMX partial. `GET /privacy`. Image upload is gated by **Cloudflare Turnstile**; all checks are **IP/session rate-limited** (reuse the `rate_limit` table with a web `user_key` = HMAC of a signed session cookie). Reuse `bot/texts.py` for the three languages. Web is **anonymous** — no accounts, no history. *(Can be built any time after T10; it adds zero engine logic.)*
 *Accept:* a web check returns the **same structured output as the bot** for the same input (assert both paths call `run_check`); image upload fails without a valid Turnstile token; the per-day limit refuses extra checks; **no submitted content is persisted** (same guarantee as the bot — verified by test); the consent notice is shown before the first check; all three languages render.
 
 ---
@@ -580,17 +580,17 @@ volumes: { pg: {}, ollama_models: {} }
 **Done when** all §13 acceptance criteria pass and:
 - both faces run on the identical pipeline (only rule pack + template differ);
 - **both channels (Telegram bot + web app) call the same `run_check()` and return matching output;**
-- 5 FS + ≥3 SG golden examples pass; safety test set fully blocked;
+- 5 family + ≥3 merchants golden examples pass; safety test set fully blocked;
 - no submitted content in any DB/log/backup (verified by test + manual log inspection) — on bot **and** web;
 - web image upload is captcha-gated and all web checks are rate-limited;
 - p90 latency and ≤$0.03 cost hold on a 50-check sample;
 - `/privacy` + `/delete_my_data` work; metrics export returns the pitch numbers.
 
 **Demo script (rehearse this for the grant panel):**
-1. *Family Shield:* forward the fake-bank-support message (UZ-Latn) → instant 🚩/✅/❓ in Uzbek. Show it never says "scammer."
+1. *Avvalo:* forward the fake-bank-support message (UZ-Latn) → instant 🚩/✅/❓ in Uzbek. Show it never says "scammer."
 2. Send a screenshot of the seller-prepayment scam (UZ-Cyrl image) → OCR → same structured read in Cyrillic.
-3. *Seller Guard:* forward a payment-screenshot order → merchant checklist; point out it says **"verify in your bank app,"** never "money received."
-4. *Web app:* open the URL, run the same Family Shield check anonymously → identical output; show the Turnstile-gated image upload. (One engine, two channels.)
+3. *Avvalo Merchants:* forward a payment-screenshot order → merchant checklist; point out it says **"verify in your bank app,"** never "money received."
+4. *Web app:* open the URL, run the same Avvalo check anonymously → identical output; show the Turnstile-gated image upload. (One engine, two channels.)
 5. Show `/privacy` + `/delete_my_data`, then the **metrics export** (checks, languages, cost/check).
 6. Close on the platform story: one engine, two faces, two channels — roadmap = on-prem OCR + self-hosted model + payment-provider API + more faces.
 

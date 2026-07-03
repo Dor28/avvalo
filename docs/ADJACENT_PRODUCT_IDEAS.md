@@ -27,7 +27,7 @@ Sources:
 
 ---
 
-## 2. Avvalo Family Shield
+## 2. Avvalo
 
 ### Concept
 
@@ -61,7 +61,7 @@ Avvalo explains the manipulation pattern, identifies red flags, and gives concre
 
 ### Possible future payer
 
-Telecom operators could bundle Family Shield with mobile plans or sponsor public digital-safety campaigns.
+Telecom operators could bundle Avvalo with mobile plans or sponsor public digital-safety campaigns.
 
 ### Why it is interesting
 
@@ -69,7 +69,7 @@ This is the closest match to Avvalo's community mission. The emotional value is 
 
 ---
 
-## 3. Avvalo Seller Guard
+## 3. Avvalo Merchants
 
 ### Concept
 
@@ -102,7 +102,7 @@ Avvalo must never claim that money arrived based only on a screenshot. A definit
 
 ### Why it is interesting
 
-Seller Guard has the clearest recurring commercial use. Merchants face suspicious orders repeatedly, so this is not a one-time fear product.
+Avvalo Merchants has the clearest recurring commercial use. Merchants face suspicious orders repeatedly, so this is not a one-time fear product.
 
 ---
 
@@ -259,19 +259,19 @@ Link security is globally competitive. Uzbek/Russian localization, Telegram dist
 
 ### Strongest monetization
 
-1. **Avvalo Seller Guard** — recurring merchant problem and subscription potential.
+1. **Avvalo Merchants** — recurring merchant problem and subscription potential.
 2. **Avvalo Deal Check** — high-value transactions support pay-per-report pricing.
 3. **Avvalo JobPass** — users and institutional partners may both pay.
 
 ### Strongest community mission
 
-1. **Avvalo Family Shield** — direct protection for families and vulnerable users.
+1. **Avvalo** — direct protection for families and vulnerable users.
 2. **Avvalo JobPass** — protects people at an important and stressful decision point.
 3. **Avvalo Complaint** — gives ordinary consumers practical leverage.
 
 ### Best balance of simplicity, usefulness, and realistic income
 
-> **Avvalo Family Shield as the community product, with Avvalo Seller Guard as the paid product.**
+> **Avvalo as the community product, with Avvalo Merchants as the paid product.**
 
 Both can use the same underlying capabilities:
 
@@ -333,14 +333,14 @@ Avvalo should never sell personal data or allow a sponsor to influence an analys
 
 Start with one shared engine and two deliberately small products:
 
-### Avvalo Family Shield — free/community
+### Avvalo — free/community
 
 - Telegram-first suspicious-message checker.
 - Five focused scam categories.
 - Community pattern alerts.
 - Privacy-safe, anonymized reporting.
 
-### Avvalo Seller Guard — paid/merchant
+### Avvalo Merchants — paid/merchant
 
 - Suspicious payment and order analysis.
 - Merchant verification checklist.
@@ -369,7 +369,7 @@ Every Avvalo product so far is **user-initiated**: a person forwards a message a
 ### Why it fits Avvalo
 
 - **Same engine, new surface.** It reuses the rule packs, OCR, and LLM explanation layer — most of the work is already built.
-- **Mission-aligned.** It protects whole communities (family groups, neighborhood chats, merchant channels) from the exact scams Family Shield handles one message at a time — and every protected group is a distribution channel that exposes Avvalo to its members.
+- **Mission-aligned.** It protects whole communities (family groups, neighborhood chats, merchant channels) from the exact scams Avvalo handles one message at a time — and every protected group is a distribution channel that exposes Avvalo to its members.
 - **Acts on content, not people.** Removing a spam *message* is content moderation, consistent with the §11 principle "verify the situation/process, not the reputation of a person." It must never publish a "this user is a scammer" label.
 
 ### What's genuinely different (and needs care)
@@ -386,4 +386,4 @@ Every Avvalo product so far is **user-initiated**: a person forwards a message a
 
 ### Status
 
-🔬 Future feature — parked behind Family Shield + Seller Guard. See the backlog line in [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §17.
+🔬 Future feature — parked behind Avvalo + Avvalo Merchants. See the backlog line in [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §17.

@@ -1,8 +1,8 @@
 # Avvalo
 
 Avvalo is an AI safety assistant for Uzbekistan. Version 1 uses one shared checking
-engine for Family Shield and Seller Guard, exposed through Telegram and an anonymous web
-application.
+engine for the family/consumer side and Avvalo Merchants, exposed through Telegram and an
+anonymous web application.
 
 **Live bot:** [@Avvalo_official_bot](https://t.me/Avvalo_official_bot) — the official Avvalo bot on Telegram.
 

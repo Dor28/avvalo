@@ -58,14 +58,14 @@ async def test_repo_creates_consent_and_event_rows(session) -> None:
     await repo.upsert_consent(
         session,
         user_key="u1",
-        face="family_shield",
+        face="family",
         notice_version="2026-06-24-v1",
         language="ru",
     )
     check_id = await repo.record_check_event(
         session,
         user_key="u1",
-        face="family_shield",
+        face="family",
         input_type="text",
         language="ru",
         status="ok",
@@ -74,7 +74,7 @@ async def test_repo_creates_consent_and_event_rows(session) -> None:
     )
     await session.commit()
 
-    consent = await repo.get_consent(session, user_key="u1", face="family_shield")
+    consent = await repo.get_consent(session, user_key="u1", face="family")
     assert consent is not None
     assert consent.language == "ru"
     assert isinstance(check_id, uuid.UUID)
@@ -85,7 +85,7 @@ async def test_check_event_metadata_values_are_categorical(session) -> None:
         await repo.record_check_event(
             session,
             user_key="u1",
-            face="family_shield",
+            face="family",
             input_type="text",
             language="ru",
             status="ok",
@@ -96,7 +96,7 @@ async def test_check_event_metadata_values_are_categorical(session) -> None:
         await repo.record_check_event(
             session,
             user_key="u1",
-            face="family_shield",
+            face="family",
             input_type="text",
             language="ru",
             status="ok",
@@ -108,27 +108,27 @@ async def test_delete_user_data_removes_every_row(session) -> None:
     await repo.upsert_consent(
         session,
         user_key="u1",
-        face="family_shield",
+        face="family",
         notice_version="v",
         language="ru",
     )
     check_id = await repo.record_check_event(
         session,
         user_key="u1",
-        face="family_shield",
+        face="family",
         input_type="text",
         language="ru",
         status="ok",
     )
     await repo.record_feedback(session, check_id=check_id, usefulness="yes", next_action="verify")
-    await repo.increment_usage(session, user_key="u1", face="family_shield")
+    await repo.increment_usage(session, user_key="u1", face="family")
     await session.commit()
 
     await repo.delete_user_data(session, user_key="u1")
     await session.commit()
 
-    assert await repo.get_consent(session, user_key="u1", face="family_shield") is None
-    assert await repo.get_usage(session, user_key="u1", face="family_shield") == 0
+    assert await repo.get_consent(session, user_key="u1", face="family") is None
+    assert await repo.get_usage(session, user_key="u1", face="family") == 0
     deletion_log = (await session.execute(select(DeletionLog))).scalar_one()
     assert deletion_log.user_key != "u1"
     assert len(deletion_log.user_key) == 32

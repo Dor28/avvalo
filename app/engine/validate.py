@@ -11,7 +11,7 @@ from app.engine.types import DraftOutput, Language, RuleHit, Signal
 _MAX_BULLETS = 3
 
 # Only rule hits at or above this severity are "red flags" that the draft must
-# surface. Lower-severity hits (e.g. Seller Guard's always-on "verify in your
+# surface. Lower-severity hits (e.g. the merchants face's always-on "verify in your
 # bank app" reminder) ground the prompt but must not force an invented flag on
 # an otherwise benign message — doing so pushed clean payment checks into the
 # safety fallback.

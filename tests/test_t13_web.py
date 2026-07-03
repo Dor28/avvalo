@@ -43,8 +43,7 @@ def test_web_app_exposes_core_routes() -> None:
     paths = {getattr(route, "path", "") for route in getattr(app, "routes", [])}
 
     assert "/" in paths
-    assert "/family-shield" in paths
-    assert "/seller-guard" in paths
+    assert "/merchants" in paths
     assert "/check" in paths
     assert "/privacy" in paths
     assert "/healthz" in paths
@@ -53,21 +52,21 @@ def test_web_app_exposes_core_routes() -> None:
 def test_product_pages_are_separate_and_localized() -> None:
     client = TestClient(create_app(settings=_settings()))
 
-    family = client.get("/family-shield?language=uz_latn")
-    seller = client.get("/seller-guard?language=ru")
-    seller_title_ru = (
+    family = client.get("/?language=uz_latn")
+    merchants = client.get("/merchants?language=ru")
+    merchants_title_ru = (
         "\u0417\u0430\u0449\u0438\u0442\u0430 \u043f\u0440\u043e\u0434\u0430\u0432\u0446\u0430"
     )
 
     assert family.status_code == 200
-    assert seller.status_code == 200
-    assert 'value="family_shield"' in family.text
-    assert 'value="seller_guard"' in seller.text
-    assert "/seller-guard?language=uz_latn" in family.text
-    assert "/family-shield?language=ru" in seller.text
+    assert merchants.status_code == 200
+    assert 'value="family"' in family.text
+    assert 'value="merchants"' in merchants.text
+    assert "/merchants?language=uz_latn" in family.text
+    assert "/?language=ru" in merchants.text
     assert 'type="radio"' not in family.text
-    assert 'type="radio"' not in seller.text
-    assert seller_title_ru in seller.text
+    assert 'type="radio"' not in merchants.text
+    assert merchants_title_ru in merchants.text
 
 
 def test_web_reuses_the_shared_engine(monkeypatch) -> None:
@@ -97,7 +96,7 @@ def test_web_reuses_the_shared_engine(monkeypatch) -> None:
     response = client.post(
         "/check",
         data={
-            "face": "family_shield",
+            "face": "family",
             "language": "uz_latn",
             "text": "Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
             "consent": "yes",
@@ -125,7 +124,7 @@ def test_web_check_fails_closed_without_session_factory(monkeypatch) -> None:
     response = client.post(
         "/check",
         data={
-            "face": "family_shield",
+            "face": "family",
             "language": "uz_latn",
             "text": "Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
             "consent": "yes",
@@ -149,7 +148,7 @@ def test_image_upload_fails_without_turnstile(monkeypatch) -> None:
     response = client.post(
         "/check",
         data={
-            "face": "family_shield",
+            "face": "family",
             "language": "uz_latn",
             "consent": "yes",
         },
@@ -173,7 +172,7 @@ def test_web_requires_consent_before_reading_upload(monkeypatch) -> None:
     response = client.post(
         "/check",
         data={
-            "face": "family_shield",
+            "face": "family",
             "language": "uz_latn",
             "text": "Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
         },
@@ -202,7 +201,7 @@ def test_web_rejects_oversized_text_before_upload_or_engine(monkeypatch) -> None
     response = client.post(
         "/check",
         data={
-            "face": "family_shield",
+            "face": "family",
             "language": "uz_latn",
             "text": "x" * (routes.WEB_MAX_TEXT_CHARS + 1),
             "consent": "yes",
@@ -250,7 +249,7 @@ def test_web_ip_limit_survives_cookie_reset_and_spoofed_xff(monkeypatch) -> None
         session_factory=FakeSessionFactory(),
     )
     payload = {
-        "face": "family_shield",
+        "face": "family",
         "language": "uz_latn",
         "text": "Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
         "consent": "yes",
@@ -270,6 +269,6 @@ def test_web_ip_limit_survives_cookie_reset_and_spoofed_xff(monkeypatch) -> None
     assert len(calls) == 2
     assert len(counts) == 1
     ((user_key, face), count) = next(iter(counts.items()))
-    assert face == "web_ip:family_shield"
+    assert face == "web_ip:family"
     assert "203.0.113" not in user_key
     assert count == 2

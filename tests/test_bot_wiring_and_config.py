@@ -53,9 +53,9 @@ class _OkLLM:
 # --- #4: configured daily limit drives enforcement -------------------------
 
 async def test_configured_daily_limit_overrides_face_default(session) -> None:
-    settings = _settings(daily_limit_family_shield=2)  # default would be 5
+    settings = _settings(daily_limit_family=2)  # default would be 5
     check_input = CheckInput(
-        face="family_shield", user_key="cfg", language=Language.ru,
+        face="family", user_key="cfg", language=Language.ru,
         input_type=InputType.text, raw_text="Bank xavfsizlik xizmati. SMS kodni yuboring.",
     )
     statuses = []
@@ -68,9 +68,9 @@ async def test_configured_daily_limit_overrides_face_default(session) -> None:
 
 
 def test_settings_daily_limit_for_maps_faces() -> None:
-    settings = _settings(daily_limit_family_shield=7, daily_limit_seller_guard=11)
-    assert settings.daily_limit_for("family_shield") == 7
-    assert settings.daily_limit_for("seller_guard") == 11
+    settings = _settings(daily_limit_family=7, daily_limit_merchants=11)
+    assert settings.daily_limit_for("family") == 7
+    assert settings.daily_limit_for("merchants") == 11
     assert settings.daily_limit_for("unknown") is None
 
 
@@ -87,7 +87,7 @@ class _FakeMessage:
 async def test_build_check_input_from_text() -> None:
     result = await _build_check_input(
         _FakeMessage(text="Salom, bu xabarni tekshiring"),
-        face=FACES["family_shield"], user_key="u", language="ru",
+        face=FACES["family"], user_key="u", language="ru",
     )
     assert result is not None
     assert result.input_type is InputType.text
@@ -98,7 +98,7 @@ async def test_build_check_input_from_text() -> None:
 async def test_build_check_input_rejects_unsupported_message() -> None:
     result = await _build_check_input(
         _FakeMessage(),  # no text, no caption, no photo (e.g. a sticker)
-        face=FACES["family_shield"], user_key="u", language="uz_latn",
+        face=FACES["family"], user_key="u", language="uz_latn",
     )
     assert result is None
 
@@ -130,7 +130,7 @@ def test_session_cookie_secure_flag_is_configurable() -> None:
 
 async def test_record_feedback_is_idempotent(session) -> None:
     check_id = await repo.record_check_event(
-        session, user_key="fb", face="family_shield", input_type="text", language="ru", status="ok"
+        session, user_key="fb", face="family", input_type="text", language="ru", status="ok"
     )
     await repo.record_feedback(session, check_id=check_id, usefulness="yes", next_action="verify")
     # Re-answering must not raise a duplicate-key error; last answer wins.
@@ -147,7 +147,7 @@ async def test_record_feedback_is_idempotent(session) -> None:
 
 async def test_record_feedback_accepts_usefulness_before_next_action(session) -> None:
     check_id = await repo.record_check_event(
-        session, user_key="fb-partial", face="family_shield",
+        session, user_key="fb-partial", face="family",
         input_type="text", language="ru", status="ok",
     )
     await repo.record_feedback(session, check_id=check_id, usefulness="yes")
@@ -162,7 +162,7 @@ async def test_record_feedback_accepts_usefulness_before_next_action(session) ->
 
 async def test_usefulness_update_does_not_clear_next_action(session) -> None:
     check_id = await repo.record_check_event(
-        session, user_key="fb-preserve", face="family_shield",
+        session, user_key="fb-preserve", face="family",
         input_type="text", language="ru", status="ok",
     )
     await repo.record_feedback(session, check_id=check_id, usefulness="yes", next_action="verify")

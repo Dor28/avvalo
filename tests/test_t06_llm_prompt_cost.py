@@ -35,7 +35,7 @@ def test_build_prompt_uses_system_safety_and_grounds_the_text(callable_or_skip) 
         )
     ]
     system, user = build_prompt(
-        **{face_kw: "family_shield"},
+        **{face_kw: "family"},
         language=Language.ru,
         minimized_text="minimized [CODE] body",
         rule_hits=hits,
