@@ -8,7 +8,7 @@
 
 ## 0. For the next session/agent — read this first
 
-Read, in order: this doc → [PRODUCT_VISION.md](PRODUCT_VISION.md) → [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) (safety rules) → skim [V1_CURRENT_PM_REVIEW.md](V1_CURRENT_PM_REVIEW.md). The build-era constraints in [EXECUTOR_PROMPT.md](EXECUTOR_PROMPT.md) still apply; the critical ones, restated:
+Read, in order: this doc → [PRODUCT_VISION.md](PRODUCT_VISION.md) → [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) (safety rules) → skim [V1_CURRENT_PM_REVIEW.md](V1_CURRENT_PM_REVIEW.md). The build-era constraints in [archive/EXECUTOR_PROMPT.md](archive/EXECUTOR_PROMPT.md) still apply (that prompt is archived — it drove the completed T1–T13 build; this roadmap replaces it as the active handoff); the critical ones, restated:
 
 1. **Never persist submitted content** — with exactly **one new sanctioned exception**: task R3's opt-in story capture stores the **minimized** text only, after explicit user consent, pending founder review. Nothing else changes. If you are about to store any other user-supplied string, stop.
 2. **Safety output contract:** no verdicts ("safe"/"scammer"/"fraud confirmed"), no risk scores, no claims of checking external databases, no raw contacts/PII in output.
@@ -41,13 +41,13 @@ Deliverable: a short `docs/ops/SMOKE_2026-07.md` (or session report) recording p
 ## Phase B — Launch features (build in this order)
 
 ### R1. "Forward this warning" share button — ~0.5 day
-On every successful check result, add an inline button that shares a **sanitized summary** (pattern name + top red flags + "check yours: t.me/Avvalo_official_bot") via Telegram's share/switch-inline mechanism.
+On every successful check result, add an inline button that shares a **sanitized summary** (pattern name + top red flags + "check yours: t.me/Avvalo_official_bot") via Telegram's share/switch-inline mechanism. Note: a placeholder already exists (`DEFAULT_SHARE_URL` in `app/bot/keyboards.py`, used by `post_check_keyboard`) — **replace it**, don't add a second button.
 **Files:** `app/bot/keyboards.py`, `app/bot/handlers.py`, `app/engine/format.py` (a `share_summary()` renderer), `app/bot/texts.py` (3 language forms).
 **Acceptance:** shared text contains no user content and no PII (unit test over golden fixtures); deep link opens the bot; works in all three languages; share taps counted as a privacy-safe event (`share_clicked`) in `check_event`-style logging (no content).
 
 ### R2. Scam library — public education pages — ~1–2 days code + content
-Server-rendered pages on the web app: `GET /scams` (index) and `GET /scams/<slug>` — one page per **family rule family** (11 slugs from `rules/family/families.yaml`), each: how the scam works · red flags · what to do · "check yours now" CTA (web form + bot link). Content lives as markdown files under `content/scams/<lang>/<slug>.md` so editing needs no redeploy.
-**Languages:** RU + UZ-Latin first; UZ-Cyrillic when content is translated. Agents draft content from the rule families + [ADJACENT_PRODUCT_IDEAS.md](ADJACENT_PRODUCT_IDEAS.md) patterns; **founder reviews every page before publish** 👤.
+Server-rendered pages on the web app: `GET /scams` (index) and `GET /scams/<slug>` — one page per **family rule family** (7 slugs — derive from `rules/family/families.yaml` at startup, never hardcode the list), each: how the scam works · red flags · what to do · "check yours now" CTA (web form + bot link). Content lives as markdown files under `content/scams/<lang>/<slug>.md` so editing needs no redeploy.
+**Languages:** RU + UZ-Latin first; UZ-Cyrillic when content is translated. Agents draft content from the rule families + [archive/ADJACENT_PRODUCT_IDEAS.md](archive/ADJACENT_PRODUCT_IDEAS.md) patterns; **founder reviews every page before publish** 👤.
 **Files:** `app/web/routes.py`, new template `scam_page.html`, `content/scams/…`, sitemap route for SEO.
 **Acceptance:** all slugs render in available languages with correct hreflang; missing translation falls back gracefully; pages are static-cacheable; zero engine code touched; route tests added.
 
@@ -63,12 +63,19 @@ After positive feedback (`usefulness` = yes/partly), offer: *"Share what happene
 **Acceptance:** unit tests prove raw text can never reach the DB; consent flow test; deletion test; operator forward mocked-tested; founder can approve/reject via a simple CLI (`tools/stories.py list|approve|reject`) — no admin UI in this pass.
 
 ### R4. Scam Pulse — aggregate trend export — ~1 day
-Extend `app/tools/metrics.py` (CLI) with `pulse --month YYYY-MM`: aggregates `check_event.rule_ids` frequency by rule family × language × face, month-over-month deltas, no-signal rate, total checks — rendered to a markdown one-pager (`out/pulse_YYYY-MM.md`).
+Extend `app/tools/metrics.py` (CLI) with `pulse --month YYYY-MM`: aggregates `check_event.rule_ids` frequency by rule family × language × face, month-over-month deltas, no-signal rate, total checks — rendered to a markdown one-pager (`out/pulse_YYYY-MM.md`). Also export the **rule-hit × feedback correlation** (which rule families users mark useful / act on) — the free active-learning signal for tuning rules ([ML_RESEARCH.md](ML_RESEARCH.md) §7).
 **Acceptance:** runs read-only against prod DB; output contains counts only (zero user identifiers — assert in test); founder can paste the output into a channel post 👤.
 
 ### R5. Uzbek STT evaluation — gate for voice checks — ~1 day
 Mirror `tools/eval_models.py`: `tools/eval_stt.py` testing 2–3 STT providers (e.g., Whisper-family API + one alternative) on ~10 UZ-Latin-speech / UZ-RU code-switched / RU voice samples (founder records them 👤 — 30–60s each, scam-scenario scripts provided by agent).
 **Acceptance:** a decision memo `docs/ops/STT_EVAL.md` with WER-style notes and a go/no-go. **Only a "go" unlocks building voice intake** (spec in [PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md) §3.1) — do not implement voice checks in the same session as the eval.
+
+### R6. URL reputation stage — ~2–3 days (from [ML_RESEARCH.md](ML_RESEARCH.md) §4)
+A lookup stage after signal extraction: check extracted URLs against **Google Safe Browsing** (use the hash-prefix Update API so raw URLs never leave the server), cached **URLhaus** and **OpenPhish** feeds (TTL-refreshed), and a new `uz_phishing_domain` table (domains only — privacy-safe) seeded from checks users later confirm as scams.
+A hit becomes a rule-grade authoritative signal → output line: *"this link appears in a phishing blacklist [source]"* (factual, sourced — allowed by the safety contract; a *miss* must never be reported as "link is clean").
+**Files:** new `app/engine/reputation.py` stage wired into the pipeline after signal extraction; config keys for the GSB key + feed URLs + cache TTLs.
+**Acceptance:** mocked-feed tests for hit/miss/feed-down paths; feed outage degrades gracefully (no crash, no "clean" claim, no latency blowup — budget ≤ +2 s); no full URL sent to any third party; the blacklist line renders in all three languages.
+*Scope note:* this deliberately supersedes the v1 build's exclusion of "external reputation calls" ([V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) §16) — that list governed the grant build, not this phase. Do not stop-and-flag on that ground.
 
 ---
 
@@ -93,9 +100,10 @@ Set calendar dates for these when Phase B lands; each gate has a pre-committed c
 2. **Merchant gate:** ≥3 independent merchants accept a named price with a dated paid pilot → **only then** build billing (Payme/Click) and promote Avvalo Merchants to the lead product. Fewer → Merchants stays a demo face.
 3. **Horizons pull-forward:** any [PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md) idea may start only if its §6 criteria all hold — engine reuse · nameable payer · situations-not-persons · founder capacity.
 4. **Content cadence check (honesty gate):** after 4 weeks — if fewer than ~2 posts/week actually shipped, consciously drop the Learn/Share layer rather than half-run it ([PRODUCT_VISION.md](PRODUCT_VISION.md) §8.2).
+5. **Corpus milestones → ML unlocks** ([ML_RESEARCH.md](ML_RESEARCH.md)): ≥ **100** founder-reviewed R3 stories → build the **pattern-similarity evidence** feature (HORIZONS §3.4; retrieval, no training) · ≥ **300–500** → SetFit first-pass classifier on an Uzbek encoder (HORIZONS §5.2). Both match *patterns, never people*; neither may ship a verdict.
 
 ---
 
 ## Definition of done for this roadmap
 
-Phase A all green · R1–R4 live in production (R5 memo written) · channel exists with ≥8 posts · alpha recruiting started · ≥10 merchant interviews logged · IT Park application submitted. At that point, write the next roadmap **from evidence** — usage data, interview notes, and gate outcomes — not from strategy discussion. The failure mode to avoid is documented in [PRODUCT_VISION.md](PRODUCT_VISION.md) §8: more documents than users.
+Phase A all green · R1–R4 + R6 live in production (R5 memo written) · channel exists with ≥8 posts · alpha recruiting started · ≥10 merchant interviews logged · IT Park application submitted. At that point, write the next roadmap **from evidence** — usage data, interview notes, and gate outcomes — not from strategy discussion. The failure mode to avoid is documented in [PRODUCT_VISION.md](PRODUCT_VISION.md) §8: more documents than users.

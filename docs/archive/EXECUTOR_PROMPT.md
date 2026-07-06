@@ -42,4 +42,4 @@ Begin by confirming you have read the three primary docs, summarize the T1 task 
 
 ---
 
-*This prompt mirrors the decisions in [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) and [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md); if you update those, update this handoff too.*
+*This prompt mirrors the decisions in [V1_TECHNICAL_PLAN.md](../V1_TECHNICAL_PLAN.md) and [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md); if you update those, update this handoff too.*

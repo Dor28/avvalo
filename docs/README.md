@@ -4,26 +4,33 @@
 
 **On Telegram:** the official bot is **[@Avvalo_official_bot](https://t.me/Avvalo_official_bot)**.
 
+## Current docs
+
 | Doc | What it is |
 |---|---|
-| [ROADMAP.md](ROADMAP.md) | 🚀 **START HERE for the next work session.** Post-deployment launch roadmap: live-verification checklist (Phase A), numbered launch features R1–R5 with acceptance criteria, launch ops, and evidence gates. Written for handoff to agents; founder-only tasks marked. |
+| [ROADMAP.md](ROADMAP.md) | 🚀 **START HERE for the next work session.** Post-deployment launch roadmap: live-verification checklist (Phase A), numbered launch features R1–R6 with acceptance criteria, launch ops, and evidence gates. Written for handoff to agents; founder-only tasks marked. |
+| [LAUNCH_EXECUTOR_PROMPT.md](LAUNCH_EXECUTOR_PROMPT.md) | 🛠️ **Executor handoff for the launch build (R1–R4 + R6)** — code-verified task specs, branch/deploy discipline (build on `launch-features`; merging to `main` deploys), and corrections to stale facts. Give this to the implementing session. |
 | [PRODUCT_VISION.md](PRODUCT_VISION.md) | 🧭 **Product vision (2026-07-04): "Check · Learn · Share."** Reconciles the original design, the pivot, and the built v1; adds the content/community layer (scam library, curated stories, Scam Pulse) and the legal data-asset story. |
-| [PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md) | 🔭 **3-year option map + ranked feature shortlist (2026-07-04).** Tiered future bets — voice checks, agentic verification, awareness training, payment-context API, Group Guard, JobPass, sovereign model, escrow — with scoring, hard pull-forward criteria, and the senior-PM build order (§7). Options, not a to-do list. |
-| [V1_CURRENT_PM_REVIEW.md](V1_CURRENT_PM_REVIEW.md) | **Current senior-PM review** - weak spots, product risks, and the improvement backlog as of 2026-06-30. |
-| [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) | ✅ **The authoritative product direction — start here.** Vision, the shared engine, the three products & build order, monetization, legal posture. |
-| [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md) | ✅ **The executable next step.** One Avvalo flow, five golden outputs, retention, cost ceiling, measurement, and go/pivot/stop gates. |
-| [V1_MVP_PRODUCT_REVIEW.md](V1_MVP_PRODUCT_REVIEW.md) | 🔎 **Critical review of the v1 MVP** — strengths, risks, and a P0/P1 fix list for the Avvalo validation build. |
-| [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md) | 🏗️ **Current build direction:** one engine, two faces (Avvalo + Avvalo Merchants) for the IT Park grant demo. |
-| [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) | 🧱 **Executable architecture & build spec** — locked stack, contracts, and numbered tasks for the implementing engineer/model. |
-| [ADJACENT_PRODUCT_IDEAS.md](ADJACENT_PRODUCT_IDEAS.md) | The "check before you commit" reframe + the 8 product ideas it generated. |
-| [PRODUCT_DESIGN.md](PRODUCT_DESIGN.md) | Background / engine reference (the earlier accusation-graph MVP spec). Reusable parts: intake, output, languages, hybrid engine, privacy. See PRODUCT_GUIDE §15 for what's reused vs retired. |
-| [USER_STORIES.md](USER_STORIES.md) | Background. Check & education stories carry over; report/accusation stories are retired with the graph. |
-| [FUNDABILITY_AND_GTM.md](FUNDABILITY_AND_GTM.md) | Background fundraising & GTM notes (B2B-API thesis now deprioritized; IT Park / founder-de-risk advice still applies). |
-| [SESSION_DECISIONS.md](SESSION_DECISIONS.md) | Chronological decision log — includes the 2026-06-21 pivot. |
-| [../prompts/fraud_intelligence_startup_prompt.md](../prompts/fraud_intelligence_startup_prompt.md) | The original brief that started the project. |
+| [PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md) | 🔭 **3-year option map + ranked feature shortlist.** Tiered future bets — pattern-similarity evidence, voice checks, agentic verification, awareness training, payment-context API, Group Guard, JobPass, sovereign model, escrow — with scoring, hard pull-forward criteria, and the build order (§7). Options, not a to-do list. |
+| [ML_RESEARCH.md](ML_RESEARCH.md) | 🔬 **Deep research (2026-07-06): ML capabilities.** Cited build/skip verdicts — embedding similarity vs story corpus (the flagship), URL reputation feeds, SetFit classifier at 300–500 examples; skip screenshot-forensics verdicts, deepfake claims, federated learning. The legal training path = the opt-in story corpus. |
+| [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) | ✅ **The authoritative product principles & safety rules — they win on any conflict.** Vision, the shared engine, monetization posture, legal/privacy posture. |
+| [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) | 🧱 **Engineering contract for the built surface** — locked stack, contracts, safety validator spec, and the numbered T1–T13 build tasks (completed). Closest thing to architecture docs. |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | 🖥️ **Production ops guide** (Hetzner, hardened Docker, TLS, backups) — the stack currently live. |
+| [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md) | ✅ **The alpha contract:** one flow, five golden outputs, retention, cost ceiling, go/pivot/stop gates. Revise the cohort per the PM review before recruiting. |
+| [V1_CURRENT_PM_REVIEW.md](V1_CURRENT_PM_REVIEW.md) | 🔎 **Senior-PM review (2026-06-30)** — weak spots and improvement backlog; §6 holds the merchant-discovery interview script the roadmap uses. |
 
-**Status (2026-06-30):** The strategic pivot remains **"check before you commit"** (verify the situation, not the person) - see [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). The current build direction is now broader than the original Avvalo alpha: one shared engine, two faces (Avvalo + Avvalo Merchants), Telegram plus anonymous web, aimed at an IT Park/grant demo. The Avvalo validation spec remains the alpha contract, but it should be revised before recruitment. Start new product planning with [V1_CURRENT_PM_REVIEW.md](V1_CURRENT_PM_REVIEW.md) to avoid mixing demo-readiness, demand validation, and revenue validation.
+## Historical ([archive/](archive/))
 
-Historical note:
+| Doc | Why archived |
+|---|---|
+| [archive/V1_BUILD_SCOPE.md](archive/V1_BUILD_SCOPE.md) | Scope of the grant-demo build — that build is complete and deployed. |
+| [archive/EXECUTOR_PROMPT.md](archive/EXECUTOR_PROMPT.md) | The agent handoff prompt that drove the T1–T13 build — superseded by [ROADMAP.md](ROADMAP.md) §0. |
+| [archive/ADJACENT_PRODUCT_IDEAS.md](archive/ADJACENT_PRODUCT_IDEAS.md) | The "check before you commit" reframe + 8 ideas — superseded by [PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md) as the forward-looking backlog; keeps the market-stat sources and Group Guard detail (§13). |
+| [archive/PRODUCT_DESIGN.md](archive/PRODUCT_DESIGN.md) | The graph-era MVP spec. Reusable engine detail; the accusation graph it centers on is permanently retired (see PRODUCT_GUIDE §15). |
+| [archive/SESSION_DECISIONS.md](archive/SESSION_DECISIONS.md) | Chronological founding decision log, incl. the 2026-06-21 pivot. |
 
-**Status (2026-06-21, rev. 3):** Direction pivoted from the fraud-intelligence *accusation graph* to a **"check before you commit"** assistant (verify the situation, not the person) — see [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). The Avvalo experiment is now locked in [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md): build the one-flow private alpha, instrument it, and apply its go/pivot/stop gates. Portfolio order after Avvalo remains evidence-driven. Open: tech stack, Avvalo Merchants pricing, sponsorship, and the §12 legal confirmations (authority + registration trigger + foreign-processing path).
+Removed from the repo entirely (retrieve via git history if ever needed): `USER_STORIES.md`, `FUNDABILITY_AND_GTM.md`, `V1_MVP_PRODUCT_REVIEW.md`, `prompts/fraud_intelligence_startup_prompt.md`.
+
+## Status (2026-07-06)
+
+v1 (one engine, two faces — Avvalo + Avvalo Merchants — over Telegram + anonymous web) is **built, tested, and deployed to production with live provider tokens**. Strategy is consolidated: vision in [PRODUCT_VISION.md](PRODUCT_VISION.md), future options in [PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md), ML direction in [ML_RESEARCH.md](ML_RESEARCH.md). The active work queue is [ROADMAP.md](ROADMAP.md): verify the live deployment (Phase A), ship launch features R1–R6, run launch ops, and decide at the evidence gates. The failure mode to avoid: producing more documents than users.

@@ -3,7 +3,7 @@
 > A chronological record of the founding PM session — the decisions and *why*. This is the "how we got here" companion to [PRODUCT_DESIGN.md](PRODUCT_DESIGN.md) (the "what we decided").
 
 ## Origin
-- Brief: [fraud_intelligence_startup_prompt.md](../prompts/fraud_intelligence_startup_prompt.md) — a fraud-intelligence graph for Central Asia.
+- Brief: `fraud_intelligence_startup_prompt.md` — a fraud-intelligence graph for Central Asia.
 - Founder: solo, technical, based in Uzbekistan.
 
 ---
@@ -29,7 +29,7 @@
 - **Hybrid:** deterministic per-category rule checklist (authoritative, unit-testable, UZ+RU) **+** LLM (nuance, UZ/RU phrasing, the verify/ask parts). The LLM never overrides rules and never emits a score.
 
 ### 5 — Fundability review (VC-advisor pass)
-- Reframe to **"anti-fraud data infrastructure"**; land B2B LOIs; IT Park; regulation-as-credibility; de-risk the solo founder; regional story. → captured in [FUNDABILITY_AND_GTM.md](FUNDABILITY_AND_GTM.md).
+- Reframe to **"anti-fraud data infrastructure"**; land B2B LOIs; IT Park; regulation-as-credibility; de-risk the solo founder; regional story. → captured in `FUNDABILITY_AND_GTM.md`.
 
 ### 6 — Architecture & web
 - **API-first:** one backend, multiple thin UIs (Telegram + web). The **check is identical on both**; no analysis logic lives in a client.
@@ -83,13 +83,13 @@ A second PM pass, immediately before implementation.
   - **New sections:** §8d entity extraction & normalization · §8e cluster merge/unmerge governance · §8f dispute & removal flow · §17 build order · §18 content & ops workstreams.
   - **Updated:** §5 (empty-state template + evidence-line-as-hero) · §7 (UZ Latin **and** Cyrillic) · §8c (check ≠ report in counts, "reported N×" = corroborated/verified over a 30-day window, reporter trust-weight, two-sided abuse) · §9 (first-run consent) · §10 (cache the LLM output, never the graph; quick-lookup rate-limit/oracle) · §11a (OCR is cross-border too; image lifecycle / EXIF / faces) · §14 (relational DB is enough — no graph DB; reconcile the two data-model sources).
   - **User stories added:** US-2.4 (two-sided abuse), US-6.1 (dispute & removal — new persona *Sardor, the accused*), US-X.4 (consent), US-X.5 (no lookup leakage).
-- **Next deliverable unchanged:** the data schema — now explicitly the **union** of the original brief's tables ([intial.md](../prompts/intial.md)) and the §8b–§8f model.
+- **Next deliverable unchanged:** the data schema — now explicitly the **union** of the original brief's tables (`intial.md`) and the §8b–§8f model.
 
 ---
 
 ## 2026-06-21 — Pivot: "verify the situation, not the person"
 
-A legal-risk + monetization review (Claude acting as Uzbek counsel + strategist). The project pivots from the fraud-intelligence **accusation graph** to a **"check before you commit"** assistant that verifies the situation / document / process — never a person's reputation. New authoritative doc: [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md).
+A legal-risk + monetization review (Claude acting as Uzbek counsel + strategist). The project pivots from the fraud-intelligence **accusation graph** to a **"check before you commit"** assistant that verifies the situation / document / process — never a person's reputation. New authoritative doc: [PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md).
 
 - **Driver:** the stored database of accusations about identifiable people concentrated two existential risks — **criminal defamation** (Criminal Code Art. 139 slander / 140 insult; "reported for fraud" imputes Art. 168; civil burden of proving truth falls on the operator) and **no lawful basis** to process the non-consenting accused's data (Law on Personal Data, ZRU-547). The fix is the design principle, not more governance.
 - **Localization update:** Uzbekistan **relaxed data-localization on 27 Mar 2026** (lex.uz/docs/8099215) — a foreign LLM/OCR is now compliant via adequacy / SCCs / listed standard (biometric + telecom-subscriber data stay domestic). Supersedes [PRODUCT_DESIGN.md](PRODUCT_DESIGN.md) §11a "local storage is a launch blocker."
@@ -103,8 +103,8 @@ A legal-risk + monetization review (Claude acting as Uzbek counsel + strategist)
 
 ## Artifacts produced this session
 - [PRODUCT_DESIGN.md](PRODUCT_DESIGN.md) — the earlier MVP spec (now background / engine reference).
-- [USER_STORIES.md](USER_STORIES.md) — 17 user stories across 6 epics.
-- [FUNDABILITY_AND_GTM.md](FUNDABILITY_AND_GTM.md) — fundraising & GTM strategy.
+- `USER_STORIES.md` — 17 user stories across 6 epics.
+- `FUNDABILITY_AND_GTM.md` — fundraising & GTM strategy.
 - [ADJACENT_PRODUCT_IDEAS.md](ADJACENT_PRODUCT_IDEAS.md) — the reframe + 8 product ideas *(2026-06-21)*.
-- [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) — the consolidated, authoritative product guide *(2026-06-21)*.
+- [PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md) — the consolidated, authoritative product guide *(2026-06-21)*.
 - This log.

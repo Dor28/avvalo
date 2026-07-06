@@ -386,4 +386,4 @@ Every Avvalo product so far is **user-initiated**: a person forwards a message a
 
 ### Status
 
-🔬 Future feature — parked behind Avvalo + Avvalo Merchants. See the backlog line in [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §17.
+🔬 Future feature — parked behind Avvalo + Avvalo Merchants. See the backlog line in [PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md) §17.

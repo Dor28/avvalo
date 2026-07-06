@@ -2,9 +2,9 @@
 
 > **Status:** Build scope (pre-implementation) · 2026-06-24
 > **Goal of this build:** A working demo that wins an **IT Park Uzbekistan** residency/grant — i.e. a credible *platform*, not a single bot.
-> **Decision context:** Founder chose **"build the shared engine, demo both faces"** (Avvalo + Avvalo Merchants), targeting **IT Park / grants**. See the strategic discussion that led here and the critique in [V1_MVP_PRODUCT_REVIEW.md](V1_MVP_PRODUCT_REVIEW.md).
-> **Authority:** Vision & safety rules from [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) still win on any conflict. Engine details reuse [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md).
-> **Companion:** The executable architecture is [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md).
+> **Decision context:** Founder chose **"build the shared engine, demo both faces"** (Avvalo + Avvalo Merchants), targeting **IT Park / grants**. See the strategic discussion that led here and the critique in `V1_MVP_PRODUCT_REVIEW.md`*(removed from repo — see git history)*.
+> **Authority:** Vision & safety rules from [PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md) still win on any conflict. Engine details reuse [FAMILY_VALIDATION.md](../FAMILY_VALIDATION.md).
+> **Companion:** The executable architecture is [V1_TECHNICAL_PLAN.md](../V1_TECHNICAL_PLAN.md).
 
 ---
 
@@ -44,7 +44,7 @@ The failure mode of "two faces" is building two half-products. The table in §3 
 - A short **metrics/admin export** (query or protected endpoint) — enough to show numbers in the pitch.
 
 ### Out of scope (this build)
-- Accusation graph, entity/person lookup, "reported N×", clusters, public pages. *(Permanently retired — [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §14.)*
+- Accusation graph, entity/person lookup, "reported N×", clusters, public pages. *(Permanently retired — [PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md) §14.)*
 - Family groups / shared accounts / guardian-dependent linking.
 - Subscriptions, paywalls, team accounts, payment-provider/marketplace integration.
 - Mobile app, browser extension. (A **web app is now in scope** — see above; web **accounts/login** are not — web is anonymous in v1.)
@@ -79,7 +79,7 @@ This is the whole case for "both faces is not 2× the work."
 
 ## 4. Decisions carried from the v1 review (baked in)
 
-These reverse or pin choices from the original validation spec, per [V1_MVP_PRODUCT_REVIEW.md](V1_MVP_PRODUCT_REVIEW.md):
+These reverse or pin choices from the original validation spec, per `V1_MVP_PRODUCT_REVIEW.md`*(removed from repo — see git history)*:
 
 1. **OCR = cloud (with DPA + zero-retention) for this build.** The legal driver for on-prem OCR was relaxed on 27 Mar 2026; betting the demo timeline on hard local UZ/Cyrillic OCR is the wrong trade. Keep OCR behind an interface so on-prem is a later swap. Pitch line: *"production roadmap moves OCR on-prem for data-residency."*
 2. **PII minimization must preserve signal structure.** Strip the *value*, keep the *signal* as a rule-layer token (e.g. `[LINK: lookalike-domain]`, `[PHONE: claimed-new-number]`, `[CARD: personal-account]`). The rule engine sees raw text locally (pre-minimization) and emits these tokens, so privacy and analysis depth stop fighting.
@@ -110,11 +110,11 @@ The build is demo-ready when:
 - Both faces run on the **same engine** (same intake → OCR → minimize → rules → LLM → validate → format path); the only difference is the rule pack + output template.
 - **Both channels (Telegram bot + web app) call the same engine** and return matching output; the web app is anonymous with captcha + rate-limit on image upload, and persists no submitted content.
 - All three language forms work for text and image input.
-- The 5 Avvalo golden examples ([FAMILY_VALIDATION.md](FAMILY_VALIDATION.md) §7) pass as fixtures; ≥3 Avvalo Merchants golden examples (authored in the technical plan) pass.
+- The 5 Avvalo golden examples ([FAMILY_VALIDATION.md](../FAMILY_VALIDATION.md) §7) pass as fixtures; ≥3 Avvalo Merchants golden examples (authored in the technical plan) pass.
 - Safety validator blocks every prohibited output in the test set; no submitted content ever reaches logs/backups.
 - p90 latency ≤ 30s text / ≤ 45s image; blended cost ≤ $0.03/check.
 - A protected metrics export returns the privacy-safe event counts for the pitch.
 
 ---
 
-*Next: the executable architecture and build sequence — [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md).*
+*Next: the executable architecture and build sequence — [V1_TECHNICAL_PLAN.md](../V1_TECHNICAL_PLAN.md).*

@@ -344,7 +344,7 @@ Web checker mirrors this as a single page.
 2. **Confirm usage-limit numbers** (Section 10).
 3. **Confirm the primary success metric** (Section 13).
 4. **Tech stack** — Telegram framework; **OCR (RU + UZ Latin/Cyrillic; prefer local / on-prem for privacy, §11a)**; **LLM provider (redaction-friendly / regionally hostable, §11a)**; **database — relational is enough: exact-match edges only (§12), no graph DB required for v1**; web framework; **UZ hosting**. → Architecture phase; note the privacy spec (§11a) constrains these choices.
-5. **Reconcile the two data-model sources when writing the schema** — the original brief's concrete tables ([intial.md](../prompts/intial.md): `identifiers / reports / users / checks / disputes` with trust fields) **plus** the PM-doc additions (state machine §8c, cluster §8b/§8e, `imported` label, extraction fields §8d, retention/consent fields §11a). The schema is the **union**, not a choice between them.
+5. **Reconcile the two data-model sources when writing the schema** — the original brief's concrete tables (`intial.md`: `identifiers / reports / users / checks / disputes` with trust fields) **plus** the PM-doc additions (state machine §8c, cluster §8b/§8e, `imported` label, extraction fields §8d, retention/consent fields §11a). The schema is the **union**, not a choice between them.
 
 ---
 

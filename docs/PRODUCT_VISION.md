@@ -20,7 +20,7 @@ You remember the product as [archive/PRODUCT_DESIGN.md](archive/PRODUCT_DESIGN.m
 | Why it changed | — | Legal review: defamation is **criminal** in UZ (Art. 139/140), operator bears the burden of proving accusations true; weak lawful basis for processing the accused's data | Build scope aimed at the IT Park grant demo (2026-06-24) |
 | Status | Retired (background reference) | Authoritative principles | **Built, tested, deployable** |
 
-**What is actually built (verified against the code today):** the full check pipeline (intake → OCR → PII minimization → deterministic rules → LLM → safety validator → fixed 🚩/✅/❓ output), a working Telegram bot (@Avvalo_official_bot) with consent/privacy/deletion flows, an anonymous web app (family + `/merchants` pages), 11 consumer + 5 merchant rule families, three language forms (UZ-Latin, UZ-Cyrillic, RU), OCR via Cloud Vision / Tesseract / PaddleOCR, per-user daily limits, retention TTLs, a metrics export, Docker prod stack, CI, and ~27 test modules. **Not built:** payments, accounts, any person-lookup, any content/community surface, alerts.
+**What is actually built (verified against the code today):** the full check pipeline (intake → OCR → PII minimization → deterministic rules → LLM → safety validator → fixed 🚩/✅/❓ output), a working Telegram bot (@Avvalo_official_bot) with consent/privacy/deletion flows, an anonymous web app (family + `/merchants` pages), 7 consumer + 5 merchant rule families, three language forms (UZ-Latin, UZ-Cyrillic, RU), OCR via Cloud Vision / Tesseract / PaddleOCR, per-user daily limits, retention TTLs, a metrics export, Docker prod stack, CI, and ~27 test modules. **Not built:** payments, accounts, any person-lookup, any content/community surface, alerts.
 
 So: the *engine* from the original design survived almost intact. What was cut is the accusation graph — and that cut stays. What was never started is the part you're now asking about: **the layer that attracts, teaches, and retains people.**
 
@@ -37,7 +37,7 @@ My verdict on each piece:
 | Your ask | Verdict | Reasoning |
 |---|---|---|
 | **Checkers** | ✅ Done — ship it | The engine is the hardest part and it exists. Everything below feeds it users. |
-| **Articles** | 🔨 Yes — build this next | Cheapest, highest-leverage missing piece. There is no good UZ-language scam-awareness hub. Every article is SEO + trust + a funnel into the bot. And you already have the skeleton: the 11 rule families in `rules/family/families.yaml` *are* the table of contents. |
+| **Articles** | 🔨 Yes — build this next | Cheapest, highest-leverage missing piece. There is no good UZ-language scam-awareness hub. Every article is SEO + trust + a funnel into the bot. And you already have the skeleton: the 7 rule families in `rules/family/families.yaml` *are* the table of contents. |
 | **Forum with stories** | 🔶 Yes to **stories**, ❌ no to an **open forum** (for now) | Stories are the emotional hook and the retention engine — right instinct. But an open forum on day 1 is (a) empty (cold-start), (b) a moderation job you don't have time for, and (c) the defamation surface the pivot removed — users *will* post names, phones, and cards. Start with **curated stories**: opt-in capture after a check → PII stripped → you review → published. A Telegram channel with comments enabled is your "forum v0" for free. |
 | **"Investment on the data I collected"** | 🔶 Yes — but only the legal version | The accusation graph is not coming back; in Uzbekistan that dataset is a criminal-liability generator, not an asset. But you are **already collecting** a legal data asset and may not have noticed: every check records *which scam-pattern families fired, in which language, on which face, at what cost* — aggregate trend intelligence with zero personal data. Add opt-in de-identified stories and a labeled UZ/RU scam corpus on top, and you have a real, defensible, *sellable-in-aggregate* dataset. §6 explains how to pitch it. |
 
@@ -80,7 +80,7 @@ The engine is done; almost everything below is **content and thin surfaces over 
 ### Days 0–30 — ship what exists, open the reach layer
 1. **Deploy and smoke-test live** (bot + web on the Hetzner stack; run `tools/eval_models.py` on real Uzbek; one credentialed OCR smoke per script). *The PM review's "do now" list — unchanged.* ~3–4 days.
 2. **Launch the Telegram channel** (@avvalo — "scam of the week", 2 posts/week, comments on). Zero code. This is your forum v0 and your distribution spine. Ongoing: ~2–3 h/week, forever — see Hard Truths.
-3. **Scam library v1 on avvalo.uz** — 11 pages, one per existing rule family, in RU + UZ-Latin first (Cyrillic next). Content drafted with AI, edited by you; each page ends in the checker. Code: a markdown loader + template + routes, ~1–2 days. Content: ~1 week part-time.
+3. **Scam library v1 on avvalo.uz** — 7 pages, one per existing rule family, in RU + UZ-Latin first (Cyrillic next). Content drafted with AI, edited by you; each page ends in the checker. Code: a markdown loader + template + routes, ~1–2 days. Content: ~1 week part-time.
 4. **Merchant interviews continue as the weekly gate** (target: 5/week toward the 20). Zero code.
 
 ### Days 30–60 — close the loop

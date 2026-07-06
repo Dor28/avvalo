@@ -2,7 +2,7 @@
 
 > **Status:** Technical architecture · ready to implement · 2026-06-24
 > **Audience:** The implementing engineer / coding model. **This document makes the decisions so you don't have to.** Where it says "MUST," do exactly that. Where it says "verify," check current external docs before coding (APIs change). Do not introduce new dependencies, services, or patterns not listed here without flagging it.
-> **Implements:** [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md) — one engine, two faces (Avvalo + Avvalo Merchants). Safety/vision authority: [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). Engine behaviour & golden examples: [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md).
+> **Implements:** [V1_BUILD_SCOPE.md](archive/V1_BUILD_SCOPE.md) — one engine, two faces (Avvalo + Avvalo Merchants). Safety/vision authority: [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). Engine behaviour & golden examples: [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md).
 
 ---
 
@@ -416,7 +416,7 @@ Fallbacks to evaluate:
 
 Do **not** choose the cheapest model blindly. Direct DeepSeek pricing is competitive, but its public privacy posture is a poor fit for Avvalo's trust story; avoid direct DeepSeek for production unless a separate no-training/no-retention contract exists. The long-term roadmap remains self-hosted Qwen in-region behind the same OpenAI-compatible adapter.
 
-Before locking any model, run `tools/eval_models.py` (self-contained; see its header). It calls every configured provider — Gemini, DeepSeek, Qwen, and any local OpenAI-compatible endpoint — with the real prompts over the 8 golden fixtures, and scores a mechanical rubric (valid JSON, correct script, no verdict words, no leaked contacts, structure, length). It cannot score whether the *advice is good* — read `eval_out/<provider>/` by eye for that, especially the Uzbek outputs. Pick the cheapest provider that passes the rubric **and** reads as natural, grounded Uzbek. The chosen provider is just one `LLMProvider` adapter (§8); the rest of the engine does not change. See [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md) §4 (item 5) for why Uzbek quality — not price — is the deciding factor.
+Before locking any model, run `tools/eval_models.py` (self-contained; see its header). It calls every configured provider — Gemini, DeepSeek, Qwen, and any local OpenAI-compatible endpoint — with the real prompts over the 8 golden fixtures, and scores a mechanical rubric (valid JSON, correct script, no verdict words, no leaked contacts, structure, length). It cannot score whether the *advice is good* — read `eval_out/<provider>/` by eye for that, especially the Uzbek outputs. Pick the cheapest provider that passes the rubric **and** reads as natural, grounded Uzbek. The chosen provider is just one `LLMProvider` adapter (§8); the rest of the engine does not change. See [V1_BUILD_SCOPE.md](archive/V1_BUILD_SCOPE.md) §4 (item 5) for why Uzbek quality — not price — is the deciding factor.
 
 ---
 
@@ -598,7 +598,7 @@ volumes: { pg: {}, ollama_models: {} }
 
 ## 16. Explicit non-goals for the implementer (do not build)
 
-Graph/entity/person lookup · "reported N×" · accusation storage · subscriptions/payments/team accounts · payment-provider integration · mobile / browser-extension clients (the **web app IS in scope** — T13) · web accounts/login (web is anonymous in v1) · image forensics / reverse-image search · URL fetching / malware scanning / external reputation calls · any persistence of submitted content · a full admin UI. If a task seems to require one of these, stop and flag it — it's out of scope by design ([PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §14, [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md) §2).
+Graph/entity/person lookup · "reported N×" · accusation storage · subscriptions/payments/team accounts · payment-provider integration · mobile / browser-extension clients (the **web app IS in scope** — T13) · web accounts/login (web is anonymous in v1) · image forensics / reverse-image search · URL fetching / malware scanning / external reputation calls · any persistence of submitted content · a full admin UI. If a task seems to require one of these, stop and flag it — it's out of scope by design ([PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §14, [V1_BUILD_SCOPE.md](archive/V1_BUILD_SCOPE.md) §2).
 
 ---
 

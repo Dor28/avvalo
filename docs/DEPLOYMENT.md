@@ -3,7 +3,7 @@
 > **Status:** Operational guide · 2026-06-27
 > **Audience:** The operator (you) deploying the v1 build to a single Hetzner VM.
 > **Scope:** Get the bot + (optional) web channel running in production, securely, on infrastructure that **starts small but scales without a rewrite.**
-> **Companions:** Architecture is [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md); scope is [V1_BUILD_SCOPE.md](V1_BUILD_SCOPE.md). Safety/privacy rules in [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) **win on any conflict** — nothing in this guide may weaken the "no submitted content is ever persisted or logged" guarantee.
+> **Companions:** Architecture is [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md); scope is [archive/V1_BUILD_SCOPE.md](archive/V1_BUILD_SCOPE.md) (historical); current work queue is [ROADMAP.md](ROADMAP.md). Safety/privacy rules in [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) **win on any conflict** — nothing in this guide may weaken the "no submitted content is ever persisted or logged" guarantee.
 
 ---
 
