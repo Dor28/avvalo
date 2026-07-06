@@ -13,6 +13,7 @@ from starlette.responses import Response
 
 from app.bot.handlers import _build_check_input
 from app.bot.keyboards import post_check_keyboard
+from app.bot.texts import t
 from app.config import Settings
 from app.data import repo
 from app.data.models import Feedback
@@ -107,9 +108,18 @@ def test_post_check_keyboard_is_localized_and_keeps_callbacks() -> None:
     kb = post_check_keyboard("ru")
     labels = [b.text for row in kb.inline_keyboard for b in row]
     callbacks = [b.callback_data for row in kb.inline_keyboard for b in row if b.callback_data]
-    assert "Полезно" in labels and "Проверю" in labels and "Поделиться Avvalo" in labels
+    assert t("fb_useful", "ru") in labels and t("fb_verify", "ru") in labels
+    assert t("fb_share", "ru") in labels
     assert "feedback:usefulness:yes" in callbacks
     assert "feedback:next_action:delay_stop" in callbacks
+
+
+def test_post_check_keyboard_uses_share_callback_when_check_id_exists() -> None:
+    kb = post_check_keyboard("ru", "11111111-1111-4111-8111-111111111111")
+    buttons = [b for row in kb.inline_keyboard for b in row]
+    share = next(b for b in buttons if b.text == t("fb_share", "ru"))
+    assert share.callback_data == "share:11111111-1111-4111-8111-111111111111"
+    assert share.url is None
 
 
 # --- #6: cookie Secure flag --------------------------------------------------

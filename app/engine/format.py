@@ -1,6 +1,98 @@
 """Final user-facing message formatting."""
 
+from functools import cache
+
+from app.engine.rules import load_rule_pack
 from app.engine.types import CheckStatus, DraftOutput, Language
+
+BOT_LINK = "https://t.me/Avvalo_official_bot"
+
+_FAMILY_LABELS = {
+    "credential_theft": {
+        Language.uz_latn: "kod yoki maxfiy ma'lumot so'rash",
+        Language.uz_cyrl: "код ёки махфий маълумот сўраш",
+        Language.ru: "запрос кодов или секретных данных",
+    },
+    "urgency_secrecy": {
+        Language.uz_latn: "shoshirish yoki sir tutishni so'rash",
+        Language.uz_cyrl: "шошириш ёки сир тутишни сўраш",
+        Language.ru: "срочность или просьба держать в тайне",
+    },
+    "authority_impersonation": {
+        Language.uz_latn: "rasmiy tashkilot yoki yaqin odam nomidan yozish",
+        Language.uz_cyrl: "расмий ташкилот ёки яқин одам номидан ёзиш",
+        Language.ru: "сообщение от имени организации или близкого",
+    },
+    "upfront_payment": {
+        Language.uz_latn: "oldindan to'lov yoki depozit so'rash",
+        Language.uz_cyrl: "олдиндан тўлов ёки депозит сўраш",
+        Language.ru: "предоплата или депозит до проверки",
+    },
+    "verification_avoidance": {
+        Language.uz_latn: "mustaqil tekshiruvdan qochish",
+        Language.uz_cyrl: "мустақил текширувдан қочиш",
+        Language.ru: "уход от независимой проверки",
+    },
+    "implausible_promise": {
+        Language.uz_latn: "juda yaxshi ko'rinadigan va'da",
+        Language.uz_cyrl: "жуда яхши кўринадиган ваъда",
+        Language.ru: "слишком выгодное обещание",
+    },
+    "suspicious_link_qr": {
+        Language.uz_latn: "havola yoki QR orqali bosim",
+        Language.uz_cyrl: "ҳавола ёки QR орқали босим",
+        Language.ru: "давление через ссылку или QR",
+    },
+    "receipt_inconsistency": {
+        Language.uz_latn: "to'lov hikoyasidagi nomuvofiqlik",
+        Language.uz_cyrl: "тўлов ҳикоясидаги номувофиқлик",
+        Language.ru: "несостыковка в истории оплаты",
+    },
+    "amount_mismatch": {
+        Language.uz_latn: "summa yoki qaytarim talabi mos kelmasligi",
+        Language.uz_cyrl: "сумма ёки қайтарим талаби мос келмаслиги",
+        Language.ru: "несовпадение суммы или просьба о возврате",
+    },
+    "edited_screenshot_hint": {
+        Language.uz_latn: "skrinshotni to'lov isboti sifatida ko'rsatish",
+        Language.uz_cyrl: "скриншотни тўлов исботи сифатида кўрсатиш",
+        Language.ru: "скриншот как доказательство оплаты",
+    },
+    "fake_courier_refund": {
+        Language.uz_latn: "pul tasdiqlanmasdan jo'natishga bosim",
+        Language.uz_cyrl: "пул тасдиқланмасдан жўнатишга босим",
+        Language.ru: "давление отправить товар до подтверждения",
+    },
+    "verify_in_bank_app": {
+        Language.uz_latn: "bank ilovasida tasdiqlash zarurati",
+        Language.uz_cyrl: "банк иловасида тасдиқлаш зарурати",
+        Language.ru: "нужно проверить в банковском приложении",
+    },
+}
+
+_SHARE_COPY = {
+    Language.uz_latn: {
+        "lead": "Men Avvalo bilan shubhali xabarni tekshirdim.",
+        "families": "Topilgan belgilar: {families}.",
+        "generic": "Men Avvalo bilan shubhali xabarni tekshirdim.",
+        "caution": "Javob berish yoki to'lov qilishdan oldin mustaqil tekshiring.",
+        "cta": f"O'zingiznikini tekshiring: {BOT_LINK}",
+    },
+    Language.uz_cyrl: {
+        "lead": "Мен Avvalo билан шубҳали хабарни текширдим.",
+        "families": "Топилган белгилар: {families}.",
+        "generic": "Мен Avvalo билан шубҳали хабарни текширдим.",
+        "caution": "Жавоб бериш ёки тўлов қилишдан олдин мустақил текширинг.",
+        "cta": f"Ўзингизникини текширинг: {BOT_LINK}",
+    },
+    Language.ru: {
+        "lead": "Я проверил(а) подозрительное сообщение в Avvalo.",
+        "families": "Найденные признаки: {families}.",
+        "generic": "Я проверил(а) подозрительное сообщение в Avvalo.",
+        "caution": "Не отвечайте и не платите до независимой проверки.",
+        "cta": f"Проверьте свое: {BOT_LINK}",
+    },
+}
 
 _HEADINGS = {
     Language.uz_latn: {
@@ -59,6 +151,25 @@ _HEADINGS = {
         ),
     },
 }
+
+
+def share_summary(rule_ids: list[str], language: Language | str, face: str) -> str:
+    """Build a deterministic, content-free share warning from stored rule IDs."""
+
+    resolved_language = _coerce_language(language)
+    labels = _top_family_labels(rule_ids, resolved_language, face)
+    copy = _SHARE_COPY[resolved_language]
+    if not labels:
+        return "\n".join([copy["generic"], copy["cta"]])
+
+    return "\n".join(
+        [
+            copy["lead"],
+            copy["families"].format(families=", ".join(labels)),
+            copy["caution"],
+            copy["cta"],
+        ]
+    )
 
 _STATUS_MESSAGES = {
     CheckStatus.rate_limited: {
@@ -163,3 +274,39 @@ def format_check(draft: DraftOutput, language: Language, *, no_signal: bool = Fa
 def _section(title: str, bullets: list[str]) -> str:
     rendered = "\n".join(f"- {bullet}" for bullet in bullets)
     return f"{title}\n{rendered}"
+
+
+def _coerce_language(language: Language | str) -> Language:
+    try:
+        return language if isinstance(language, Language) else Language(language)
+    except ValueError:
+        return Language.uz_latn
+
+
+def _top_family_labels(rule_ids: list[str], language: Language, face: str) -> list[str]:
+    by_rule = _rules_by_id(face)
+    ranked: dict[str, tuple[int, int]] = {}
+    for index, rule_id in enumerate(rule_ids):
+        rule = by_rule.get(rule_id)
+        if rule is None:
+            continue
+        current = ranked.get(rule.family)
+        if current is None or rule.severity > current[0]:
+            ranked[rule.family] = (rule.severity, index)
+
+    families = sorted(ranked, key=lambda family: (-ranked[family][0], ranked[family][1], family))
+    return [_family_label(family, language) for family in families[:3]]
+
+
+@cache
+def _rules_by_id(face: str):
+    try:
+        pack = load_rule_pack(face)
+    except (FileNotFoundError, ValueError):
+        return {}
+    return {rule.id: rule for rule in pack.rules}
+
+
+def _family_label(family: str, language: Language) -> str:
+    localized = _FAMILY_LABELS.get(family, {})
+    return localized.get(language) or family.replace("_", " ")

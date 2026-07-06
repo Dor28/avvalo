@@ -57,7 +57,7 @@ def test_verify_in_bank_app_reminder_always_fires(golden) -> None:
 
 
 def test_merchants_uses_its_own_rule_pack_only(golden) -> None:
-    """Families fired for merchants inputs must all come from the merchants pack (no family bleed-through)."""
+    """Families fired for merchants inputs must all come from the merchants pack."""
     merchants_families = {rule.family for rule in _merchants_rules()}
     for fixture in golden("merchants"):
         hits, _ = run_rules(fixture["input"], "merchants")

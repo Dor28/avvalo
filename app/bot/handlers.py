@@ -10,15 +10,21 @@ from uuid import UUID
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from app.bot.keyboards import consent_keyboard, language_keyboard, post_check_keyboard
+from app.bot.keyboards import (
+    consent_keyboard,
+    language_keyboard,
+    post_check_keyboard,
+    telegram_share_url,
+)
 from app.bot.states import Onboarding
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGES, entry_text, t
 from app.config import Settings
 from app.data import repo
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.faces import Face
+from app.engine.format import share_summary
 from app.obs.events import log_event
 from app.privacy.consent import grant_consent, is_consent_current
 from app.privacy.user_key import derive_user_key
@@ -134,6 +140,45 @@ async def on_consent_accepted(
     log_event("consent_accepted", face=face.id, language=language)
 
 
+@router.callback_query(F.data.startswith("share:"))
+async def on_share(callback: CallbackQuery, state: FSMContext, session_factory) -> None:
+    """Rebuild and offer a content-free Telegram share warning for a completed check."""
+
+    raw_id = callback.data.split(":", 1)[1] if callback.data else ""
+    try:
+        check_id = UUID(raw_id)
+    except ValueError:
+        await callback.answer(t("share_expired", await _language(state)))
+        return
+
+    async with session_factory() as session:
+        event = await repo.get_check_event(session, check_id)
+
+    if event is None:
+        await callback.answer(t("share_expired", await _language(state)))
+        return
+
+    language = event.language if event.language in LANGUAGES else await _language(state)
+    summary = share_summary(list(event.rule_ids or []), language, event.face)
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t("fb_share", language),
+                    url=telegram_share_url(summary),
+                )
+            ]
+        ]
+    )
+    log_event("share_clicked", face=event.face, language=language)
+    await callback.answer()
+
+    if isinstance(callback.message, Message):
+        await callback.message.answer(summary, reply_markup=keyboard)
+    elif callback.bot is not None:
+        await callback.bot.send_message(callback.from_user.id, summary, reply_markup=keyboard)
+
+
 @router.callback_query(F.data.startswith("feedback:"))
 async def on_feedback(callback: CallbackQuery, state: FSMContext, session_factory, face) -> None:
     parts = callback.data.split(":", 2)
@@ -230,7 +275,11 @@ async def on_content(
         last_check_id=str(result.check_id) if result.check_id else None,
         feedback_usefulness=None,
     )
-    keyboard = post_check_keyboard(language) if result.status in _FEEDBACK_STATUSES else None
+    keyboard = (
+        post_check_keyboard(language, result.check_id)
+        if result.status in _FEEDBACK_STATUSES
+        else None
+    )
     await message.answer(result.text or t("unsupported_input", language), reply_markup=keyboard)
 
 

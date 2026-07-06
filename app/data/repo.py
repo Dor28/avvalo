@@ -129,6 +129,12 @@ async def record_check_event(
     return event.id
 
 
+async def get_check_event(session: AsyncSession, check_id: uuid.UUID) -> CheckEvent | None:
+    """Return a privacy-safe check event by id for post-check metadata flows."""
+
+    return await session.get(CheckEvent, check_id)
+
+
 def _validate_check_event_metadata(
     *,
     face: str,

@@ -22,6 +22,7 @@ ALLOWED_EVENT_NAMES = {
     "check_failed",
     "usefulness_answered",
     "decision_answered",
+    "share_clicked",
     "share_tapped",
     "deletion_requested",
     "deletion_completed",

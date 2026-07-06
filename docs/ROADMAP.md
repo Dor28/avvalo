@@ -41,6 +41,8 @@ Deliverable: a short `docs/ops/SMOKE_2026-07.md` (or session report) recording p
 ## Phase B — Launch features (build in this order)
 
 ### R1. "Forward this warning" share button — ~0.5 day
+**Status:** [x] Code complete on branch `launch-features` (2026-07-06); do not merge to `main` until Phase A smoke evidence is recorded.
+
 On every successful check result, add an inline button that shares a **sanitized summary** (pattern name + top red flags + "check yours: t.me/Avvalo_official_bot") via Telegram's share/switch-inline mechanism. Note: a placeholder already exists (`DEFAULT_SHARE_URL` in `app/bot/keyboards.py`, used by `post_check_keyboard`) — **replace it**, don't add a second button.
 **Files:** `app/bot/keyboards.py`, `app/bot/handlers.py`, `app/engine/format.py` (a `share_summary()` renderer), `app/bot/texts.py` (3 language forms).
 **Acceptance:** shared text contains no user content and no PII (unit test over golden fixtures); deep link opens the bot; works in all three languages; share taps counted as a privacy-safe event (`share_clicked`) in `check_event`-style logging (no content).
