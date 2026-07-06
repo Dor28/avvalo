@@ -51,9 +51,10 @@ $COMPOSE run --rm --entrypoint sh certbot -c "\
   cp '$cert_path/fullchain.pem' '$cert_path/chain.pem'"
 
 # 2. Start the stack. nginx comes up serving the dummy cert; certbot's webroot
-#    (:80 /.well-known/acme-challenge/) is now reachable.
+#    (:80 /.well-known/acme-challenge/) is now reachable. Force-recreate nginx
+#    so a previously broken container cannot keep running with an empty conf.d.
 echo "### 2/5  Starting the stack (nginx will use the temporary cert) ..."
-$COMPOSE up -d
+$COMPOSE up -d --force-recreate nginx
 
 # 3. Drop the dummy cert so certbot can write a real one at the same path.
 echo "### 3/5  Removing the temporary certificate ..."

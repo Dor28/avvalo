@@ -119,13 +119,19 @@ services:
       # Substitute ONLY ${AVVALO_DOMAIN} in deploy/nginx/templates/*.template;
       # leave nginx's own runtime variables ($host, $remote_addr, …) intact.
       NGINX_ENVSUBST_FILTER: "^AVVALO_DOMAIN$$"
-    # Remove the image's default welcome site, then reload every 6h so renewed
-    # certificates are picked up without a restart. `exec` keeps nginx as PID 1
-    # for clean signal handling; the reload loop runs in the background.
+    # The custom shell command bypasses the official nginx entrypoint's template
+    # hook, so render /etc/nginx/templates explicitly before starting nginx.
+    # Then reload every 6h so renewed certificates are picked up without a
+    # restart. `exec` keeps nginx as PID 1 for clean signal handling.
     command:
       - /bin/sh
       - -c
-      - "rm -f /etc/nginx/conf.d/default.conf; while :; do sleep 6h & wait $${!}; nginx -s reload; done & exec nginx -g 'daemon off;'"
+      - |
+        set -eu
+        /docker-entrypoint.d/20-envsubst-on-templates.sh
+        rm -f /etc/nginx/conf.d/default.conf
+        while :; do sleep 6h & wait $$!; nginx -s reload; done &
+        exec nginx -g 'daemon off;'
     volumes:
       - ./deploy/nginx/templates:/etc/nginx/templates:ro
       - certbot_certs:/etc/letsencrypt:ro
