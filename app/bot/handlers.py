@@ -4,6 +4,7 @@ No handler stores or echoes submitted content. The consent gate ensures content
 is only accepted after the current privacy notice has been agreed to.
 """
 
+import logging
 from io import BytesIO
 from uuid import UUID
 
@@ -16,20 +17,25 @@ from app.bot.keyboards import (
     consent_keyboard,
     language_keyboard,
     post_check_keyboard,
+    story_invite_keyboard,
+    story_publish_keyboard,
     telegram_share_url,
 )
-from app.bot.states import Onboarding
+from app.bot.states import Onboarding, StoryCapture
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGES, entry_text, t
 from app.config import Settings
 from app.data import repo
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.faces import Face
 from app.engine.format import share_summary
+from app.engine.minimize import minimize
+from app.engine.rules import run_rules
 from app.obs.events import log_event
 from app.privacy.consent import grant_consent, is_consent_current
 from app.privacy.user_key import derive_user_key
 
 _FEEDBACK_STATUSES = {CheckStatus.ok, CheckStatus.no_signal}
+LOGGER = logging.getLogger(__name__)
 
 router = Router()
 
@@ -179,6 +185,72 @@ async def on_share(callback: CallbackQuery, state: FSMContext, session_factory) 
         await callback.bot.send_message(callback.from_user.id, summary, reply_markup=keyboard)
 
 
+@router.callback_query(F.data.startswith("story:"))
+async def on_story_callback(
+    callback: CallbackQuery, state: FSMContext, settings, session_factory, face
+) -> None:
+    action = callback.data.split(":", 1)[1] if callback.data else ""
+    language = await _language(state)
+
+    if action == "cancel":
+        await _clear_story_state(state, language=language)
+        await callback.answer(t("story_cancelled", language))
+        await _send_user_message(callback, t("story_cancelled", language))
+        return
+
+    if action == "start":
+        data = await state.get_data()
+        if not data.get("story_check_id"):
+            await callback.answer(t("story_expired", language))
+            return
+        user_key = _user_key(callback.from_user.id, settings)
+        if await _story_limit_reached(session_factory, user_key=user_key, settings=settings):
+            await _clear_story_state(state, language=language)
+            await callback.answer(t("story_limit_reached", language))
+            await _send_user_message(callback, t("story_limit_reached", language))
+            return
+        await state.set_state(StoryCapture.awaiting_story)
+        await callback.answer()
+        await _send_user_message(callback, t("story_prompt", language))
+        return
+
+    if action != "publish":
+        await callback.answer()
+        return
+
+    data = await state.get_data()
+    raw_text = data.get("story_raw_text")
+    story_face = data.get("story_face") or face.id
+    story_language = data.get("story_language") or language
+    if not raw_text:
+        await _clear_story_state(state, language=language)
+        await callback.answer(t("story_expired", language))
+        return
+
+    user_key = _user_key(callback.from_user.id, settings)
+    if await _story_limit_reached(session_factory, user_key=user_key, settings=settings):
+        await _clear_story_state(state, language=language)
+        await callback.answer(t("story_limit_reached", language))
+        await _send_user_message(callback, t("story_limit_reached", language))
+        return
+
+    async with session_factory() as session:
+        story = await repo.store_story(
+            session,
+            user_key=user_key,
+            face=story_face,
+            language=story_language,
+            raw_text=raw_text,
+        )
+        await session.commit()
+
+    await _forward_story_to_operator(callback, settings=settings, story=story)
+    await _clear_story_state(state, language=story_language)
+    log_event("story_submitted", face=story_face, language=story_language)
+    await callback.answer(t("story_saved", story_language))
+    await _send_user_message(callback, t("story_saved", story_language))
+
+
 @router.callback_query(F.data.startswith("feedback:"))
 async def on_feedback(callback: CallbackQuery, state: FSMContext, session_factory, face) -> None:
     parts = callback.data.split(":", 2)
@@ -202,9 +274,22 @@ async def on_feedback(callback: CallbackQuery, state: FSMContext, session_factor
                     usefulness=value,
                 )
                 await session.commit()
-        await state.update_data(feedback_usefulness=value)
+        story_data = {}
+        if check_id and value in {"yes", "partly"}:
+            story_data = {
+                "story_check_id": str(check_id),
+                "story_face": face.id,
+                "story_language": language,
+            }
+        await state.update_data(feedback_usefulness=value, **story_data)
         log_event("usefulness_answered", face=face.id, usefulness=value)
         await callback.answer(t("fb_saved", language))
+        if story_data:
+            await _send_user_message(
+                callback,
+                t("story_invite", language),
+                reply_markup=story_invite_keyboard(language),
+            )
         return
 
     if kind != "next_action":
@@ -229,6 +314,117 @@ async def on_feedback(callback: CallbackQuery, state: FSMContext, session_factor
 
     log_event("decision_answered", face=face.id, next_action=value)
     await callback.answer(t("fb_saved", language))
+
+
+@router.message(StoryCapture.awaiting_story)
+async def on_story_text(
+    message: Message, state: FSMContext, settings, face
+) -> None:
+    language = await _language(state)
+    text = (message.text or "").strip()
+    if not text:
+        await message.answer(t("story_text_required", language))
+        return
+    if len(text) > settings.story_max_chars:
+        await message.answer(
+            t("story_too_long", language).format(limit=settings.story_max_chars)
+        )
+        return
+
+    story_face = face.id
+    _, signals = run_rules(text, story_face)
+    minimized_text = minimize(text, signals).strip()
+    await state.update_data(
+        story_raw_text=text,
+        story_minimized_text=minimized_text,
+        story_face=story_face,
+        story_language=language,
+    )
+    await state.set_state(StoryCapture.awaiting_publish)
+    await message.answer(
+        _story_preview_text(language, minimized_text),
+        reply_markup=story_publish_keyboard(language),
+    )
+
+
+@router.message(StoryCapture.awaiting_publish)
+async def on_story_publish_waiting(message: Message, state: FSMContext) -> None:
+    language = await _language(state)
+    await message.answer(
+        _story_preview_text(language, (await state.get_data()).get("story_minimized_text", "")),
+        reply_markup=story_publish_keyboard(language),
+    )
+
+
+async def _send_user_message(
+    callback: CallbackQuery, text: str, *, reply_markup: InlineKeyboardMarkup | None = None
+) -> None:
+    if isinstance(callback.message, Message):
+        await callback.message.answer(text, reply_markup=reply_markup)
+    elif callback.bot is not None:
+        await callback.bot.send_message(
+            callback.from_user.id, text, reply_markup=reply_markup
+        )
+
+
+async def _clear_story_state(state: FSMContext, *, language: str) -> None:
+    data = await state.get_data()
+    kept = {"language": language}
+    for key in ("last_check_id", "feedback_usefulness"):
+        if data.get(key) is not None:
+            kept[key] = data[key]
+    await state.set_data(kept)
+    await state.set_state(Onboarding.ready)
+
+
+def _story_preview_text(language: str, minimized_text: str) -> str:
+    return (
+        f"{t('story_preview_intro', language)}\n\n"
+        f"{minimized_text}\n\n"
+        f"{t('story_preview_confirm', language)}"
+    )
+
+
+async def _story_limit_reached(session_factory, *, user_key: str, settings: Settings) -> bool:
+    async with session_factory() as session:
+        count = await repo.count_story_submissions_for_day(session, user_key=user_key)
+    return count >= settings.story_daily_limit
+
+
+async def _forward_story_to_operator(
+    callback: CallbackQuery, *, settings: Settings, story
+) -> None:
+    if not settings.operator_alert_chat_id:
+        LOGGER.warning("story operator forward skipped: OPERATOR_ALERT_CHAT_ID unset")
+        return
+    if callback.bot is None:
+        LOGGER.warning(
+            "story operator forward skipped: callback bot missing story_id=%s", story.id
+        )
+        return
+    try:
+        await callback.bot.send_message(
+            settings.operator_alert_chat_id,
+            _operator_story_text(story),
+        )
+    except Exception as exc:  # pragma: no cover - defensive around Telegram IO
+        LOGGER.warning(
+            "story operator forward failed story_id=%s error_type=%s",
+            story.id,
+            exc.__class__.__name__,
+        )
+
+
+def _operator_story_text(story) -> str:
+    return (
+        "Avvalo story submission\n"
+        f"id: {story.id}\n"
+        f"face: {story.face}\n"
+        f"language: {story.language}\n"
+        f"status: {story.status}\n\n"
+        f"{story.minimized_text}\n\n"
+        f"Review: python tools/stories.py approve {story.id}"
+    )
 
 
 @router.message()

@@ -25,6 +25,7 @@ ALLOWED_EVENT_NAMES = {
     "share_clicked",
     "share_tapped",
     "deletion_requested",
+    "story_submitted",
     "deletion_completed",
 }
 

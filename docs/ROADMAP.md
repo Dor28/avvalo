@@ -56,6 +56,8 @@ Server-rendered pages on the web app: `GET /scams` (index) and `GET /scams/<slug
 **Acceptance:** all slugs render in available languages with correct hreflang; missing translation falls back gracefully; pages are static-cacheable; zero engine code touched; route tests added.
 
 ### R3. Opt-in story capture — ~2–3 days ⚠️ the one consented persistence exception
+**Status:** [x] Code complete on branch `launch-features` (2026-07-07); requires founder/operator review flow and lawyer checkpoint before public alpha.
+
 After positive feedback (`usefulness` = yes/partly), offer: *"Share what happened — anonymously — to warn others?"* Flow: user writes story → **pipe through the existing minimizer** (`app/engine/minimize.py`) → show the user the minimized version → explicit "publish anonymously" consent tap → store → forward to `OPERATOR_ALERT_CHAT_ID` for review.
 **Schema:** new table `story_submission(id UUID, user_key, face, language, minimized_text, status: submitted|approved|rejected|published, created_ts, reviewed_ts)` + Alembic migration.
 **Guardrails (all mandatory):**
@@ -64,6 +66,7 @@ After positive feedback (`usefulness` = yes/partly), offer: *"Share what happene
 - Privacy notice gains a story-capture paragraph → **bump `NOTICE_VERSION`** (forces re-consent) → texts updated in all three languages.
 - `/delete_my_data` deletes the user's stories too; retention rule added (e.g., rejected stories purged in 30 days).
 - ⚖️ Flag for the lawyer checkpoint before public alpha ([PRODUCT_VISION.md](PRODUCT_VISION.md) §9.3).
+- TODO (lawyer): confirm the R3 privacy-notice wording, retention terms, and operator/founder review process before public alpha.
 **Acceptance:** unit tests prove raw text can never reach the DB; consent flow test; deletion test; operator forward mocked-tested; founder can approve/reject via a simple CLI (`tools/stories.py list|approve|reject`) — no admin UI in this pass.
 
 ### R4. Scam Pulse — aggregate trend export — ~1 day

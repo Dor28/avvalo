@@ -14,7 +14,7 @@ from app.data.db import (
     create_database_engine,
     create_session_factory,
 )
-from app.data.retention import start_retention_scheduler
+from app.data.retention import RetentionPolicy, start_retention_scheduler
 from app.engine.faces import FACES
 from app.web.app import create_app
 
@@ -41,7 +41,12 @@ async def run(*, check_only: bool = False) -> None:
             return
 
         session_factory = create_session_factory(engine)
-        scheduler = start_retention_scheduler(session_factory)
+        scheduler = start_retention_scheduler(
+            session_factory,
+            policy=RetentionPolicy(
+                story_rejected_days=settings.story_rejected_retention_days
+            ),
+        )
         try:
             runners = []
             if settings.web_enabled:

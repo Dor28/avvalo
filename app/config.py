@@ -34,10 +34,13 @@ class Settings(BaseSettings):
     ocr_min_confidence: float = Field(default=0.5, ge=0, le=1)
     ocr_timeout_s: float = Field(default=30.0, gt=0)
 
-    notice_version: str = "2026-06-24-v1"
+    notice_version: str = "2026-07-07-v2"
     daily_limit_family: int = Field(default=5, ge=1)
     daily_limit_merchants: int = Field(default=20, ge=1)
     operator_alert_chat_id: int | None = None
+    story_max_chars: int = Field(default=2000, ge=1, le=10000)
+    story_daily_limit: int = Field(default=3, ge=1, le=20)
+    story_rejected_retention_days: int = Field(default=30, ge=1)
 
     web_enabled: bool = False
     web_host: str = "0.0.0.0"

@@ -16,7 +16,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimit
+from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimit, StorySubmission
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ class RetentionPolicy:
     consent_days: int = 365
     rate_limit_hours: int = 48
     deletion_log_days: int = 365
+    story_rejected_days: int = 30
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,7 @@ class RetentionResult:
     consent: int = 0
     rate_limits: int = 0
     deletion_logs: int = 0
+    stories: int = 0
 
     def asdict(self) -> dict[str, int]:
         """Return a plain dict for logs, tests, and CLI output."""
@@ -69,6 +71,7 @@ async def cleanup_expired(
     consent_cutoff = now - timedelta(days=policy.consent_days)
     rate_limit_cutoff_day = (now - timedelta(hours=policy.rate_limit_hours)).date()
     deletion_log_cutoff = now - timedelta(days=policy.deletion_log_days)
+    story_rejected_cutoff = now - timedelta(days=policy.story_rejected_days)
 
     # Delete feedback that is either past its own TTL or orphaned by an
     # about-to-be-deleted check. A correlated subquery keeps the expired-check
@@ -98,6 +101,16 @@ async def cleanup_expired(
             )
         )
     )
+    story_result = await session.execute(
+        delete(StorySubmission).where(
+            StorySubmission.status == "rejected",
+            or_(
+                StorySubmission.reviewed_ts < story_rejected_cutoff,
+                StorySubmission.reviewed_ts.is_(None)
+                & (StorySubmission.created_ts < story_rejected_cutoff),
+            ),
+        )
+    )
     await session.flush()
 
     return RetentionResult(
@@ -106,6 +119,7 @@ async def cleanup_expired(
         consent=_rowcount(consent_result),
         rate_limits=_rowcount(rate_result),
         deletion_logs=_rowcount(deletion_log_result),
+        stories=_rowcount(story_result),
     )
 
 

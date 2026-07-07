@@ -108,3 +108,23 @@ class DeletionLog(Base):
     user_key: Mapped[str] = mapped_column(Text, nullable=False)
     requested_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     completed_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class StorySubmission(Base):
+    """Opt-in minimized story awaiting founder review.
+
+    This is the one R3 exception to the no-content schema rule:
+    ``minimized_text`` may store only the minimizer's derivative, never raw
+    user-submitted text.
+    """
+
+    __tablename__ = "story_submission"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_key: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    face: Mapped[str] = mapped_column(Text, nullable=False)
+    language: Mapped[str] = mapped_column(Text, nullable=False)
+    minimized_text: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="submitted")
+    created_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    reviewed_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

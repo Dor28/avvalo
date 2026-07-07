@@ -218,6 +218,111 @@ TEXTS: dict[str, dict[str, str]] = {
             "Попробуйте после новой проверки."
         ),
     },
+    "privacy_story_notice": {
+        "uz_latn": (
+            "\n\n• Agar tekshiruv foydali bo'lsa, Avvalo ixtiyoriy anonim hikoya so'rashi mumkin. "
+            "Avval minimallashtirilgan matnni ko'rasiz; faqat alohida rozilik bossangiz, "
+            "shu minimallashtirilgan matn asoschining ko'rib chiqishi uchun saqlanadi."
+        ),
+        "uz_cyrl": (
+            "\n\n• Агар текширув фойдали бўлса, Avvalo ихтиёрий аноним ҳикоя сўраши мумкин. "
+            "Аввал минималлаштирилган матнни кўрасиз; фақат алоҳида розилик боссангиз, "
+            "шу минималлаштирилган матн асосчининг кўриб чиқиши учун сақланади."
+        ),
+        "ru": (
+            "\n\n• Если проверка помогла, Avvalo может попросить добровольно поделиться "
+            "анонимной историей. Сначала вы увидите минимизированный текст; только после "
+            "отдельного согласия он сохранится для проверки основателем."
+        ),
+    },
+    "story_invite": {
+        "uz_latn": (
+            "Bu foydali bo'lganidan xursandman. Boshqalarni ogohlantirish uchun nima "
+            "bo'lganini anonim ulashasizmi? Avval minimallashtirilgan matnni ko'rsataman."
+        ),
+        "uz_cyrl": (
+            "Бу фойдали бўлганидан хурсандман. Бошқаларни огоҳлантириш учун нима "
+            "бўлганини аноним улашасизми? Аввал минималлаштирилган матнни кўрсатаман."
+        ),
+        "ru": (
+            "Рад, что это помогло. Хотите анонимно поделиться тем, что произошло, "
+            "чтобы предупредить других? Сначала я покажу минимизированный текст."
+        ),
+    },
+    "story_start": {
+        "uz_latn": "Anonim ulashish",
+        "uz_cyrl": "Аноним улашиш",
+        "ru": "Поделиться анонимно",
+    },
+    "story_no_thanks": {
+        "uz_latn": "Yo'q, rahmat",
+        "uz_cyrl": "Йўқ, раҳмат",
+        "ru": "Нет, спасибо",
+    },
+    "story_prompt": {
+        "uz_latn": (
+            "Qisqa qilib nima bo'lganini yozing. Ism, telefon, karta yoki aniq manzil "
+            "kiritmaslikka harakat qiling; Avvalo baribir minimallashtirib ko'rsatadi."
+        ),
+        "uz_cyrl": (
+            "Қисқа қилиб нима бўлганини ёзинг. Исм, телефон, карта ёки аниқ манзил "
+            "киритмасликка ҳаракат қилинг; Avvalo барибир минималлаштириб кўрсатади."
+        ),
+        "ru": (
+            "Коротко напишите, что произошло. Постарайтесь не указывать имена, телефоны, "
+            "карты или точный адрес; Avvalo всё равно минимизирует текст и покажет его вам."
+        ),
+    },
+    "story_text_required": {
+        "uz_latn": "Hikoya uchun faqat matn yuboring yoki bekor qiling.",
+        "uz_cyrl": "Ҳикоя учун фақат матн юборинг ёки бекор қилинг.",
+        "ru": "Для истории отправьте только текст или отмените.",
+    },
+    "story_too_long": {
+        "uz_latn": "Hikoya juda uzun. Iltimos, {limit} belgigacha qisqartiring.",
+        "uz_cyrl": "Ҳикоя жуда узун. Илтимос, {limit} белгичага қисқартиринг.",
+        "ru": "История слишком длинная. Сократите её до {limit} символов.",
+    },
+    "story_preview_intro": {
+        "uz_latn": "Saqlanishi mumkin bo'lgan minimallashtirilgan ko'rinish:",
+        "uz_cyrl": "Сақланиши мумкин бўлган минималлаштирилган кўриниш:",
+        "ru": "Минимизированная версия, которую можно сохранить:",
+    },
+    "story_preview_confirm": {
+        "uz_latn": "Faqat shu matn ko'rib chiqish uchun saqlanadi. Rozimisiz?",
+        "uz_cyrl": "Фақат шу матн кўриб чиқиш учун сақланади. Розимисиз?",
+        "ru": "Только этот текст будет сохранён для проверки. Согласны?",
+    },
+    "story_publish": {
+        "uz_latn": "Roziman, yuborish",
+        "uz_cyrl": "Розиман, юбориш",
+        "ru": "Согласен, отправить",
+    },
+    "story_cancel": {
+        "uz_latn": "Bekor qilish",
+        "uz_cyrl": "Бекор қилиш",
+        "ru": "Отменить",
+    },
+    "story_saved": {
+        "uz_latn": "Rahmat. Hikoya minimallashtirilgan holda ko'rib chiqish uchun yuborildi.",
+        "uz_cyrl": "Раҳмат. Ҳикоя минималлаштирилган ҳолда кўриб чиқиш учун юборилди.",
+        "ru": "Спасибо. Минимизированная история отправлена на проверку.",
+    },
+    "story_cancelled": {
+        "uz_latn": "Bekor qilindi. Hikoya saqlanmadi.",
+        "uz_cyrl": "Бекор қилинди. Ҳикоя сақланмади.",
+        "ru": "Отменено. История не сохранена.",
+    },
+    "story_limit_reached": {
+        "uz_latn": "Buguncha hikoya limiti tugadi. Rahmat, keyinroq qayta urinib ko'ring.",
+        "uz_cyrl": "Бугунча ҳикоя лимити тугади. Раҳмат, кейинроқ қайта уриниб кўринг.",
+        "ru": "На сегодня лимит историй исчерпан. Спасибо, попробуйте позже.",
+    },
+    "story_expired": {
+        "uz_latn": "Bu hikoya oynasi eskirgan. Yangi tekshiruvdan keyin qayta urinib ko'ring.",
+        "uz_cyrl": "Бу ҳикоя ойнаси эскирган. Янги текширувдан кейин қайта уриниб кўринг.",
+        "ru": "Это окно истории устарело. Попробуйте после новой проверки.",
+    },
 }
 
 
@@ -225,7 +330,11 @@ def t(key: str, language: str) -> str:
     """Return the string for *key* in *language*, falling back to the default."""
 
     table = TEXTS[key]
-    return table.get(language) or table[DEFAULT_LANGUAGE]
+    value = table.get(language) or table[DEFAULT_LANGUAGE]
+    if key in {"privacy_notice", "privacy"}:
+        story_table = TEXTS["privacy_story_notice"]
+        return value + (story_table.get(language) or story_table[DEFAULT_LANGUAGE])
+    return value
 
 
 def entry_text(face_id: str, language: str) -> str:

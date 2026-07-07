@@ -8,13 +8,15 @@ submitted content — only pseudonymous keys, categorical fields, IDs, and metri
 import hashlib
 import re
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimit
+from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimit, StorySubmission
+from app.engine.minimize import minimize
+from app.engine.rules import run_rules
 
 USEFULNESS_VALUES = {"yes", "partly", "no"}
 NEXT_ACTION_VALUES = {"verify", "delay_stop", "continue", "not_sure"}
@@ -32,6 +34,7 @@ CHECK_EVENT_STATUSES = {
     "safety_fallback",
     "unsupported_media",
 }
+STORY_STATUSES = {"submitted", "approved", "rejected", "published"}
 RULE_ID_RE = re.compile(r"^[a-z][a-z0-9_.-]{0,79}$")
 ERROR_CLASS_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,79}$")
 
@@ -190,6 +193,108 @@ async def record_feedback(
     await session.flush()
 
 
+async def count_story_submissions_for_day(
+    session: AsyncSession, *, user_key: str, day: date | None = None
+) -> int:
+    """Return the user's story submissions for one UTC day."""
+
+    day = day or _utcnow().date()
+    start = datetime(day.year, day.month, day.day, tzinfo=UTC)
+    end = start + timedelta(days=1)
+    result = await session.execute(
+        select(func.count())
+        .select_from(StorySubmission)
+        .where(
+            StorySubmission.user_key == user_key,
+            StorySubmission.created_ts >= start,
+            StorySubmission.created_ts < end,
+        )
+    )
+    return int(result.scalar_one())
+
+
+async def store_story(
+    session: AsyncSession,
+    *,
+    user_key: str,
+    face: str,
+    language: str,
+    raw_text: str,
+    status: str = "submitted",
+) -> StorySubmission:
+    """Store an explicitly consented story after re-running minimization."""
+
+    _validate_story_metadata(face=face, language=language, status=status)
+    text = raw_text.strip()
+    if not text:
+        raise ValueError("Story text cannot be empty")
+
+    _, signals = run_rules(text, face)
+    minimized_text = minimize(text, signals).strip()
+    if not minimized_text:
+        raise ValueError("Minimized story text cannot be empty")
+
+    row = StorySubmission(
+        id=uuid.uuid4(),
+        user_key=user_key,
+        face=face,
+        language=language,
+        minimized_text=minimized_text,
+        status=status,
+        created_ts=_utcnow(),
+        reviewed_ts=None,
+    )
+    session.add(row)
+    await session.flush()
+    return row
+
+
+async def get_story_submission(
+    session: AsyncSession, story_id: uuid.UUID
+) -> StorySubmission | None:
+    """Return one story submission by id."""
+
+    return await session.get(StorySubmission, story_id)
+
+
+async def list_story_submissions(
+    session: AsyncSession, *, status: str | None = "submitted", limit: int = 20
+) -> list[StorySubmission]:
+    """Return recent story submissions for founder review."""
+
+    if status is not None and status not in STORY_STATUSES:
+        raise ValueError(f"Unsupported story status: {status}")
+    stmt = select(StorySubmission).order_by(StorySubmission.created_ts.desc()).limit(limit)
+    if status is not None:
+        stmt = stmt.where(StorySubmission.status == status)
+    return list((await session.execute(stmt)).scalars())
+
+
+async def update_story_status(
+    session: AsyncSession, *, story_id: uuid.UUID, status: str
+) -> StorySubmission | None:
+    """Move a story through founder-review statuses."""
+
+    if status not in STORY_STATUSES:
+        raise ValueError(f"Unsupported story status: {status}")
+    row = await session.get(StorySubmission, story_id)
+    if row is None:
+        return None
+    row.status = status
+    row.reviewed_ts = None if status == "submitted" else _utcnow()
+    await session.flush()
+    return row
+
+
+def _validate_story_metadata(*, face: str, language: str, status: str) -> None:
+    if face not in CHECK_EVENT_FACES:
+        raise ValueError(f"Unsupported story face: {face}")
+    if language not in CHECK_EVENT_LANGUAGES:
+        raise ValueError(f"Unsupported story language: {language}")
+    if status not in STORY_STATUSES:
+        raise ValueError(f"Unsupported story status: {status}")
+
+
 async def get_usage(
     session: AsyncSession, *, user_key: str, face: str, day: date | None = None
 ) -> int:
@@ -273,6 +378,7 @@ async def delete_user_data(session: AsyncSession, *, user_key: str) -> None:
     check_ids = result.scalars().all()
     if check_ids:
         await session.execute(delete(Feedback).where(Feedback.check_id.in_(check_ids)))
+    await session.execute(delete(StorySubmission).where(StorySubmission.user_key == user_key))
     await session.execute(delete(CheckEvent).where(CheckEvent.user_key == user_key))
     await session.execute(delete(Consent).where(Consent.user_key == user_key))
     await session.execute(delete(RateLimit).where(RateLimit.user_key == user_key))

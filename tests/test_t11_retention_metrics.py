@@ -6,7 +6,7 @@ from uuid import uuid4
 from sqlalchemy import func, select
 
 from app.data import repo
-from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimit
+from app.data.models import CheckEvent, Consent, DeletionLog, Feedback, RateLimit, StorySubmission
 from app.data.retention import cleanup_expired
 from app.obs.metrics import collect_metrics, export_metrics
 
@@ -90,6 +90,26 @@ async def test_retention_deletes_only_expired_metadata_rows(session) -> None:
                 requested_ts=now - timedelta(days=1),
                 completed_ts=now - timedelta(days=1),
             ),
+            StorySubmission(
+                id=uuid4(),
+                user_key="old-story",
+                face="family",
+                language="ru",
+                minimized_text="old minimized story",
+                status="rejected",
+                created_ts=now - timedelta(days=40),
+                reviewed_ts=now - timedelta(days=31),
+            ),
+            StorySubmission(
+                id=uuid4(),
+                user_key="fresh-story",
+                face="family",
+                language="ru",
+                minimized_text="fresh minimized story",
+                status="submitted",
+                created_ts=now - timedelta(days=40),
+                reviewed_ts=None,
+            ),
         ]
     )
     await session.flush()
@@ -102,12 +122,14 @@ async def test_retention_deletes_only_expired_metadata_rows(session) -> None:
         "consent": 1,
         "rate_limits": 1,
         "deletion_logs": 1,
+        "stories": 1,
     }
     assert await _count(session, CheckEvent) == 1
     assert await _count(session, Feedback) == 1
     assert await _count(session, Consent) == 1
     assert await _count(session, RateLimit) == 1
     assert await _count(session, DeletionLog) == 1
+    assert await _count(session, StorySubmission) == 1
 
 
 async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> None:

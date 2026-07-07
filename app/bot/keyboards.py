@@ -82,3 +82,37 @@ def post_check_keyboard(
             [share_button],
         ]
     )
+
+
+def story_invite_keyboard(language: str) -> InlineKeyboardMarkup:
+    """Offer optional anonymous story capture after positive feedback."""
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t("story_start", language), callback_data="story:start"
+                ),
+                InlineKeyboardButton(
+                    text=t("story_no_thanks", language), callback_data="story:cancel"
+                ),
+            ]
+        ]
+    )
+
+
+def story_publish_keyboard(language: str) -> InlineKeyboardMarkup:
+    """Require explicit consent before storing a minimized story."""
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t("story_publish", language), callback_data="story:publish"
+                ),
+                InlineKeyboardButton(
+                    text=t("story_cancel", language), callback_data="story:cancel"
+                ),
+            ]
+        ]
+    )

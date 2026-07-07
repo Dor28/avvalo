@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select
 
 from app.data import repo
-from app.data.models import Base, DeletionLog
+from app.data.models import Base, DeletionLog, StorySubmission
 from app.privacy.user_key import derive_user_key
 
 # Any column whose name hints at stored user content breaks the privacy promise.
@@ -28,7 +28,16 @@ CONTENT_TOKENS = (
     "text",
 )
 
-EXPECTED_TABLES = {"consent", "check_event", "feedback", "rate_limit", "deletion_log"}
+EXPECTED_TABLES = {
+    "consent",
+    "check_event",
+    "feedback",
+    "rate_limit",
+    "deletion_log",
+    "story_submission",
+}
+# R3 reviewed exception: opt-in, minimized, founder-reviewed story corpus.
+ALLOWED_CONTENT_COLUMNS = {"story_submission.minimized_text"}
 
 
 def test_expected_tables_present() -> None:
@@ -41,8 +50,14 @@ def test_no_content_columns_anywhere() -> None:
         for table in Base.metadata.tables.values()
         for column in table.columns
         if any(token in column.name.lower() for token in CONTENT_TOKENS)
+        and f"{table.name}.{column.name}" not in ALLOWED_CONTENT_COLUMNS
     ]
     assert not offenders, f"content-like columns are forbidden: {offenders}"
+    assert {
+        f"{table.name}.{column.name}"
+        for table in Base.metadata.tables.values()
+        for column in table.columns
+    } >= ALLOWED_CONTENT_COLUMNS
 
 
 def test_user_key_is_pseudonymous_and_stable() -> None:
@@ -121,6 +136,13 @@ async def test_delete_user_data_removes_every_row(session) -> None:
         status="ok",
     )
     await repo.record_feedback(session, check_id=check_id, usefulness="yes", next_action="verify")
+    await repo.store_story(
+        session,
+        user_key="u1",
+        face="family",
+        language="ru",
+        raw_text="Murod Karimov asked for SMS kod 123456 and +998 90 123 45 67.",
+    )
     await repo.increment_usage(session, user_key="u1", face="family")
     await session.commit()
 
@@ -129,6 +151,33 @@ async def test_delete_user_data_removes_every_row(session) -> None:
 
     assert await repo.get_consent(session, user_key="u1", face="family") is None
     assert await repo.get_usage(session, user_key="u1", face="family") == 0
+    stories = (await session.execute(select(StorySubmission))).scalars().all()
+    assert stories == []
     deletion_log = (await session.execute(select(DeletionLog))).scalar_one()
     assert deletion_log.user_key != "u1"
     assert len(deletion_log.user_key) == 32
+
+
+async def test_store_story_reminimizes_raw_text_before_db_write(session) -> None:
+    story = await repo.store_story(
+        session,
+        user_key="story-user",
+        face="family",
+        language="ru",
+        raw_text=(
+            "Murod Karimov wrote from +998 90 123 45 67, asked for SMS kod 123456, "
+            "sent card 8600 1234 5678 9012 and link https://payme-fake.example/login."
+        ),
+    )
+    await session.commit()
+
+    stored = await session.get(StorySubmission, story.id)
+    assert stored is not None
+    assert stored.status == "submitted"
+    assert "[PHONE]" in stored.minimized_text
+    assert "[CARD]" in stored.minimized_text
+    assert "[LINK" in stored.minimized_text
+    assert "+998" not in stored.minimized_text
+    assert "8600" not in stored.minimized_text
+    assert "123456" not in stored.minimized_text
+    assert "Murod Karimov" not in stored.minimized_text
