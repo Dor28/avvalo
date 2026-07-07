@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ copy.title }} · {{ copy.scams_title }}</title>
+    {% for option in languages %}
+      <link rel="alternate" hreflang="{{ hreflangs[option] }}" href="/scams?language={{ option }}">
+    {% endfor %}
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/?language={{ language }}" aria-label="Avvalo">
+        <span class="brand-mark">A</span>
+        <span>Avvalo</span>
+      </a>
+      <nav class="product-nav" aria-label="Product">
+        <a href="/?language={{ language }}">{{ copy.nav_family }}</a>
+        <a href="/merchants?language={{ language }}">{{ copy.nav_merchants }}</a>
+        <a class="active" href="/scams?language={{ language }}">{{ copy.nav_scams }}</a>
+      </nav>
+      <nav class="language-nav compact" aria-label="{{ copy.language_label }}">
+        {% for option in languages %}
+          <a class="{% if option == language %}active{% endif %}" href="/scams?language={{ option }}">{{ language_labels[option] }}</a>
+        {% endfor %}
+      </nav>
+    </header>
+
+    <main class="content-shell">
+      <section class="content-head" aria-labelledby="scams-title">
+        <p class="eyebrow">Avvalo</p>
+        <h1 id="scams-title">{{ copy.scams_title }}</h1>
+      </section>
+
+      {% if articles %}
+        <section class="article-grid" aria-label="{{ copy.scams_title }}">
+          {% for article in articles %}
+            <article class="article-card">
+              <h2>{{ article.title }}</h2>
+              <p>{{ article.description }}</p>
+              <a class="text-link" href="/scams/{{ article.slug }}?language={{ language }}">{{ copy.scams_open }}</a>
+            </article>
+          {% endfor %}
+        </section>
+      {% else %}
+        <section class="empty-state">
+          <p>{{ copy.scams_empty }}</p>
+        </section>
+      {% endif %}
+    </main>
+  </body>
+</html>

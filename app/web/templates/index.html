@@ -18,6 +18,7 @@
       <nav class="product-nav" aria-label="Product">
         <a class="{% if face == 'family' %}active{% endif %}" href="/?language={{ language }}">{{ copy.nav_family }}</a>
         <a class="{% if face == 'merchants' %}active{% endif %}" href="/merchants?language={{ language }}">{{ copy.nav_merchants }}</a>
+        <a href="/scams?language={{ language }}">{{ copy.nav_scams }}</a>
       </nav>
       <nav class="language-nav compact" aria-label="{{ copy.language_label }}">
         {% for option in languages %}

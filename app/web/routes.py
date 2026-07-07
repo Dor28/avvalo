@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -18,10 +19,12 @@ from app.engine.faces import FACES
 from app.engine.format import format_status_message
 from app.privacy.consent import is_consent_current
 from app.web.abuse import pseudonymous_ip_key, read_limited_upload, require_turnstile_for_image
+from app.web.content import available_languages, get_article, list_articles, sitemap_articles
 from app.web.session import get_or_create_web_session, set_web_session_cookie
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).with_name("templates")))
+HREFLANGS = {"uz_latn": "uz-Latn", "uz_cyrl": "uz-Cyrl", "ru": "ru"}
 DEV_WEB_SESSION_SECRET = "development-web-session-secret"
 WEB_MAX_TEXT_CHARS = 6000
 WEB_MAX_CAPTION_CHARS = 500
@@ -35,59 +38,65 @@ WEB_COPY = {
         "html_lang": "uz-Latn",
         "nav_family": "Oila himoyasi",
         "nav_merchants": "Sotuvchi himoyasi",
+        "nav_scams": "Firibgarlik turlari",
         "privacy_link": "Maxfiylik",
         "language_label": "Til",
         "title": "Avvalo",
+        "scams_title": "Firibgarlik turlari",
+        "scams_empty": "Hozircha maqolalar ko'rib chiqilmoqda.",
+        "scams_fallback": "Bu maqola hozircha tanlangan tilda yo'q, mavjud tarjima ko'rsatildi.",
+        "scams_cta": "Shubhali xabarni Avvalo orqali tekshiring",
+        "scams_open": "O'qish",
         "privacy_title": "Maxfiylik",
-        "consent_label": "Maxfiylik shartlariga roziman",
+        "consent_label": "Maxfiylik shartlarini o'qidim va roziman",
         "message_label": "Xabar matni",
         "caption_label": "Qo'shimcha izoh",
         "image_label": "Skrinshot yoki rasm",
         "submit": "Tekshirish",
-        "result_error_title": "Tekshiruv amalga oshmadi",
-        "result_empty": "Javob matni yo'q.",
+        "result_error_title": "Hozir tekshirib bo'lmadi",
+        "result_empty": "Javob bo'sh keldi.",
         "meta_status": "Holat",
         "meta_latency": "Vaqt",
         "meta_cost": "Narx",
-        "empty_error": "Matn kiriting yoki o'qilishi mumkin bo'lgan rasm yuklang.",
-        "too_long_error": "Matn yoki izoh juda uzun. Iltimos, qisqartirib yuboring.",
+        "empty_error": "Tekshirish uchun xabar yozing yoki matni ko'rinadigan rasm yuklang.",
+        "too_long_error": "Matn biroz uzun. Qisqartirib, qayta yuboring.",
         "consent_error": "Avval maxfiylik shartlariga rozilik bering.",
-        "unknown_face_error": "Noma'lum tekshiruv turi.",
+        "unknown_face_error": "Bunday tekshiruv turi topilmadi.",
         "faces": {
             "family": {
                 "eyebrow": "Oilalar uchun",
                 "name": "Oila himoyasi",
-                "headline": "Shubhali xabarni yuboring, keyin harakat qiling.",
+                "headline": "Javob berishdan yoki pul yuborishdan oldin Avvalo tekshirib ko'ring.",
                 "subhead": (
-                    "Avvalo xabar yoki skrinshotdagi ogohlantiruvchi belgilarni ko'rsatadi: "
-                    "nimani tekshirish va qanday savol berish kerak."
+                    "Xabar yoki skrinshotni yuboring. Avvalo xavf belgilarini, nimani "
+                    "tekshirishni va qanday savol berishni aniq qilib beradi."
                 ),
-                "prompt": "Bank, qarindosh, yetkazib berish, ish yoki oldindan to'lov haqidagi xabarni joylang.",
-                "textarea_placeholder": "Masalan: SMS kodni yuboring, hisob bloklanadi...",
-                "caption_placeholder": "Agar kerak bo'lsa, qisqa kontekst qo'shing",
-                "image_hint": "Matn ko'rinadigan bitta rasm. OCR uchun Turnstile talab qilinadi.",
+                "prompt": "Bank, qarindosh, yetkazib berish, ish, xarid yoki oldindan to'lov haqidagi xabarni shu yerga qo'ying.",
+                "textarea_placeholder": "Masalan: SMS kodni ayting, aks holda karta bloklanadi...",
+                "caption_placeholder": "Kerak bo'lsa: kim yubordi, nima so'rayapti?",
+                "image_hint": "Rasmda matn aniq ko'rinsin. Rasm yuborilganda xavfsizlik tekshiruvi ishlaydi.",
                 "trust": [
-                    "Vaziyat tekshiriladi, odam emas",
-                    "Xavfsiz yoki firibgar degan hukm berilmaydi",
-                    "Yuborilgan matn saqlanmaydi",
+                    "Odamni emas, vaziyatni tekshiradi",
+                    "Hukm emas, tekshiruv ro'yxati beradi",
+                    "Yuborgan matningiz 1 soat ichida o'chiriladi",
                 ],
             },
             "merchants": {
                 "eyebrow": "Sotuvchilar uchun",
                 "name": "Sotuvchi himoyasi",
-                "headline": "Tovarni berishdan oldin xaridor yuborgan dalilni tekshiring.",
+                "headline": "Tovarni berishdan oldin to'lov va buyurtma xabarini tekshiring.",
                 "subhead": (
-                    "To'lov skrinshoti, kuryer bosimi yoki qaytarim so'rovini mustaqil tekshiruv "
-                    "ro'yxatiga aylantiradi."
+                    "Avvalo chek, skrinshot, kuryer shoshiltirishi yoki qaytarim/refund so'rovini "
+                    "bank ilovasida tekshiriladigan aniq qadamlarga ajratadi."
                 ),
-                "prompt": "Xaridor yuborgan chek, buyurtma suhbati yoki yetkazish so'rovini joylang.",
-                "textarea_placeholder": "Masalan: pul o'tkazdim, kuryer kutyapti, skrinshot mana...",
-                "caption_placeholder": "Buyurtma summasi yoki muhim kontekst",
-                "image_hint": "Chek rasmi dalil emas; javob bank ilovasida nimani tekshirishni aytadi.",
+                "prompt": "Chek, buyurtma suhbati, kuryer yoki qaytarim haqidagi xabarni shu yerga qo'ying.",
+                "textarea_placeholder": "Masalan: pul o'tdi, kuryer pastda kutyapti, tovarni bering...",
+                "caption_placeholder": "Buyurtma summasi, to'lov vaqti yoki muhim detal",
+                "image_hint": "Skrinshot to'lov dalili emas. Avvalo nimani bank ilovasida tekshirishni aytadi.",
                 "trust": [
-                    "Pul kelganini skrinshotdan tasdiqlamaydi",
-                    "Bank ilovasida mustaqil tekshirishni talab qiladi",
-                    "Tovarni berishdan oldin xavf belgilarini ko'rsatadi",
+                    "Pul tushganini skrinshotga qarab tasdiqlamaydi",
+                    "Bank ilovasida alohida tekshirishni eslatadi",
+                    "Tovar ketishidan oldin xavf belgilarini ko'rsatadi",
                 ],
             },
         },
@@ -96,59 +105,65 @@ WEB_COPY = {
         "html_lang": "uz-Cyrl",
         "nav_family": "Оила ҳимояси",
         "nav_merchants": "Сотувчи ҳимояси",
+        "nav_scams": "Фирибгарлик турлари",
         "privacy_link": "Махфийлик",
         "language_label": "Тил",
         "title": "Avvalo",
+        "scams_title": "Фирибгарлик турлари",
+        "scams_empty": "Ҳозирча мақолалар кўриб чиқилмоқда.",
+        "scams_fallback": "Бу мақола ҳозирча танланган тилда йўқ, мавжуд таржима кўрсатилди.",
+        "scams_cta": "Шубҳали хабарни Avvalo орқали текширинг",
+        "scams_open": "Ўқиш",
         "privacy_title": "Махфийлик",
-        "consent_label": "Махфийлик шартларига розиман",
+        "consent_label": "Махфийлик шартларини ўқидим ва розиман",
         "message_label": "Хабар матни",
         "caption_label": "Қўшимча изоҳ",
         "image_label": "Скриншот ёки расм",
         "submit": "Текшириш",
-        "result_error_title": "Текширув амалга ошмади",
-        "result_empty": "Жавоб матни йўқ.",
+        "result_error_title": "Ҳозир текшириб бўлмади",
+        "result_empty": "Жавоб бўш келди.",
         "meta_status": "Ҳолат",
         "meta_latency": "Вақт",
         "meta_cost": "Нарх",
-        "empty_error": "Матн киритинг ёки ўқилиши мумкин бўлган расм юкланг.",
-        "too_long_error": "Матн ёки изоҳ жуда узун. Илтимос, қисқартириб юборинг.",
+        "empty_error": "Текшириш учун хабар ёзинг ёки матни кўринадиган расм юкланг.",
+        "too_long_error": "Матн бироз узун. Қисқартириб, қайта юборинг.",
         "consent_error": "Аввал махфийлик шартларига розилик беринг.",
-        "unknown_face_error": "Номаълум текширув тури.",
+        "unknown_face_error": "Бундай текширув тури топилмади.",
         "faces": {
             "family": {
                 "eyebrow": "Оилалар учун",
                 "name": "Оила ҳимояси",
-                "headline": "Шубҳали хабарни юборинг, кейин ҳаракат қилинг.",
+                "headline": "Жавоб беришдан ёки пул юборишдан олдин Avvalo текшириб кўринг.",
                 "subhead": (
-                    "Avvalo хабар ёки скриншотдаги огоҳлантирувчи белгиларни кўрсатади: "
-                    "нимани текшириш ва қандай савол бериш керак."
+                    "Хабар ёки скриншотни юборинг. Avvalo хавф белгиларини, нимани "
+                    "текширишни ва қандай савол беришни аниқ қилиб беради."
                 ),
-                "prompt": "Банк, қариндош, етказиб бериш, иш ёки олдиндан тўлов ҳақидаги хабарни жойланг.",
-                "textarea_placeholder": "Масалан: SMS кодни юборинг, ҳисоб блокланади...",
-                "caption_placeholder": "Агар керак бўлса, қисқа контекст қўшинг",
-                "image_hint": "Матн кўринадиган битта расм. OCR учун Turnstile талаб қилинади.",
+                "prompt": "Банк, қариндош, етказиб бериш, иш, харид ёки олдиндан тўлов ҳақидаги хабарни шу ерга қўйинг.",
+                "textarea_placeholder": "Масалан: SMS кодни айтинг, акс ҳолда карта блокланади...",
+                "caption_placeholder": "Керак бўлса: ким юборди, нима сўраяпти?",
+                "image_hint": "Расмда матн аниқ кўринсин. Расм юборилганда хавфсизлик текшируви ишлайди.",
                 "trust": [
-                    "Вазият текширилади, одам эмас",
-                    "Хавфсиз ёки фирибгар деган ҳукм берилмайди",
-                    "Юборилган матн сақланмайди",
+                    "Одамни эмас, вазиятни текширади",
+                    "Ҳукм эмас, текширув рўйхати беради",
+                    "Юборган матнингиз 1 соат ичида ўчирилади",
                 ],
             },
             "merchants": {
                 "eyebrow": "Сотувчилар учун",
                 "name": "Сотувчи ҳимояси",
-                "headline": "Товарни беришдан олдин харидор юборган далилни текширинг.",
+                "headline": "Товарни беришдан олдин тўлов ва буюртма хабарини текширинг.",
                 "subhead": (
-                    "Тўлов скриншоти, курьер босими ёки қайтарим сўровини мустақил текширув "
-                    "рўйхатига айлантиради."
+                    "Avvalo чек, скриншот, курьер шошилтириши ёки қайтарим/refund сўровини "
+                    "банк иловасида текшириладиган аниқ қадамларга ажратади."
                 ),
-                "prompt": "Харидор юборган чек, буюртма суҳбати ёки етказиш сўровини жойланг.",
-                "textarea_placeholder": "Масалан: пул ўтказдим, курьер кутяпти, скриншот мана...",
-                "caption_placeholder": "Буюртма суммаси ёки муҳим контекст",
-                "image_hint": "Чек расми далил эмас; жавоб банк иловасида нимани текширишни айтади.",
+                "prompt": "Чек, буюртма суҳбати, курьер ёки қайтарим ҳақидаги хабарни шу ерга қўйинг.",
+                "textarea_placeholder": "Масалан: пул ўтди, курьер пастда кутяпти, товарни беринг...",
+                "caption_placeholder": "Буюртма суммаси, тўлов вақти ёки муҳим детал",
+                "image_hint": "Скриншот тўлов далили эмас. Avvalo нимани банк иловасида текширишни айтади.",
                 "trust": [
-                    "Пул келганини скриншотдан тасдиқламайди",
-                    "Банк иловасида мустақил текширишни талаб қилади",
-                    "Товарни беришдан олдин хавф белгиларини кўрсатади",
+                    "Пул тушганини скриншотга қараб тасдиқламайди",
+                    "Банк иловасида алоҳида текширишни эслатади",
+                    "Товар кетишидан олдин хавф белгиларини кўрсатади",
                 ],
             },
         },
@@ -157,59 +172,65 @@ WEB_COPY = {
         "html_lang": "ru",
         "nav_family": "Защита семьи",
         "nav_merchants": "Защита продавца",
+        "nav_scams": "Виды мошенничества",
         "privacy_link": "Конфиденциальность",
         "language_label": "Язык",
         "title": "Avvalo",
+        "scams_title": "Виды мошенничества",
+        "scams_empty": "Материалы пока на проверке.",
+        "scams_fallback": "Этой статьи пока нет на выбранном языке, показан доступный перевод.",
+        "scams_cta": "Проверить сомнительное сообщение в Avvalo",
+        "scams_open": "Читать",
         "privacy_title": "Конфиденциальность",
-        "consent_label": "Я согласен с условиями конфиденциальности",
+        "consent_label": "Я прочитал условия конфиденциальности и согласен",
         "message_label": "Текст сообщения",
         "caption_label": "Короткий контекст",
         "image_label": "Скриншот или фото",
         "submit": "Проверить",
-        "result_error_title": "Не удалось проверить",
-        "result_empty": "Нет текста ответа.",
+        "result_error_title": "Сейчас проверить не получилось",
+        "result_empty": "Ответ пришёл пустым.",
         "meta_status": "Статус",
         "meta_latency": "Время",
         "meta_cost": "Стоимость",
         "empty_error": "Вставьте текст или загрузите читаемое изображение.",
-        "too_long_error": "Текст или контекст слишком длинные. Пожалуйста, сократите их.",
+        "too_long_error": "Текст получился слишком длинным. Сократите его и отправьте ещё раз.",
         "consent_error": "Сначала примите условия конфиденциальности.",
         "unknown_face_error": "Неизвестный тип проверки.",
         "faces": {
             "family": {
                 "eyebrow": "Для семей",
                 "name": "Защита семьи",
-                "headline": "Проверьте сомнительное сообщение до ответа или оплаты.",
+                "headline": "Перед ответом или оплатой проверьте сообщение в Avvalo.",
                 "subhead": (
-                    "Avvalo показывает тревожные признаки в сообщении или скриншоте: "
-                    "что проверить и какие вопросы задать."
+                    "Отправьте текст или скриншот. Avvalo покажет, где может быть риск, "
+                    "что проверить и какой вопрос задать."
                 ),
-                "prompt": "Вставьте сообщение от банка, родственника, доставки, работодателя или продавца.",
-                "textarea_placeholder": "Например: пришлите SMS-код, иначе счёт будет заблокирован...",
-                "caption_placeholder": "Добавьте короткий контекст, если он важен",
-                "image_hint": "Одно изображение с читаемым текстом. Для OCR нужен Turnstile.",
+                "prompt": "Вставьте сообщение от банка, родственника, доставки, работодателя, продавца или покупателя.",
+                "textarea_placeholder": "Например: скажите SMS-код, иначе карта будет заблокирована...",
+                "caption_placeholder": "Если нужно: кто написал и чего просит?",
+                "image_hint": "Текст на изображении должен быть читаемым. Для фото работает защитная проверка.",
                 "trust": [
-                    "Проверяется ситуация, а не человек",
-                    "Нет вердиктов безопасно или мошенник",
-                    "Отправленный текст не сохраняется",
+                    "Проверяем ситуацию, а не человека",
+                    "Даём список проверок, а не ярлык",
+                    "Ваш текст удаляется в течение 1 часа",
                 ],
             },
             "merchants": {
                 "eyebrow": "Для продавцов",
                 "name": "Защита продавца",
-                "headline": "Проверьте доказательство от покупателя до передачи товара.",
+                "headline": "Проверьте оплату и заказ до передачи товара.",
                 "subhead": (
-                    "Платёжный скриншот, давление курьером или запрос на возврат превращаются "
-                    "в список независимых проверок."
+                    "Avvalo разбирает чек, переписку, давление курьером или запрос на возврат/refund "
+                    "и превращает это в понятные проверки."
                 ),
-                "prompt": "Вставьте чек, переписку по заказу или запрос на доставку от покупателя.",
-                "textarea_placeholder": "Например: перевёл деньги, курьер ждёт, вот скриншот...",
-                "caption_placeholder": "Сумма заказа или важный контекст",
-                "image_hint": "Скриншот чека не доказывает оплату; ответ подскажет, что проверить в банке.",
+                "prompt": "Вставьте чек, переписку по заказу, запрос на доставку или возврат от покупателя.",
+                "textarea_placeholder": "Например: деньги ушли, курьер уже ждёт, отдайте товар...",
+                "caption_placeholder": "Сумма заказа, время оплаты или важная деталь",
+                "image_hint": "Скриншот не доказывает оплату. Avvalo подскажет, что проверить в своём банке.",
                 "trust": [
                     "Не подтверждает приход денег по скриншоту",
-                    "Требует самостоятельной проверки в банковском приложении",
-                    "Показывает признаки риска до передачи товара",
+                    "Напоминает проверить свой банк отдельно",
+                    "Показывает риски до передачи товара",
                 ],
             },
         },
@@ -241,6 +262,78 @@ async def merchants(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLR
     """Render the Avvalo Merchants check page."""
 
     return _face_page(request, face="merchants", language=language)
+
+
+@router.get("/scams", response_class=HTMLResponse)
+async def scams_index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
+    """Render the localized scam education index."""
+
+    language = _normalize_language(language)
+    copy = WEB_COPY[language]
+    debug = _content_debug(request)
+    response = templates.TemplateResponse(
+        request,
+        "scam_index.html",
+        {
+            "copy": copy,
+            "language": language,
+            "languages": LANGUAGES,
+            "hreflangs": HREFLANGS,
+            "language_labels": LANGUAGE_LABELS,
+            "articles": list_articles(language, include_drafts=debug),
+        },
+    )
+    return _cache_content_response(response, debug=debug)
+
+
+@router.get("/scams/{slug}", response_class=HTMLResponse)
+async def scam_page(
+    request: Request, slug: str, language: str = DEFAULT_LANGUAGE
+) -> HTMLResponse:
+    """Render one localized scam education page."""
+
+    language = _normalize_language(language)
+    debug = _content_debug(request)
+    article = get_article(slug, language, include_drafts=debug)
+    if article is None:
+        raise HTTPException(status_code=404, detail="Scam page not found.")
+
+    copy = WEB_COPY[language]
+    response = templates.TemplateResponse(
+        request,
+        "scam_page.html",
+        {
+            "copy": copy,
+            "language": language,
+            "languages": LANGUAGES,
+            "hreflangs": HREFLANGS,
+            "language_labels": LANGUAGE_LABELS,
+            "article": article,
+            "article_languages": available_languages(slug),
+        },
+    )
+    return _cache_content_response(response, debug=debug)
+
+
+@router.get("/sitemap.xml")
+async def sitemap(request: Request) -> Response:
+    """Return a sitemap of founder-reviewed published content."""
+
+    base_url = str(request.base_url).rstrip("/")
+    urls = [
+        f"{base_url}/scams/{article.slug}?language={article.language}"
+        for article in sitemap_articles()
+    ]
+    body = "\n".join(
+        [
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+            *[f"  <url><loc>{escape(url)}</loc></url>" for url in urls],
+            "</urlset>",
+            "",
+        ]
+    )
+    return _cache_content_response(Response(content=body, media_type="application/xml"))
 
 
 def _face_page(request: Request, *, face: str, language: str) -> HTMLResponse:
@@ -521,3 +614,14 @@ def _web_secret(settings: Settings | None) -> str:
 
 def _normalize_language(language: str) -> str:
     return language if language in LANGUAGES else DEFAULT_LANGUAGE
+
+
+def _content_debug(request: Request) -> bool:
+    return bool(getattr(request.app, "debug", False))
+
+
+def _cache_content_response(response: HTMLResponse | Response, *, debug: bool = False) -> HTMLResponse | Response:
+    response.headers["Cache-Control"] = (
+        "no-store" if debug else "public, max-age=86400, stale-while-revalidate=604800"
+    )
+    return response

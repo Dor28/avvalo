@@ -16,10 +16,11 @@ def create_app(
     *,
     settings: Settings | None = None,
     session_factory: Any | None = None,
+    debug: bool = False,
 ) -> FastAPI:
     """Create the server-rendered Avvalo web app."""
 
-    web_app = FastAPI(title="Avvalo", docs_url=None, redoc_url=None)
+    web_app = FastAPI(title="Avvalo", docs_url=None, redoc_url=None, debug=debug)
     web_app.state.settings = settings
     web_app.state.session_factory = session_factory
     web_app.router.routes.extend(router.routes)

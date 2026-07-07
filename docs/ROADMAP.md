@@ -48,6 +48,8 @@ On every successful check result, add an inline button that shares a **sanitized
 **Acceptance:** shared text contains no user content and no PII (unit test over golden fixtures); deep link opens the bot; works in all three languages; share taps counted as a privacy-safe event (`share_clicked`) in `check_event`-style logging (no content).
 
 ### R2. Scam library — public education pages — ~1–2 days code + content
+**Status:** [x] Code complete on branch `launch-features` (2026-07-07); markdown drafts are intentionally `published: false` until founder review.
+
 Server-rendered pages on the web app: `GET /scams` (index) and `GET /scams/<slug>` — one page per **family rule family** (7 slugs — derive from `rules/family/families.yaml` at startup, never hardcode the list), each: how the scam works · red flags · what to do · "check yours now" CTA (web form + bot link). Content lives as markdown files under `content/scams/<lang>/<slug>.md` so editing needs no redeploy.
 **Languages:** RU + UZ-Latin first; UZ-Cyrillic when content is translated. Agents draft content from the rule families + [archive/ADJACENT_PRODUCT_IDEAS.md](archive/ADJACENT_PRODUCT_IDEAS.md) patterns; **founder reviews every page before publish** 👤.
 **Files:** `app/web/routes.py`, new template `scam_page.html`, `content/scams/…`, sitemap route for SEO.

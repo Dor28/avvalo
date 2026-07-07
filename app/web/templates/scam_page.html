@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ copy.title }} · {{ article.title }}</title>
+    <meta name="description" content="{{ article.description }}">
+    {% for option in article_languages %}
+      <link rel="alternate" hreflang="{{ hreflangs[option] }}" href="/scams/{{ article.slug }}?language={{ option }}">
+    {% endfor %}
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/?language={{ language }}" aria-label="Avvalo">
+        <span class="brand-mark">A</span>
+        <span>Avvalo</span>
+      </a>
+      <nav class="product-nav" aria-label="Product">
+        <a href="/?language={{ language }}">{{ copy.nav_family }}</a>
+        <a href="/merchants?language={{ language }}">{{ copy.nav_merchants }}</a>
+        <a class="active" href="/scams?language={{ language }}">{{ copy.nav_scams }}</a>
+      </nav>
+      <nav class="language-nav compact" aria-label="{{ copy.language_label }}">
+        {% for option in languages %}
+          <a class="{% if option == language %}active{% endif %}" href="/scams/{{ article.slug }}?language={{ option }}">{{ language_labels[option] }}</a>
+        {% endfor %}
+      </nav>
+    </header>
+
+    <main class="content-shell">
+      <article class="article-page">
+        <p class="eyebrow">{{ copy.scams_title }}</p>
+        <h1>{{ article.title }}</h1>
+        <p class="lead">{{ article.description }}</p>
+        {% if article.is_fallback %}
+          <p class="fallback-note">{{ copy.scams_fallback }}</p>
+        {% endif %}
+        <div class="article-body">
+          {{ article.html | safe }}
+        </div>
+        <a class="cta-link" href="/?language={{ language }}">{{ copy.scams_cta }}</a>
+      </article>
+    </main>
+  </body>
+</html>
