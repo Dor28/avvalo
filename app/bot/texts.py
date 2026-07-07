@@ -24,47 +24,51 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "privacy_notice": {
         "uz_latn": (
-            "👋 Avvalo siz olgan xabar, skrinshot yoki vaziyatdagi xavf belgilarini — "
-            "javob berish, to'lash yoki biror narsa ulashishdan oldin — ko'rishga yordam beradi.\n\n"
-            "Bilib qo'ying:\n"
-            "• Men «vaziyatni» tekshiraman, odamlarni emas. Hech qachon «xavfsiz» yoki «firibgar» "
-            "demayman va ball qo'ymayman.\n"
-            "• Men tushuntiruvchi vositaman — yuridik yoki moliyaviy maslahat emas, rasmiy tekshiruv ham emas.\n"
-            "• Yuborgan narsangiz faqat tahlil uchun ishlatiladi va 1 soat ichida o'chiriladi. "
-            "Matn va rasmlaringizni saqlamayman.\n"
-            "• Sun'iy intellektga faqat minimallashtirilgan matn (telefon, karta va havolalar "
-            "token bilan almashtirilgan) yuboriladi.\n"
-            "• Ma'lumotlaringizni istalgan vaqtda /delete_my_data orqali o'chirishingiz mumkin. "
+            "👋 Assalomu alaykum. Avvalo shubhali xabar, skrinshot yoki vaziyatni "
+            "javob berish, pul yuborish yoki kod/hujjat ulashishdan oldin "
+            "tekshirib ko'rishga yordam beradi.\n\n"
+            "Qisqasi:\n"
+            "• Men odamni emas, siz yuborgan vaziyatni tahlil qilaman. «Xavfsiz» yoki "
+            "«firibgar» degan tamg'a qo'ymayman.\n"
+            "• Javobim maslahat va tekshiruv ro'yxati. Bu yuridik, moliyaviy yoki "
+            "rasmiy xulosa emas.\n"
+            "• Yuborgan matn/rasm faqat tekshiruv uchun ishlatiladi va 1 soat ichida "
+            "o'chiriladi.\n"
+            "• Tahlilga faqat minimallashtirilgan matn ketadi: telefon, karta va "
+            "havolalar token bilan almashtiriladi.\n"
+            "• Xohlagan payt /delete_my_data yozib ma'lumotlaringizni o'chira olasiz. "
             "Batafsil: /privacy.\n\n"
-            "Boshlash uchun «Roziman» tugmasini bosing."
+            "Boshlash uchun «Roziman» ni bosing."
         ),
         "uz_cyrl": (
-            "👋 Avvalo сиз олган хабар, скриншот ёки вазиятдаги хавф белгиларини — "
-            "жавоб бериш, тўлаш ёки бирор нарса улашишдан олдин — кўришга ёрдам беради.\n\n"
-            "Билиб қўйинг:\n"
-            "• Мен «вазиятни» текшираман, одамларни эмас. Ҳеч қачон «хавфсиз» ёки «фирибгар» "
-            "демайман ва балл қўймайман.\n"
-            "• Мен тушунтирувчи воситаман — юридик ёки молиявий маслаҳат эмас, расмий текширув ҳам эмас.\n"
-            "• Юборган нарсангиз фақат таҳлил учун ишлатилади ва 1 соат ичида ўчирилади. "
-            "Матн ва расмларингизни сақламайман.\n"
-            "• Сунъий интеллектга фақат минималлаштирилган матн (телефон, карта ва ҳаволалар "
-            "токен билан алмаштирилган) юборилади.\n"
-            "• Маълумотларингизни исталган вақтда /delete_my_data орқали ўчиришингиз мумкин. "
+            "👋 Ассалому алайкум. Avvalo шубҳали хабар, скриншот ёки вазиятни "
+            "жавоб бериш, пул юбориш ёки код/ҳужжат улашишдан олдин "
+            "текшириб кўришга ёрдам беради.\n\n"
+            "Қисқаси:\n"
+            "• Мен одамни эмас, сиз юборган вазиятни таҳлил қиламан. «Хавфсиз» ёки "
+            "«фирибгар» деган тамға қўймайман.\n"
+            "• Жавобим маслаҳат ва текширув рўйхати. Бу юридик, молиявий ёки "
+            "расмий хулоса эмас.\n"
+            "• Юборган матн/расм фақат текширув учун ишлатилади ва 1 соат ичида "
+            "ўчирилади.\n"
+            "• Таҳлилга фақат минималлаштирилган матн юборилади: телефон, карта ва "
+            "ҳаволалар токен билан алмаштирилади.\n"
+            "• Хоҳлаган пайт /delete_my_data ёзиб маълумотларингизни ўчира оласиз. "
             "Батафсил: /privacy.\n\n"
-            "Бошлаш учун «Розиман» тугмасини босинг."
+            "Бошлаш учун «Розиман» ни босинг."
         ),
         "ru": (
-            "👋 Avvalo помогает заметить тревожные признаки в полученном сообщении, скриншоте "
-            "или ситуации — до того, как вы ответите, заплатите или чем-то поделитесь.\n\n"
-            "Важно знать:\n"
-            "• Я проверяю «ситуацию», а не людей. Я никогда не говорю «безопасно» или «мошенник» "
-            "и не ставлю оценок.\n"
-            "• Я инструмент-пояснение, а не юридическая или финансовая консультация и не официальная проверка.\n"
-            "• То, что вы отправляете, используется только для анализа и удаляется в течение 1 часа. "
-            "Я не храню ваши тексты и изображения.\n"
-            "• Искусственному интеллекту передаётся только минимизированный текст (номера телефонов, "
-            "карты и ссылки заменены токенами).\n"
-            "• Вы можете удалить свои данные в любой момент командой /delete_my_data. Подробнее: /privacy.\n\n"
+            "👋 Avvalo помогает проверить сомнительное сообщение, скриншот или ситуацию "
+            "до ответа, оплаты, отправки кода или документов.\n\n"
+            "Коротко:\n"
+            "• Я разбираю ситуацию, которую вы прислали, а не человека. Я не ставлю "
+            "ярлыки «безопасно» или «мошенник».\n"
+            "• Ответ — это подсказка и список проверок, а не юридическое, финансовое "
+            "или официальное заключение.\n"
+            "• Текст и изображения используются только для анализа и удаляются в течение 1 часа.\n"
+            "• На анализ уходит только минимизированный текст: телефоны, карты и ссылки "
+            "заменяются токенами.\n"
+            "• Удалить свои данные можно в любой момент командой /delete_my_data. Подробнее: /privacy.\n\n"
             "Нажмите «Согласен», чтобы начать."
         ),
     },
@@ -75,92 +79,85 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "ready": {
         "uz_latn": (
-            "✅ Tayyor. Tekshirmoqchi bo'lgan xabar yoki skrinshotni yuboring "
-            "yoki vaziyatni yozing."
+            "✅ Tayyor. Xabar yoki skrinshotni yuboring. Avvalo xavf belgilarini, "
+            "nimani tekshirishni va nima deb so'rashni chiqarib beradi."
         ),
         "uz_cyrl": (
-            "✅ Тайёр. Текширмоқчи бўлган хабар ёки скриншотни юборинг "
-            "ёки вазиятни ёзинг."
+            "✅ Тайёр. Хабар ёки скриншотни юборинг. Avvalo хавф белгиларини, "
+            "нимани текширишни ва нима деб сўрашни чиқариб беради."
         ),
         "ru": (
-            "✅ Готово. Пришлите сообщение или скриншот, который нужно проверить, "
-            "либо опишите ситуацию."
+            "✅ Готово. Пришлите сообщение или скриншот. Avvalo покажет возможные "
+            "риски, что проверить и что спросить."
         ),
     },
     "ready_family": {
-        "uz_latn": "Tayyor. Shubhali xabar, skrinshot yoki vaziyatni yuboring.",
-        "uz_cyrl": "Тайёр. Шубҳали хабар, скриншот ёки вазиятни юборинг.",
-        "ru": "Готово. Пришлите сомнительное сообщение, скриншот или ситуацию.",
+        "uz_latn": "Tayyor. Shubhali xabar yoki skrinshotni yuboring — javob berishdan yoki to'lashdan oldin ko'rib chiqamiz.",
+        "uz_cyrl": "Тайёр. Шубҳали хабар ёки скриншотни юборинг — жавоб беришдан ёки тўлашдан олдин кўриб чиқамиз.",
+        "ru": "Готово. Пришлите сомнительное сообщение или скриншот — разберём до ответа или оплаты.",
     },
     "ready_merchants": {
         "uz_latn": (
-            "Tayyor. Xaridor yuborgan to'lov cheki, yetkazish yoki refund so'rovini "
-            "yuboring. Tovarni berishdan oldin tekshiramiz."
+            "Tayyor. Xaridor yuborgan chek, to'lov skrinshoti, yetkazish yoki qaytarim/refund "
+            "xabarini yuboring. Tovarni berishdan oldin bank ilovasida nimani "
+            "tekshirish kerakligini aytaman."
         ),
         "uz_cyrl": (
-            "Тайёр. Харидор юборган тўлов чеки, етказиш ёки refund сўровини "
-            "юборинг. Товарни беришдан олдин текширамиз."
+            "Тайёр. Харидор юборган чек, тўлов скриншоти, етказиш ёки қайтарим/refund "
+            "хабарини юборинг. Товарни беришдан олдин банк иловасида нимани "
+            "текшириш кераклигини айтаман."
         ),
         "ru": (
-            "Готово. Пришлите чек оплаты, запрос на доставку или refund от "
-            "покупателя. Проверим до того, как отдавать товар."
+            "Готово. Пришлите чек, скриншот оплаты, доставку или возврат/refund от "
+            "покупателя. Подскажу, что проверить в своём банке до передачи товара."
         ),
     },
     "privacy": {
         "uz_latn": (
             "🔒 Maxfiylik\n\n"
-            "• Avvalo siz olgan kontent va vaziyatni tahlil qiladi, odamlar haqida hukm chiqarmaydi.\n"
-            "• Yuborgan matn va rasmlaringiz faqat tahlil uchun ishlatiladi va 1 soat ichida "
-            "o'chiriladi — ular saqlanmaydi.\n"
-            "• Sun'iy intellektga faqat minimallashtirilgan matn yuboriladi (telefon, karta, "
-            "havolalar tokenlar bilan almashtiriladi).\n"
-            "• Avvalo tushuntirish vositasi — yuridik yoki moliyaviy maslahat emas; «xavfsiz» yoki "
-            "«firibgar» degan xulosa bermaydi.\n"
-            "• Barcha ma'lumotlaringizni o'chirish uchun /delete_my_data buyrug'ini yuboring."
+            "• Avvalo siz yuborgan xabar, rasm yoki vaziyatni tahlil qiladi; odamlar haqida hukm chiqarmaydi.\n"
+            "• Matn va rasmlar faqat tekshiruv uchun ishlatiladi va 1 soat ichida o'chiriladi.\n"
+            "• Tahlilga telefon, karta va havolalari token bilan almashtirilgan minimallashtirilgan matn ketadi.\n"
+            "• Avvalo tekshiruv ro'yxati beradi, lekin yuridik yoki moliyaviy xulosa bermaydi.\n"
+            "• Ma'lumotlaringizni o'chirish uchun /delete_my_data yuboring."
         ),
         "uz_cyrl": (
             "🔒 Махфийлик\n\n"
-            "• Avvalo сиз олган контент ва вазиятни таҳлил қилади, одамлар ҳақида ҳукм чиқармайди.\n"
-            "• Юборган матн ва расмларингиз фақат таҳлил учун ишлатилади ва 1 соат ичида "
-            "ўчирилади — улар сақланмайди.\n"
-            "• Сунъий интеллектга фақат минималлаштирилган матн юборилади (телефон, карта, "
-            "ҳаволалар токенлар билан алмаштирилади).\n"
-            "• Avvalo тушунтириш воситаси — юридик ёки молиявий маслаҳат эмас; «хавфсиз» ёки "
-            "«фирибгар» деган хулоса бермайди.\n"
-            "• Барча маълумотларингизни ўчириш учун /delete_my_data буйруғини юборинг."
+            "• Avvalo сиз юборган хабар, расм ёки вазиятни таҳлил қилади; одамлар ҳақида ҳукм чиқармайди.\n"
+            "• Матн ва расмлар фақат текширув учун ишлатилади ва 1 соат ичида ўчирилади.\n"
+            "• Таҳлилга телефон, карта ва ҳаволалари токен билан алмаштирилган минималлаштирилган матн юборилади.\n"
+            "• Avvalo текширув рўйхати беради, лекин юридик ёки молиявий хулоса бермайди.\n"
+            "• Маълумотларингизни ўчириш учун /delete_my_data юборинг."
         ),
         "ru": (
             "🔒 Конфиденциальность\n\n"
-            "• Avvalo анализирует полученный вами контент и ситуацию, не вынося суждений о людях.\n"
-            "• Отправленные тексты и изображения используются только для анализа и удаляются "
-            "в течение 1 часа — они не хранятся.\n"
-            "• Искусственному интеллекту передаётся только минимизированный текст (телефоны, карты, "
-            "ссылки заменяются токенами).\n"
-            "• Avvalo — инструмент-пояснение, а не юридическая или финансовая консультация; "
-            "он не выносит вердикт «безопасно» или «мошенник».\n"
-            "• Чтобы удалить все свои данные, отправьте команду /delete_my_data."
+            "• Avvalo анализирует сообщение, изображение или ситуацию, которую вы прислали; людей мы не оцениваем.\n"
+            "• Текст и изображения используются только для проверки и удаляются в течение 1 часа.\n"
+            "• На анализ уходит минимизированный текст: телефоны, карты и ссылки заменяются токенами.\n"
+            "• Avvalo даёт список проверок, но не юридическое или финансовое заключение.\n"
+            "• Чтобы удалить свои данные, отправьте /delete_my_data."
         ),
     },
     "data_deleted": {
-        "uz_latn": "🗑 Ma'lumotlaringiz o'chirildi. Qaytadan boshlash uchun /start yuboring.",
-        "uz_cyrl": "🗑 Маълумотларингиз ўчирилди. Қайтадан бошлаш учун /start юборинг.",
-        "ru": "🗑 Ваши данные удалены. Отправьте /start, чтобы начать заново.",
+        "uz_latn": "🗑 Ma'lumotlaringiz o'chirildi. Qayta boshlash uchun /start yuboring.",
+        "uz_cyrl": "🗑 Маълумотларингиз ўчирилди. Қайта бошлаш учун /start юборинг.",
+        "ru": "🗑 Данные удалены. Чтобы начать заново, отправьте /start.",
     },
     "need_consent": {
         "uz_latn": (
-            "Iltimos, biror narsa yuborishdan oldin /start ni bosing va «Roziman» tugmasini tanlang."
+            "Avval /start ni bosing va «Roziman» tugmasini tasdiqlang. Shundan keyin xabarni tekshiraman."
         ),
         "uz_cyrl": (
-            "Илтимос, бирор нарса юборишдан олдин /start ни босинг ва «Розиман» тугмасини танланг."
+            "Аввал /start ни босинг ва «Розиман» тугмасини тасдиқланг. Шундан кейин хабарни текшираман."
         ),
         "ru": (
-            "Пожалуйста, отправьте /start и нажмите «Согласен», прежде чем отправлять что-либо на проверку."
+            "Сначала отправьте /start и нажмите «Согласен». После этого я смогу проверить сообщение."
         ),
     },
     "unsupported_input": {
-        "uz_latn": "Iltimos, tekshirish uchun matn yoki rasm (skrinshot) yuboring.",
-        "uz_cyrl": "Илтимос, текшириш учун матн ёки расм (скриншот) юборинг.",
-        "ru": "Пожалуйста, пришлите текст или изображение (скриншот) для проверки.",
+        "uz_latn": "Tekshirish uchun xabar matni yoki skrinshot yuboring.",
+        "uz_cyrl": "Текшириш учун хабар матни ёки скриншот юборинг.",
+        "ru": "Пришлите текст сообщения или скриншот для проверки.",
     },
     "fb_saved": {
         "uz_latn": "Saqlandi",
@@ -168,9 +165,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "ru": "Сохранено",
     },
     "fb_useful": {
-        "uz_latn": "Foydali",
-        "uz_cyrl": "Фойдали",
-        "ru": "Полезно",
+        "uz_latn": "Foydali bo'ldi",
+        "uz_cyrl": "Фойдали бўлди",
+        "ru": "Помогло",
     },
     "fb_partly": {
         "uz_latn": "Qisman",
@@ -178,9 +175,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "ru": "Частично",
     },
     "fb_not_useful": {
-        "uz_latn": "Yo'q",
-        "uz_cyrl": "Йўқ",
-        "ru": "Нет",
+        "uz_latn": "Foydali emas",
+        "uz_cyrl": "Фойдали эмас",
+        "ru": "Не помогло",
     },
     "fb_verify": {
         "uz_latn": "Tekshiraman",
@@ -188,9 +185,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "ru": "Проверю",
     },
     "fb_stop": {
-        "uz_latn": "To'xtataman",
-        "uz_cyrl": "Тўхтатаман",
-        "ru": "Остановлюсь",
+        "uz_latn": "To'xtab turaman",
+        "uz_cyrl": "Тўхтаб тураман",
+        "ru": "Подожду",
     },
     "fb_continue": {
         "uz_latn": "Davom etaman",
@@ -198,13 +195,13 @@ TEXTS: dict[str, dict[str, str]] = {
         "ru": "Продолжу",
     },
     "fb_not_sure": {
-        "uz_latn": "Bilmadim",
-        "uz_cyrl": "Билмадим",
-        "ru": "Не уверен",
+        "uz_latn": "Ishonchim yo'q",
+        "uz_cyrl": "Ишончим йўқ",
+        "ru": "Пока не уверен",
     },
     "fb_share": {
-        "uz_latn": "Avvalo'ni ulashish",
-        "uz_cyrl": "Avvalo'ни улашиш",
+        "uz_latn": "Avvalo'ni yuborish",
+        "uz_cyrl": "Avvalo'ни юбориш",
         "ru": "Поделиться Avvalo",
     },
     "share_expired": {
@@ -213,12 +210,12 @@ TEXTS: dict[str, dict[str, str]] = {
             "Yangi tekshiruvdan keyin qayta urinib ko'ring."
         ),
         "uz_cyrl": (
-            "\u0411\u0443 \u0436\u0430\u0432\u043e\u0431\u043d\u0438 \u0443\u043b\u0430\u0448\u0438\u0431 \u0431\u045e\u043b\u043c\u0430\u0434\u0438. "
-            "\u042f\u043d\u0433\u0438 \u0442\u0435\u043a\u0448\u0438\u0440\u0443\u0432\u0434\u0430\u043d \u043a\u0435\u0439\u0438\u043d \u049b\u0430\u0439\u0442\u0430 \u0443\u0440\u0438\u043d\u0438\u0431 \u043a\u045e\u0440\u0438\u043d\u0433."
+            "Бу жавобни улашиб бўлмади. "
+            "Янги текширувдан кейин қайта уриниб кўринг."
         ),
         "ru": (
-            "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u0438\u0442\u044c \u044d\u0442\u043e\u0442 \u043e\u0442\u0432\u0435\u0442 \u0434\u043b\u044f \u043f\u0435\u0440\u0435\u0441\u044b\u043b\u043a\u0438. "
-            "\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0441\u043b\u0435 \u043d\u043e\u0432\u043e\u0439 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438."
+            "Не удалось подготовить этот ответ для пересылки. "
+            "Попробуйте после новой проверки."
         ),
     },
 }

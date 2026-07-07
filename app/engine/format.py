@@ -97,57 +97,59 @@ _SHARE_COPY = {
 _HEADINGS = {
     Language.uz_latn: {
         "red_flags": "🚩 **Xavf belgilari**",
-        "pattern": "**Bosim usuli:**",
-        "verify": "✅ **Nimani tekshirish kerak**",
-        "ask": "❓ **Nimani so'rash kerak**",
+        "pattern": "**Qanday bosim ishlatyapti:**",
+        "verify": "✅ **Nimani tekshiring**",
+        "ask": "❓ **Qanday savol bering**",
         "no_signal": (
-            "Aniq xavf belgilari topilmadi. Bu holatda xavf yo'qligini isbotlamaydi."
+            "Aniq xavf belgisi ko'rinmadi. Lekin bu kafolat emas: pul, kod yoki "
+            "hujjat yuborishdan oldin manbani o'zingiz tekshiring."
         ),
         "limitation": (
-            "ℹ️ Avvalo yuborilgan vaziyatdagi belgilarni tahlil qildi; "
-            "u shaxsni tekshirmadi va yakuniy kafolat bermaydi."
+            "ℹ️ Avvalo vaziyatdagi belgilarni ko'rib chiqdi. Bu odamni tekshirish "
+            "yoki yakuniy kafolat emas."
         ),
         "fallback": (
-            "Avvalo bu javobni tekshiruvdan o'tkaza olmadi. Kodlarni ulashmang "
-            "va to'lov qilmang; avval rasmiy ilova yoki mustaqil topgan aloqa "
-            "kanali orqali tekshiring."
+            "Hozir javobni xavfsiz shaklda tayyorlay olmadim. Kodlarni aytmang, "
+            "pul yubormang. Avval rasmiy ilova yoki o'zingiz topgan aloqa kanali "
+            "orqali tekshiring."
         ),
     },
     Language.uz_cyrl: {
         "red_flags": "🚩 **Хавф белгилари**",
-        "pattern": "**Босим усули:**",
-        "verify": "✅ **Нимани текшириш керак**",
-        "ask": "❓ **Нимани сўраш керак**",
+        "pattern": "**Қандай босим ишлатяпти:**",
+        "verify": "✅ **Нимани текширинг**",
+        "ask": "❓ **Қандай савол беринг**",
         "no_signal": (
-            "Аниқ хавф белгилари топилмади. Бу ҳолатда хавф йўқлигини исботламайди."
+            "Аниқ хавф белгиси кўринмади. Лекин бу кафолат эмас: пул, код ёки "
+            "ҳужжат юборишдан олдин манбани ўзингиз текширинг."
         ),
         "limitation": (
-            "ℹ️ Avvalo юборилган вазиятдаги белгиларни таҳлил қилди; "
-            "у шахсни текширмади ва якуний кафолат бермайди."
+            "ℹ️ Avvalo вазиятдаги белгиларни кўриб чиқди. Бу одамни текшириш "
+            "ёки якуний кафолат эмас."
         ),
         "fallback": (
-            "Avvalo бу жавобни текширувдан ўтказа олмади. Кодларни улашманг "
-            "ва тўлов қилманг; аввал расмий илова ёки мустақил топган алоқа "
-            "канали орқали текширинг."
+            "Ҳозир жавобни хавфсиз шаклда тайёрлай олмадим. Кодларни айтманг, "
+            "пул юборманг. Аввал расмий илова ёки ўзингиз топган алоқа канали "
+            "орқали текширинг."
         ),
     },
     Language.ru: {
         "red_flags": "🚩 **Тревожные признаки**",
-        "pattern": "**Схема давления:**",
+        "pattern": "**Как на вас давят:**",
         "verify": "✅ **Что проверить**",
         "ask": "❓ **Что спросить**",
         "no_signal": (
-            "Явных тревожных признаков в присланном содержании не найдено. "
-            "Это не доказывает отсутствие риска."
+            "Явных тревожных признаков не видно. Но это не гарантия: перед оплатой, "
+            "кодом или документами проверьте источник самостоятельно."
         ),
         "limitation": (
-            "ℹ️ Avvalo анализирует признаки в ситуации, а не личность отправителя, "
-            "и не даёт окончательных гарантий."
+            "ℹ️ Avvalo разбирает признаки в ситуации. Это не проверка личности "
+            "и не гарантия."
         ),
         "fallback": (
-            "Avvalo не смог подготовить ответ, который проходит проверку безопасности. "
-            "Не сообщайте коды и не платите, пока не проверите ситуацию через официальное "
-            "приложение или контакт, найденный самостоятельно."
+            "Сейчас не получилось подготовить безопасный ответ. Не сообщайте коды "
+            "и не платите, пока не проверите ситуацию через официальное приложение "
+            "или контакт, который нашли сами."
         ),
     },
 }
@@ -173,40 +175,40 @@ def share_summary(rule_ids: list[str], language: Language | str, face: str) -> s
 
 _STATUS_MESSAGES = {
     CheckStatus.rate_limited: {
-        Language.uz_latn: "Bugungi tekshiruv limiti tugadi. Iltimos, ertaga qayta urinib ko'ring.",
-        Language.uz_cyrl: "Бугунги текширув лимити тугади. Илтимос, эртага қайта уриниб кўринг.",
-        Language.ru: "Дневной лимит проверок исчерпан. Пожалуйста, попробуйте завтра.",
+        Language.uz_latn: "Bugungi tekshiruvlar limiti tugadi. Ertaga yana urinib ko'ring.",
+        Language.uz_cyrl: "Бугунги текширувлар лимити тугади. Эртага яна уриниб кўринг.",
+        Language.ru: "На сегодня лимит проверок закончился. Попробуйте завтра.",
     },
     CheckStatus.empty_input: {
-        Language.uz_latn: "Tekshirish uchun matn yuboring.",
-        Language.uz_cyrl: "Текшириш учун матн юборинг.",
-        Language.ru: "Пришлите текст для проверки.",
+        Language.uz_latn: "Tekshirish uchun xabar matnini yuboring.",
+        Language.uz_cyrl: "Текшириш учун хабар матнини юборинг.",
+        Language.ru: "Пришлите текст сообщения для проверки.",
     },
     CheckStatus.low_ocr: {
-        Language.uz_latn: "Rasmni aniq o'qiy olmadik. Iltimos, muhim matnni yozib yuboring.",
-        Language.uz_cyrl: "Расмни аниқ ўқий олмадик. Илтимос, муҳим матнни ёзиб юборинг.",
+        Language.uz_latn: "Rasm matnini aniq o'qiy olmadim. Muhim joyini xabar qilib yuboring.",
+        Language.uz_cyrl: "Расм матнини аниқ ўқий олмадим. Муҳим жойини хабар қилиб юборинг.",
         Language.ru: (
-            "Не удалось чётко прочитать изображение. "
-            "Пожалуйста, пришлите важный текст сообщением."
+            "Не получилось чётко прочитать текст на изображении. "
+            "Пришлите важный фрагмент сообщением."
         ),
     },
     CheckStatus.timeout: {
-        Language.uz_latn: "Tekshiruv o'z vaqtida yakunlanmadi. Iltimos, qayta urinib ko'ring.",
-        Language.uz_cyrl: "Текширув ўз вақтида якунланмади. Илтимос, қайта уриниб кўринг.",
-        Language.ru: "Проверка не успела завершиться. Пожалуйста, попробуйте ещё раз.",
+        Language.uz_latn: "Tekshiruv cho'zilib ketdi. Qayta urinib ko'ring.",
+        Language.uz_cyrl: "Текширув чўзилиб кетди. Қайта уриниб кўринг.",
+        Language.ru: "Проверка затянулась. Попробуйте ещё раз.",
     },
     CheckStatus.llm_error: {
-        Language.uz_latn: "Hozir bu xabarni tahlil qila olmadik. Iltimos, qayta urinib ko'ring.",
-        Language.uz_cyrl: "Ҳозир бу хабарни таҳлил қила олмадик. Илтимос, қайта уриниб кўринг.",
+        Language.uz_latn: "Hozir bu xabarni tahlil qila olmadim. Qayta urinib ko'ring.",
+        Language.uz_cyrl: "Ҳозир бу хабарни таҳлил қила олмадим. Қайта уриниб кўринг.",
         Language.ru: (
-            "Сейчас не удалось проанализировать это сообщение. "
-            "Пожалуйста, попробуйте ещё раз."
+            "Сейчас не получилось разобрать это сообщение. "
+            "Попробуйте ещё раз."
         ),
     },
     CheckStatus.unsupported_media: {
-        Language.uz_latn: "Iltimos, o'qilishi mumkin bo'lgan rasm yoki matn yuboring.",
-        Language.uz_cyrl: "Илтимос, ўқилиши мумкин бўлган расм ёки матн юборинг.",
-        Language.ru: "Пожалуйста, пришлите читаемое изображение или текст.",
+        Language.uz_latn: "Matn yoki o'qilishi mumkin bo'lgan skrinshot yuboring.",
+        Language.uz_cyrl: "Матн ёки ўқилиши мумкин бўлган скриншот юборинг.",
+        Language.ru: "Пришлите текст или читаемый скриншот.",
     },
 }
 

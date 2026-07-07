@@ -136,9 +136,9 @@ def test_validator_accepts_clean_draft_and_truncates_blocks() -> None:
 def test_formatter_adds_structure_limitation_and_no_signal_lead() -> None:
     formatted = format_result(_clean_draft(), Language.uz_latn)
     assert "🚩 **Xavf belgilari**" in formatted
-    assert "✅ **Nimani tekshirish kerak**" in formatted
-    assert "❓ **Nimani so'rash kerak**" in formatted
-    assert "shaxsni tekshirmadi" in formatted
+    assert "✅ **Nimani tekshiring**" in formatted
+    assert "❓ **Qanday savol bering**" in formatted
+    assert "odamni tekshirish" in formatted
 
     no_signal = format_result(
         DraftOutput(
@@ -149,8 +149,16 @@ def test_formatter_adds_structure_limitation_and_no_signal_lead() -> None:
         Language.ru,
         no_signal=True,
     )
-    assert no_signal.startswith("Явных тревожных признаков")
-    assert "Это не доказывает отсутствие риска." in no_signal
+    assert no_signal.startswith(
+        "\u042f\u0432\u043d\u044b\u0445 "
+        "\u0442\u0440\u0435\u0432\u043e\u0436\u043d\u044b\u0445 "
+        "\u043f\u0440\u0438\u0437\u043d\u0430\u043a\u043e\u0432"
+    )
+    no_guarantee = (
+        "\u041d\u043e \u044d\u0442\u043e \u043d\u0435 "
+        "\u0433\u0430\u0440\u0430\u043d\u0442\u0438\u044f"
+    )
+    assert no_guarantee in no_signal
 
 
 def test_status_messages_are_localized() -> None:
