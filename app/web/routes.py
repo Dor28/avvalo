@@ -32,7 +32,13 @@ def _static_version() -> str:
 
     static_dir = Path(__file__).with_name("static")
     digest = sha256()
-    for name in ("styles.css", "favicon.ico", "apple-touch-icon.png", "icon-192.png"):
+    for name in (
+        "styles.css",
+        "favicon.ico",
+        "apple-touch-icon.png",
+        "icon-192.png",
+        "icon-512.png",
+    ):
         path = static_dir / name
         digest.update(name.encode())
         digest.update(path.read_bytes())
@@ -52,6 +58,8 @@ WEB_BILLABLE_STATUSES = frozenset(
 WEB_COPY = {
     "uz_latn": {
         "html_lang": "uz-Latn",
+        "nav_home": "Bosh sahifa",
+        "nav_check": "Tekshirish",
         "nav_family": "Oila himoyasi",
         "nav_merchants": "Sotuvchi himoyasi",
         "nav_scams": "Firibgarlik turlari",
@@ -61,6 +69,13 @@ WEB_COPY = {
         "workflow_label": "Qanday ishlaydi",
         "trust_label": "Ishonch",
         "skip_to_check": "Tekshiruvga o'tish",
+        "landing_cta": "Xabarni tekshirish",
+        "landing_preview_title": "Shubhani aniq tekshiruv rejasiga aylantiring.",
+        "landing_steps_title": "Uch qadamda tekshiring",
+        "landing_steps_lead": (
+            "Xabarni kiriting, kerak bo'lsa skrinshot qo'shing va tekshiruv "
+            "ro'yxatini oling."
+        ),
         "title": "Avvalo",
         "scams_title": "Firibgarlik turlari",
         "scams_empty": "Hozircha maqolalar ko'rib chiqilmoqda.",
@@ -124,6 +139,8 @@ WEB_COPY = {
     },
     "uz_cyrl": {
         "html_lang": "uz-Cyrl",
+        "nav_home": "Бош саҳифа",
+        "nav_check": "Текшириш",
         "nav_family": "Оила ҳимояси",
         "nav_merchants": "Сотувчи ҳимояси",
         "nav_scams": "Фирибгарлик турлари",
@@ -133,6 +150,13 @@ WEB_COPY = {
         "workflow_label": "Қандай ишлайди",
         "trust_label": "Ишонч",
         "skip_to_check": "Текширувга ўтиш",
+        "landing_cta": "Хабарни текшириш",
+        "landing_preview_title": "Шубҳани аниқ текширув режасига айлантиринг.",
+        "landing_steps_title": "Уч қадамда текширинг",
+        "landing_steps_lead": (
+            "Хабарни киритинг, керак бўлса скриншот қўшинг ва текширув "
+            "рўйхатини олинг."
+        ),
         "title": "Avvalo",
         "scams_title": "Фирибгарлик турлари",
         "scams_empty": "Ҳозирча мақолалар кўриб чиқилмоқда.",
@@ -196,6 +220,8 @@ WEB_COPY = {
     },
     "ru": {
         "html_lang": "ru",
+        "nav_home": "Главная",
+        "nav_check": "Проверить",
         "nav_family": "Защита семьи",
         "nav_merchants": "Защита продавца",
         "nav_scams": "Виды мошенничества",
@@ -205,6 +231,13 @@ WEB_COPY = {
         "workflow_label": "Как это работает",
         "trust_label": "Доверие",
         "skip_to_check": "Перейти к проверке",
+        "landing_cta": "Проверить сообщение",
+        "landing_preview_title": "Превратите сомнение в понятный план проверки.",
+        "landing_steps_title": "Проверка в три шага",
+        "landing_steps_lead": (
+            "Вставьте сообщение, при необходимости добавьте скриншот и получите "
+            "список проверок."
+        ),
         "title": "Avvalo",
         "scams_title": "Виды мошенничества",
         "scams_empty": "Материалы пока на проверке.",
@@ -269,7 +302,7 @@ WEB_COPY = {
 }
 
 FACE_PATHS = {
-    "family": "/",
+    "family": "/check",
     "merchants": "/merchants",
 }
 
@@ -283,7 +316,28 @@ async def healthz() -> dict[str, bool]:
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
-    """Render the Avvalo family check page (the default, unbranded root)."""
+    """Render the public Avvalo landing page without a check form."""
+
+    language = _normalize_language(language)
+    copy = WEB_COPY[language]
+    return templates.TemplateResponse(
+        request,
+        "landing.html",
+        {
+            "copy": copy,
+            "face_copy": copy["faces"]["family"],
+            "current_page": "home",
+            "language_path": "/",
+            "languages": LANGUAGES,
+            "language_labels": LANGUAGE_LABELS,
+            "language": language,
+        },
+    )
+
+
+@router.get("/check", response_class=HTMLResponse)
+async def family_check(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
+    """Render the consumer checker and its result surface."""
 
     return _face_page(request, face="family", language=language)
 
@@ -311,6 +365,8 @@ async def scams_index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTM
             "languages": LANGUAGES,
             "hreflangs": HREFLANGS,
             "language_labels": LANGUAGE_LABELS,
+            "current_page": "scams",
+            "language_path": "/scams",
             "articles": list_articles(language, include_drafts=debug),
         },
     )
@@ -339,6 +395,8 @@ async def scam_page(
             "languages": LANGUAGES,
             "hreflangs": HREFLANGS,
             "language_labels": LANGUAGE_LABELS,
+            "current_page": "scams",
+            "language_path": f"/scams/{article.slug}",
             "article": article,
             "article_languages": available_languages(slug),
         },
@@ -381,11 +439,8 @@ def _face_page(request: Request, *, face: str, language: str) -> HTMLResponse:
             "copy": copy,
             "face": face,
             "face_copy": copy["faces"][face],
-            "face_path": FACE_PATHS[face],
-            "other_face": "merchants" if face == "family" else "family",
-            "other_face_path": FACE_PATHS[
-                "merchants" if face == "family" else "family"
-            ],
+            "current_page": "check" if face == "family" else "merchant",
+            "language_path": FACE_PATHS[face],
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
             "language": language,
@@ -415,6 +470,8 @@ async def privacy(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRes
             "language": language,
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
+            "current_page": "privacy",
+            "language_path": "/privacy",
             "privacy_text": t("privacy", language),
         },
     )

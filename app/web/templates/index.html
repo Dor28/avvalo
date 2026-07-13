@@ -14,24 +14,7 @@
   </head>
   <body>
     <a class="skip-link" href="#check-title">{{ copy.skip_to_check }}</a>
-    <header class="topbar">
-      <a class="brand" href="/?language={{ language }}" aria-label="Avvalo">
-        <span class="brand-mark" aria-hidden="true">
-          <img src="/static/icon-192.png?v={{ static_version }}" alt="">
-        </span>
-        <span>Avvalo</span>
-      </a>
-      <nav class="product-nav" aria-label="{{ copy.product_label }}">
-        <a class="{% if face == 'family' %}active{% endif %}" {% if face == 'family' %}aria-current="page"{% endif %} href="/?language={{ language }}">{{ copy.nav_family }}</a>
-        <a class="{% if face == 'merchants' %}active{% endif %}" {% if face == 'merchants' %}aria-current="page"{% endif %} href="/merchants?language={{ language }}">{{ copy.nav_merchants }}</a>
-        <a href="/scams?language={{ language }}">{{ copy.nav_scams }}</a>
-      </nav>
-      <nav class="language-nav compact" aria-label="{{ copy.language_label }}">
-        {% for option in languages %}
-          <a class="{% if option == language %}active{% endif %}" {% if option == language %}aria-current="page"{% endif %} href="{{ face_path }}?language={{ option }}">{{ language_labels[option] }}</a>
-        {% endfor %}
-      </nav>
-    </header>
+    {% include "_header.html" %}
 
     <main class="app-shell" data-face="{{ face }}">
       <section class="hero-panel" aria-labelledby="app-title">

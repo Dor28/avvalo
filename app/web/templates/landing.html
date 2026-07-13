@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#008aa8">
+    <title>{{ copy.title }}</title>
+    <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{ static_version }}">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
+  </head>
+  <body class="landing-page">
+    <a class="skip-link" href="#landing-actions">{{ copy.skip_to_check }}</a>
+    {% include "_header.html" %}
+
+    <main class="landing-shell">
+      <section class="landing-hero" aria-labelledby="landing-title">
+        <div class="landing-copy">
+          <p class="eyebrow">{{ face_copy.eyebrow }}</p>
+          <h1 id="landing-title">{{ face_copy.headline }}</h1>
+          <p class="lead">{{ face_copy.subhead }}</p>
+          <div id="landing-actions" class="hero-actions">
+            <a class="primary-cta" href="/check?language={{ language }}">{{ copy.landing_cta }}</a>
+            <a class="secondary-cta" href="/scams?language={{ language }}">{{ copy.nav_scams }}</a>
+          </div>
+          <p class="privacy-proof">{{ face_copy.trust[2] }}</p>
+        </div>
+
+        <div class="landing-visual" aria-label="{{ copy.landing_preview_title }}">
+          <img class="landing-icon" src="/static/icon-512.png?v={{ static_version }}" alt="">
+          <div class="preview-card">
+            <p class="eyebrow">Avvalo</p>
+            <h2>{{ copy.landing_preview_title }}</h2>
+            <ul class="preview-list">
+              {% for item in face_copy.trust %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="landing-steps" aria-labelledby="landing-steps-title">
+        <div class="section-heading">
+          <p class="eyebrow">{{ copy.workflow_label }}</p>
+          <h2 id="landing-steps-title">{{ copy.landing_steps_title }}</h2>
+          <p>{{ copy.landing_steps_lead }}</p>
+        </div>
+        <ol class="landing-step-grid" aria-label="{{ copy.workflow_label }}">
+          <li>
+            <span class="step-number">1</span>
+            <span>
+              <strong>{{ copy.message_label }}</strong>
+              <small>{{ face_copy.prompt }}</small>
+            </span>
+          </li>
+          <li>
+            <span class="step-number">2</span>
+            <span>
+              <strong>{{ copy.image_label }}</strong>
+              <small>{{ face_copy.image_hint }}</small>
+            </span>
+          </li>
+          <li>
+            <span class="step-number">3</span>
+            <span>
+              <strong>{{ copy.submit }}</strong>
+              <small>{{ face_copy.trust[1] }}</small>
+            </span>
+          </li>
+        </ol>
+      </section>
+    </main>
+  </body>
+</html>

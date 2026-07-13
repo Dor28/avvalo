@@ -160,6 +160,264 @@ textarea {
   box-shadow: inset 0 -2px 0 rgba(217, 173, 58, 0.68);
 }
 
+.landing-shell {
+  width: min(100%, 1180px);
+  display: grid;
+  gap: 34px;
+  margin: 0 auto;
+  padding: 44px 18px 58px;
+}
+
+.landing-hero {
+  min-height: calc(100vh - 178px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.9fr);
+  gap: clamp(32px, 5vw, 62px);
+  align-items: center;
+}
+
+.landing-copy {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+}
+
+.landing-copy h1 {
+  max-width: 18ch;
+  font-size: clamp(2.7rem, 5vw, 4.75rem);
+  line-height: 0.99;
+}
+
+.landing-copy .lead {
+  max-width: 43rem;
+  font-size: 1.1rem;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 5px;
+}
+
+.primary-cta,
+.secondary-cta {
+  min-height: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 18px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font-weight: 850;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.primary-cta {
+  color: #ffffff;
+  background: var(--teal);
+  box-shadow: 0 14px 28px rgba(0, 96, 120, 0.2);
+}
+
+.secondary-cta {
+  border-color: var(--line-strong);
+  color: var(--teal-strong);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.primary-cta:hover,
+.secondary-cta:hover {
+  transform: translateY(-1px);
+}
+
+.primary-cta:hover {
+  background: var(--teal-strong);
+}
+
+.secondary-cta:hover {
+  border-color: var(--teal);
+  background: #ffffff;
+}
+
+.privacy-proof {
+  position: relative;
+  margin: 0;
+  padding-left: 23px;
+  color: var(--muted-strong);
+  font-size: 0.92rem;
+  font-weight: 720;
+  line-height: 1.5;
+}
+
+.privacy-proof::before {
+  content: "";
+  position: absolute;
+  top: 0.48em;
+  left: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gold);
+  box-shadow: 0 0 0 5px rgba(217, 173, 58, 0.16);
+}
+
+.landing-visual {
+  position: relative;
+  min-height: 480px;
+  display: grid;
+  align-items: end;
+  overflow: hidden;
+  padding: 28px;
+  border: 1px solid rgba(0, 138, 168, 0.26);
+  border-radius: 10px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(217, 173, 58, 0.17) 1px, transparent 1px),
+    linear-gradient(140deg, #00a0bd 0%, var(--teal-deep) 63%, #102228 100%);
+  background-size: 28px 28px, 28px 28px, cover;
+  box-shadow: var(--shadow);
+}
+
+.landing-visual::after {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  top: -90px;
+  left: -90px;
+  border: 52px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+
+.landing-icon {
+  position: absolute;
+  z-index: 1;
+  top: 32px;
+  right: 34px;
+  width: 188px;
+  height: 188px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 22px;
+  box-shadow: 0 22px 46px rgba(0, 36, 47, 0.28);
+}
+
+.preview-card {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 13px;
+  padding: 23px;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-top: 4px solid var(--gold);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 20px 50px rgba(0, 36, 47, 0.25);
+  backdrop-filter: blur(10px);
+}
+
+.preview-card h2 {
+  max-width: none;
+  font-size: 1.42rem;
+}
+
+.preview-list {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preview-list li {
+  position: relative;
+  padding-left: 23px;
+  color: var(--muted-strong);
+  font-size: 0.91rem;
+  line-height: 1.45;
+}
+
+.preview-list li::before {
+  content: "";
+  position: absolute;
+  top: 0.5em;
+  left: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--teal);
+  box-shadow: 0 0 0 4px rgba(0, 138, 168, 0.13);
+}
+
+.landing-steps {
+  display: grid;
+  gap: 24px;
+  padding: 30px;
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--gold);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-soft);
+}
+
+.section-heading {
+  display: grid;
+  gap: 10px;
+}
+
+.section-heading h2 {
+  max-width: none;
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+}
+
+.section-heading p:last-child {
+  max-width: 44rem;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.landing-step-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-step-grid li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.landing-step-grid strong,
+.landing-step-grid small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.landing-step-grid strong {
+  color: var(--ink);
+  font-weight: 820;
+}
+
+.landing-step-grid small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
 .app-shell {
   width: min(100%, 1180px);
   display: grid;
@@ -718,6 +976,19 @@ pre {
     grid-template-columns: 1fr;
   }
 
+  .landing-hero {
+    min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .landing-copy h1 {
+    max-width: 19ch;
+  }
+
+  .landing-visual {
+    min-height: 420px;
+  }
+
   .check-panel {
     order: 1;
   }
@@ -784,9 +1055,48 @@ pre {
   }
 
   .app-shell,
+  .landing-shell,
   .privacy-shell,
   .content-shell {
     padding: 18px 11px 30px;
+  }
+
+  .landing-shell {
+    gap: 24px;
+  }
+
+  .landing-hero {
+    gap: 26px;
+  }
+
+  .landing-copy h1 {
+    font-size: clamp(2.35rem, 11vw, 3.25rem);
+  }
+
+  .landing-visual {
+    min-height: 390px;
+    padding: 18px;
+  }
+
+  .landing-icon {
+    top: 24px;
+    right: 24px;
+    width: 144px;
+    height: 144px;
+    border-radius: 18px;
+  }
+
+  .preview-card {
+    padding: 18px;
+  }
+
+  .landing-steps {
+    gap: 20px;
+    padding: 21px;
+  }
+
+  .landing-step-grid {
+    grid-template-columns: 1fr;
   }
 
   .check-panel,

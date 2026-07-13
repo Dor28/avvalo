@@ -155,8 +155,10 @@ Then boot:
 docker compose up --build
 ```
 
-Open `http://localhost:8000` for the family face and
-`http://localhost:8000/merchants` for the merchant face.
+Open `http://localhost:8000` for the public landing page and
+`http://localhost:8000/check` for the consumer checker. The merchant checker
+remains available by direct URL at `http://localhost:8000/merchants`, but is not
+linked from the public navigation.
 
 Text checks require a reachable LLM endpoint. Image checks also require an OCR
 provider and, on the web, Turnstile configuration unless tests/mocks bypass it.

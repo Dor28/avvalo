@@ -52,17 +52,22 @@ def test_web_app_exposes_core_routes() -> None:
 def test_product_pages_are_separate_and_localized() -> None:
     client = TestClient(create_app(settings=_settings()))
 
-    family = client.get("/?language=uz_latn")
+    landing = client.get("/?language=uz_latn")
+    family = client.get("/check?language=uz_latn")
     merchants = client.get("/merchants?language=ru")
     merchants_title_ru = (
         "\u0417\u0430\u0449\u0438\u0442\u0430 \u043f\u0440\u043e\u0434\u0430\u0432\u0446\u0430"
     )
 
+    assert landing.status_code == 200
     assert family.status_code == 200
     assert merchants.status_code == 200
+    assert "<form" not in landing.text
+    assert "/check?language=uz_latn" in landing.text
     assert 'value="family"' in family.text
     assert 'value="merchants"' in merchants.text
-    assert "/merchants?language=uz_latn" in family.text
+    assert "/merchants?language=uz_latn" not in landing.text
+    assert "/merchants?language=uz_latn" not in family.text
     assert "/?language=ru" in merchants.text
     assert 'type="radio"' not in family.text
     assert 'type="radio"' not in merchants.text
