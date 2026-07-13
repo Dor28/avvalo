@@ -60,8 +60,6 @@ WEB_COPY = {
         "html_lang": "uz-Latn",
         "nav_home": "Bosh sahifa",
         "nav_check": "Tekshirish",
-        "nav_family": "Oila himoyasi",
-        "nav_merchants": "Sotuvchi himoyasi",
         "nav_scams": "Firibgarlik turlari",
         "privacy_link": "Maxfiylik",
         "language_label": "Til",
@@ -70,12 +68,18 @@ WEB_COPY = {
         "trust_label": "Ishonch",
         "skip_to_check": "Tekshiruvga o'tish",
         "landing_cta": "Xabarni tekshirish",
-        "landing_preview_title": "Shubhani aniq tekshiruv rejasiga aylantiring.",
-        "landing_steps_title": "Uch qadamda tekshiring",
+        "landing_preview_title": "Xavf belgilari. Tekshirish qadamlari. Beriladigan savollar.",
+        "landing_steps_title": "Xabardan tekshiruv rejasigacha",
         "landing_steps_lead": (
-            "Xabarni kiriting, kerak bo'lsa skrinshot qo'shing va tekshiruv "
-            "ro'yxatini oling."
+            "Avvalo hukm chiqarmaydi — qaror qilishdan oldin nimani "
+            "tekshirishni ko'rsatadi."
         ),
+        "landing_step_1_title": "Xabarni yuboring",
+        "landing_step_1_body": "Matnni kiriting yoki o'qiladigan skrinshot qo'shing.",
+        "landing_step_2_title": "Avvalo vaziyatni tahlil qiladi",
+        "landing_step_2_body": "Xavf belgilarini va yetishmayotgan ma'lumotlarni ajratadi.",
+        "landing_step_3_title": "Tekshirib, keyin harakat qiling",
+        "landing_step_3_body": "Nimani tasdiqlash va qanday savol berishni ko'ring.",
         "title": "Avvalo",
         "scams_title": "Firibgarlik turlari",
         "scams_empty": "Hozircha maqolalar ko'rib chiqilmoqda.",
@@ -100,20 +104,23 @@ WEB_COPY = {
         "unknown_face_error": "Bunday tekshiruv turi topilmadi.",
         "faces": {
             "family": {
-                "eyebrow": "Oilalar uchun",
-                "name": "Oila himoyasi",
-                "headline": "Javob berishdan yoki pul yuborishdan oldin Avvalo tekshirib ko'ring.",
-                "subhead": (
-                    "Xabar yoki skrinshotni yuboring. Avvalo xavf belgilarini, nimani "
-                    "tekshirishni va qanday savol berishni aniq qilib beradi."
+                "eyebrow": "",
+                "name": "Xabar tekshiruvi",
+                "headline": (
+                    "Shubhali xabarga javob berishdan yoki pul yuborishdan "
+                    "oldin tekshiring."
                 ),
-                "prompt": "Bank, qarindosh, yetkazib berish, ish, xarid yoki oldindan to'lov haqidagi xabarni shu yerga qo'ying.",
+                "subhead": (
+                    "Avvalo xabardagi xavf belgilarini ko'rsatadi, nimani tekshirish "
+                    "va qanday savol berishni aytadi."
+                ),
+                "prompt": "Shubhali xabar matnini kiriting yoki skrinshot yuklang.",
                 "textarea_placeholder": "Masalan: SMS kodni ayting, aks holda karta bloklanadi...",
                 "caption_placeholder": "Kerak bo'lsa: kim yubordi, nima so'rayapti?",
-                "image_hint": "Rasmda matn aniq ko'rinsin. Rasm yuborilganda xavfsizlik tekshiruvi ishlaydi.",
+                "image_hint": "Skrinshotdagi matn aniq o'qiladigan bo'lsin.",
                 "trust": [
                     "Odamni emas, vaziyatni tekshiradi",
-                    "Hukm emas, tekshiruv ro'yxati beradi",
+                    "Hukm emas, aniq tekshiruv qadamlari",
                     "Yuborgan matningiz 1 soat ichida o'chiriladi",
                 ],
             },
@@ -141,8 +148,6 @@ WEB_COPY = {
         "html_lang": "uz-Cyrl",
         "nav_home": "Бош саҳифа",
         "nav_check": "Текшириш",
-        "nav_family": "Оила ҳимояси",
-        "nav_merchants": "Сотувчи ҳимояси",
         "nav_scams": "Фирибгарлик турлари",
         "privacy_link": "Махфийлик",
         "language_label": "Тил",
@@ -151,12 +156,18 @@ WEB_COPY = {
         "trust_label": "Ишонч",
         "skip_to_check": "Текширувга ўтиш",
         "landing_cta": "Хабарни текшириш",
-        "landing_preview_title": "Шубҳани аниқ текширув режасига айлантиринг.",
-        "landing_steps_title": "Уч қадамда текширинг",
+        "landing_preview_title": "Хавф белгилари. Текшириш қадамлари. Бериладиган саволлар.",
+        "landing_steps_title": "Хабардан текширув режасигача",
         "landing_steps_lead": (
-            "Хабарни киритинг, керак бўлса скриншот қўшинг ва текширув "
-            "рўйхатини олинг."
+            "Avvalo ҳукм чиқармайди — қарор қилишдан олдин нимани "
+            "текширишни кўрсатади."
         ),
+        "landing_step_1_title": "Хабарни юборинг",
+        "landing_step_1_body": "Матнни киритинг ёки ўқиладиган скриншот қўшинг.",
+        "landing_step_2_title": "Avvalo вазиятни таҳлил қилади",
+        "landing_step_2_body": "Хавф белгилари ва етишмаётган маълумотларни ажратади.",
+        "landing_step_3_title": "Текшириб, кейин ҳаракат қилинг",
+        "landing_step_3_body": "Нимани тасдиқлаш ва қандай савол беришни кўринг.",
         "title": "Avvalo",
         "scams_title": "Фирибгарлик турлари",
         "scams_empty": "Ҳозирча мақолалар кўриб чиқилмоқда.",
@@ -181,20 +192,23 @@ WEB_COPY = {
         "unknown_face_error": "Бундай текширув тури топилмади.",
         "faces": {
             "family": {
-                "eyebrow": "Оилалар учун",
-                "name": "Оила ҳимояси",
-                "headline": "Жавоб беришдан ёки пул юборишдан олдин Avvalo текшириб кўринг.",
-                "subhead": (
-                    "Хабар ёки скриншотни юборинг. Avvalo хавф белгиларини, нимани "
-                    "текширишни ва қандай савол беришни аниқ қилиб беради."
+                "eyebrow": "",
+                "name": "Хабар текшируви",
+                "headline": (
+                    "Шубҳали хабарга жавоб беришдан ёки пул юборишдан олдин "
+                    "текширинг."
                 ),
-                "prompt": "Банк, қариндош, етказиб бериш, иш, харид ёки олдиндан тўлов ҳақидаги хабарни шу ерга қўйинг.",
+                "subhead": (
+                    "Avvalo хабардаги хавф белгиларини кўрсатади, нимани текшириш "
+                    "ва қандай савол беришни айтади."
+                ),
+                "prompt": "Шубҳали хабар матнини киритинг ёки скриншот юкланг.",
                 "textarea_placeholder": "Масалан: SMS кодни айтинг, акс ҳолда карта блокланади...",
                 "caption_placeholder": "Керак бўлса: ким юборди, нима сўраяпти?",
-                "image_hint": "Расмда матн аниқ кўринсин. Расм юборилганда хавфсизлик текшируви ишлайди.",
+                "image_hint": "Скриншотдаги матн аниқ ўқиладиган бўлсин.",
                 "trust": [
                     "Одамни эмас, вазиятни текширади",
-                    "Ҳукм эмас, текширув рўйхати беради",
+                    "Ҳукм эмас, аниқ текширув қадамлари",
                     "Юборган матнингиз 1 соат ичида ўчирилади",
                 ],
             },
@@ -222,8 +236,6 @@ WEB_COPY = {
         "html_lang": "ru",
         "nav_home": "Главная",
         "nav_check": "Проверить",
-        "nav_family": "Защита семьи",
-        "nav_merchants": "Защита продавца",
         "nav_scams": "Виды мошенничества",
         "privacy_link": "Конфиденциальность",
         "language_label": "Язык",
@@ -232,12 +244,18 @@ WEB_COPY = {
         "trust_label": "Доверие",
         "skip_to_check": "Перейти к проверке",
         "landing_cta": "Проверить сообщение",
-        "landing_preview_title": "Превратите сомнение в понятный план проверки.",
-        "landing_steps_title": "Проверка в три шага",
+        "landing_preview_title": "Признаки риска. Шаги проверки. Вопросы.",
+        "landing_steps_title": "От сообщения к плану проверки",
         "landing_steps_lead": (
-            "Вставьте сообщение, при необходимости добавьте скриншот и получите "
-            "список проверок."
+            "Avvalo не выносит вердикт — он показывает, что проверить до "
+            "принятия решения."
         ),
+        "landing_step_1_title": "Отправьте сообщение",
+        "landing_step_1_body": "Вставьте текст или добавьте читаемый скриншот.",
+        "landing_step_2_title": "Avvalo разбирает ситуацию",
+        "landing_step_2_body": "Показывает признаки риска и недостающую информацию.",
+        "landing_step_3_title": "Проверьте и только потом действуйте",
+        "landing_step_3_body": "Узнайте, что подтвердить и какие вопросы задать.",
         "title": "Avvalo",
         "scams_title": "Виды мошенничества",
         "scams_empty": "Материалы пока на проверке.",
@@ -262,20 +280,22 @@ WEB_COPY = {
         "unknown_face_error": "Неизвестный тип проверки.",
         "faces": {
             "family": {
-                "eyebrow": "Для семей",
-                "name": "Защита семьи",
-                "headline": "Перед ответом или оплатой проверьте сообщение в Avvalo.",
-                "subhead": (
-                    "Отправьте текст или скриншот. Avvalo покажет, где может быть риск, "
-                    "что проверить и какой вопрос задать."
+                "eyebrow": "",
+                "name": "Проверка сообщения",
+                "headline": (
+                    "Проверьте подозрительное сообщение до ответа или перевода денег."
                 ),
-                "prompt": "Вставьте сообщение от банка, родственника, доставки, работодателя, продавца или покупателя.",
+                "subhead": (
+                    "Avvalo покажет признаки риска, что проверить и какие вопросы "
+                    "задать."
+                ),
+                "prompt": "Вставьте текст подозрительного сообщения или загрузите скриншот.",
                 "textarea_placeholder": "Например: скажите SMS-код, иначе карта будет заблокирована...",
                 "caption_placeholder": "Если нужно: кто написал и чего просит?",
-                "image_hint": "Текст на изображении должен быть читаемым. Для фото работает защитная проверка.",
+                "image_hint": "Текст на скриншоте должен быть читаемым.",
                 "trust": [
                     "Проверяем ситуацию, а не человека",
-                    "Даём список проверок, а не ярлык",
+                    "Конкретные шаги проверки вместо вердикта",
                     "Ваш текст удаляется в течение 1 часа",
                 ],
             },

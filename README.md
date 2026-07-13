@@ -2,7 +2,7 @@
 
 Avvalo is a privacy-first AI safety assistant for Uzbekistan. It helps people
 check suspicious messages, screenshots, payment claims, links, and deals before
-they send money, identity details, or trust.
+they reply, send money, share personal details, or act on a claim.
 
 The product rule is simple:
 
@@ -12,12 +12,12 @@ The product rule is simple:
 Avvalo is Telegram-first, works in Uzbek Latin, Uzbek Cyrillic, and Russian, and
 is built around one shared checking engine used by multiple faces:
 
-- **Avvalo / Family Shield**: consumer safety checks for suspicious messages,
-  support scams, urgent payment requests, links, job offers, and similar cases.
+- **Avvalo consumer checker**: checks suspicious messages and returns risk
+  signs, verification steps, and questions to ask before the user acts.
 - **Avvalo Merchants**: seller-side checks for payment screenshots, order chats,
   courier/refund pressure, and "verify in your real bank app" workflows.
-- **Anonymous web channel**: a thin FastAPI/Jinja/HTMX surface over the same
-  engine, with Turnstile-gated image uploads and session/IP limits.
+- **Anonymous web channel**: a thin server-rendered surface over the same engine,
+  with Turnstile-gated image uploads and session/IP limits.
 
 Live Telegram bot: [@Avvalo_official_bot](https://t.me/Avvalo_official_bot)
 

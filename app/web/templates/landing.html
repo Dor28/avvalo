@@ -16,7 +16,6 @@
     <main class="landing-shell">
       <section class="landing-hero" aria-labelledby="landing-title">
         <div class="landing-copy">
-          <p class="eyebrow">{{ face_copy.eyebrow }}</p>
           <h1 id="landing-title">{{ face_copy.headline }}</h1>
           <p class="lead">{{ face_copy.subhead }}</p>
           <div id="landing-actions" class="hero-actions">
@@ -50,22 +49,22 @@
           <li>
             <span class="step-number">1</span>
             <span>
-              <strong>{{ copy.message_label }}</strong>
-              <small>{{ face_copy.prompt }}</small>
+              <strong>{{ copy.landing_step_1_title }}</strong>
+              <small>{{ copy.landing_step_1_body }}</small>
             </span>
           </li>
           <li>
             <span class="step-number">2</span>
             <span>
-              <strong>{{ copy.image_label }}</strong>
-              <small>{{ face_copy.image_hint }}</small>
+              <strong>{{ copy.landing_step_2_title }}</strong>
+              <small>{{ copy.landing_step_2_body }}</small>
             </span>
           </li>
           <li>
             <span class="step-number">3</span>
             <span>
-              <strong>{{ copy.submit }}</strong>
-              <small>{{ face_copy.trust[1] }}</small>
+              <strong>{{ copy.landing_step_3_title }}</strong>
+              <small>{{ copy.landing_step_3_body }}</small>
             </span>
           </li>
         </ol>

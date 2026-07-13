@@ -48,6 +48,50 @@ def test_landing_separates_marketing_from_checker_and_hides_merchants() -> None:
     assert 'href="/merchants' not in product_nav.group()
 
 
+def test_consumer_copy_leads_with_the_check_instead_of_family_branding() -> None:
+    client = TestClient(create_app())
+    localized_copy = [
+        (
+            "uz_latn",
+            "Oilalar uchun",
+            "Oila himoyasi",
+            "Xabar tekshiruvi",
+            "Xabardan tekshiruv rejasigacha",
+        ),
+        (
+            "uz_cyrl",
+            "Оилалар учун",
+            "Оила ҳимояси",
+            "\u0425\u0430\u0431\u0430\u0440 \u0442\u0435\u043a\u0448\u0438\u0440\u0443\u0432\u0438",
+            (
+                "\u0425\u0430\u0431\u0430\u0440\u0434\u0430\u043d "
+                "\u0442\u0435\u043a\u0448\u0438\u0440\u0443\u0432 "
+                "\u0440\u0435\u0436\u0430\u0441\u0438\u0433\u0430\u0447\u0430"
+            ),
+        ),
+        (
+            "ru",
+            "Для семей",
+            "Защита семьи",
+            "Проверка сообщения",
+            "От сообщения к плану проверки",
+        ),
+    ]
+
+    for language, old_audience, old_name, new_name, workflow in localized_copy:
+        landing = client.get(f"/?language={language}")
+        checker = client.get(f"/check?language={language}")
+
+        assert landing.status_code == 200
+        assert checker.status_code == 200
+        assert old_audience not in landing.text
+        assert old_audience not in checker.text
+        assert old_name not in landing.text
+        assert old_name not in checker.text
+        assert new_name in checker.text
+        assert workflow in landing.text
+
+
 def test_check_page_exposes_localized_navigation_and_busy_state() -> None:
     response = TestClient(create_app()).get("/check?language=ru")
 

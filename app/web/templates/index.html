@@ -19,7 +19,7 @@
     <main class="app-shell" data-face="{{ face }}">
       <section class="hero-panel" aria-labelledby="app-title">
         <div class="hero-copy">
-          <p class="eyebrow">{{ face_copy.eyebrow }}</p>
+          {% if face_copy.eyebrow %}<p class="eyebrow">{{ face_copy.eyebrow }}</p>{% endif %}
           <h1 id="app-title">{{ face_copy.headline }}</h1>
           <p class="lead">{{ face_copy.subhead }}</p>
         </div>
