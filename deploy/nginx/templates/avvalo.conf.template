@@ -94,9 +94,10 @@ server {
 
     set $avvalo_upstream app;
 
-    # Cache static assets at the browser (the app fingerprints nothing; 1 day is
-    # safe). `expires` sets Cache-Control without an add_header, so the security
-    # headers above are still inherited here.
+    # Cache static assets at the browser. Public templates append a content hash
+    # query so new builds receive a fresh URL immediately. `expires` sets
+    # Cache-Control without an add_header, so the security headers above are
+    # still inherited here.
     location /static/ {
         proxy_pass http://$avvalo_upstream:8000;
         expires 1d;

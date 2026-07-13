@@ -22,7 +22,22 @@ fi
 
 echo ">> Deploying image tag: ${TAG}"
 $COMPOSE pull app                       # requires a one-time `docker login ghcr.io` on this host
-$COMPOSE up -d                          # migrations run on app start (alembic upgrade head)
+
+# Docker can briefly report "removal ... is already in progress" while replacing
+# the previous app container. Retry the idempotent Compose update a few times so
+# that transient daemon state does not leave a tested image undeployed.
+for attempt in 1 2 3; do
+  if $COMPOSE up -d; then               # migrations run on app start (alembic upgrade head)
+    break
+  fi
+  if [ "$attempt" -eq 3 ]; then
+    echo ">> Compose update failed after ${attempt} attempts." >&2
+    exit 1
+  fi
+  echo ">> Compose update attempt ${attempt} failed; retrying in 5 seconds..." >&2
+  sleep 5
+done
+
 $COMPOSE ps
 docker image prune -f                   # reclaim space from the previous image
 echo ">> Deploy complete."

@@ -3,23 +3,28 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ copy.title }} · {{ copy.privacy_title }}</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <meta name="theme-color" content="#008aa8">
+    <title>{{ copy.title }} | {{ copy.privacy_title }}</title>
+    <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{ static_version }}">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
   </head>
   <body>
     <header class="topbar">
       <a class="brand" href="/?language={{ language }}" aria-label="Avvalo">
-        <span class="brand-mark">A</span>
+        <span class="brand-mark" aria-hidden="true">
+          <img src="/static/icon-192.png?v={{ static_version }}" alt="">
+        </span>
         <span>Avvalo</span>
       </a>
-      <nav class="product-nav" aria-label="Product">
+      <nav class="product-nav" aria-label="{{ copy.product_label }}">
         <a href="/?language={{ language }}">{{ copy.nav_family }}</a>
         <a href="/merchants?language={{ language }}">{{ copy.nav_merchants }}</a>
         <a href="/scams?language={{ language }}">{{ copy.nav_scams }}</a>
       </nav>
       <nav class="language-nav compact" aria-label="{{ copy.language_label }}">
         {% for option in languages %}
-          <a class="{% if option == language %}active{% endif %}" href="/privacy?language={{ option }}">{{ language_labels[option] }}</a>
+          <a class="{% if option == language %}active{% endif %}" {% if option == language %}aria-current="page"{% endif %} href="/privacy?language={{ option }}">{{ language_labels[option] }}</a>
         {% endfor %}
       </nav>
     </header>

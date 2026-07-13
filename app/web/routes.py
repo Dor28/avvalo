@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
 from html import escape
 from pathlib import Path
 from typing import Annotated
@@ -24,6 +25,21 @@ from app.web.session import get_or_create_web_session, set_web_session_cookie
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).with_name("templates")))
+
+
+def _static_version() -> str:
+    """Fingerprint browser-cached assets so each deploy gets fresh URLs."""
+
+    static_dir = Path(__file__).with_name("static")
+    digest = sha256()
+    for name in ("styles.css", "favicon.ico", "apple-touch-icon.png", "icon-192.png"):
+        path = static_dir / name
+        digest.update(name.encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
+
+
+templates.env.globals["static_version"] = _static_version()
 HREFLANGS = {"uz_latn": "uz-Latn", "uz_cyrl": "uz-Cyrl", "ru": "ru"}
 DEV_WEB_SESSION_SECRET = "development-web-session-secret"
 WEB_MAX_TEXT_CHARS = 6000
@@ -41,6 +57,10 @@ WEB_COPY = {
         "nav_scams": "Firibgarlik turlari",
         "privacy_link": "Maxfiylik",
         "language_label": "Til",
+        "product_label": "Bo'limlar",
+        "workflow_label": "Qanday ishlaydi",
+        "trust_label": "Ishonch",
+        "skip_to_check": "Tekshiruvga o'tish",
         "title": "Avvalo",
         "scams_title": "Firibgarlik turlari",
         "scams_empty": "Hozircha maqolalar ko'rib chiqilmoqda.",
@@ -53,6 +73,7 @@ WEB_COPY = {
         "caption_label": "Qo'shimcha izoh",
         "image_label": "Skrinshot yoki rasm",
         "submit": "Tekshirish",
+        "checking": "Tekshirilmoqda...",
         "result_error_title": "Hozir tekshirib bo'lmadi",
         "result_empty": "Javob bo'sh keldi.",
         "meta_status": "Holat",
@@ -108,6 +129,10 @@ WEB_COPY = {
         "nav_scams": "Фирибгарлик турлари",
         "privacy_link": "Махфийлик",
         "language_label": "Тил",
+        "product_label": "Бўлимлар",
+        "workflow_label": "Қандай ишлайди",
+        "trust_label": "Ишонч",
+        "skip_to_check": "Текширувга ўтиш",
         "title": "Avvalo",
         "scams_title": "Фирибгарлик турлари",
         "scams_empty": "Ҳозирча мақолалар кўриб чиқилмоқда.",
@@ -120,6 +145,7 @@ WEB_COPY = {
         "caption_label": "Қўшимча изоҳ",
         "image_label": "Скриншот ёки расм",
         "submit": "Текшириш",
+        "checking": "Текширилмоқда...",
         "result_error_title": "Ҳозир текшириб бўлмади",
         "result_empty": "Жавоб бўш келди.",
         "meta_status": "Ҳолат",
@@ -175,6 +201,10 @@ WEB_COPY = {
         "nav_scams": "Виды мошенничества",
         "privacy_link": "Конфиденциальность",
         "language_label": "Язык",
+        "product_label": "Разделы",
+        "workflow_label": "Как это работает",
+        "trust_label": "Доверие",
+        "skip_to_check": "Перейти к проверке",
         "title": "Avvalo",
         "scams_title": "Виды мошенничества",
         "scams_empty": "Материалы пока на проверке.",
@@ -187,6 +217,7 @@ WEB_COPY = {
         "caption_label": "Короткий контекст",
         "image_label": "Скриншот или фото",
         "submit": "Проверить",
+        "checking": "Проверяем...",
         "result_error_title": "Сейчас проверить не получилось",
         "result_empty": "Ответ пришёл пустым.",
         "meta_status": "Статус",
