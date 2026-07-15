@@ -45,9 +45,10 @@ def test_t_falls_back_to_default_language() -> None:
 
 def test_start_intro_is_short_and_explains_the_flow() -> None:
     intro = t("start_intro", DEFAULT_LANGUAGE)
-    assert "Как пользоваться" in intro
-    assert "1." in intro and "2." in intro and "3." in intro
-    assert "ситуацию, а не человека" in intro
+    assert "O'zbekcha" in intro
+    assert "Русский" in intro
+    assert "Xabar, rasm yoki vaziyatni yuboring" in intro
+    assert "Пришлите сообщение, изображение или опишите ситуацию" in intro
     assert len(intro) < 700
 
 
