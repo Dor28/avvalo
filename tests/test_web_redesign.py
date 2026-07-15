@@ -48,6 +48,21 @@ def test_landing_separates_marketing_from_checker_and_hides_merchants() -> None:
     assert 'href="/merchants' not in product_nav.group()
 
 
+def test_public_flow_uses_the_minimal_shell_without_duplicate_explainers() -> None:
+    client = TestClient(create_app())
+
+    landing = client.get("/?language=ru")
+    checker = client.get("/check?language=ru")
+
+    assert 'class="landing-visual"' not in landing.text
+    assert 'class="preview-card"' not in landing.text
+    assert 'class="workflow-list"' not in checker.text
+    assert 'class="trust-list"' not in checker.text
+    assert 'class="check-summary"' in checker.text
+    assert 'class="attachment-panel"' in checker.text
+    assert 'class="result-meta"' not in checker.text
+
+
 def test_consumer_copy_leads_with_the_check_instead_of_family_branding() -> None:
     client = TestClient(create_app())
     localized_copy = [

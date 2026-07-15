@@ -5,11 +5,6 @@
   </div>
 {% elif result %}
   <div class="result-block">
-    <div class="result-meta">
-      <span>{{ copy.meta_status }}: {{ result.status.value }}</span>
-      {% if result.latency_ms %}<span>{{ copy.meta_latency }}: {{ result.latency_ms }} ms</span>{% endif %}
-      {% if result.cost_usd is not none %}<span>{{ copy.meta_cost }}: ${{ "%.6f"|format(result.cost_usd) }}</span>{% endif %}
-    </div>
     <pre>{{ result.text or copy.result_empty }}</pre>
   </div>
 {% endif %}

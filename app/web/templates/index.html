@@ -17,72 +17,40 @@
     {% include "_header.html" %}
 
     <main class="app-shell" data-face="{{ face }}">
-      <section class="hero-panel" aria-labelledby="app-title">
-        <div class="hero-copy">
-          {% if face_copy.eyebrow %}<p class="eyebrow">{{ face_copy.eyebrow }}</p>{% endif %}
-          <h1 id="app-title">{{ face_copy.headline }}</h1>
-          <p class="lead">{{ face_copy.subhead }}</p>
-        </div>
-
-        <ol class="workflow-list" aria-label="{{ copy.workflow_label }}">
-          <li>
-            <span class="step-number">1</span>
-            <span>
-              <strong>{{ copy.message_label }}</strong>
-              <small>{{ face_copy.prompt }}</small>
-            </span>
-          </li>
-          <li>
-            <span class="step-number">2</span>
-            <span>
-              <strong>{{ copy.image_label }}</strong>
-              <small>{{ face_copy.image_hint }}</small>
-            </span>
-          </li>
-          <li>
-            <span class="step-number">3</span>
-            <span>
-              <strong>{{ copy.submit }}</strong>
-              <small>{{ face_copy.trust[1] }}</small>
-            </span>
-          </li>
+      <section class="check-intro" aria-labelledby="check-title">
+        {% if face_copy.eyebrow %}<p class="eyebrow">{{ face_copy.eyebrow }}</p>{% endif %}
+        <h1 id="check-title">{{ face_copy.headline }}</h1>
+        <p class="lead">{{ face_copy.subhead }}</p>
+        <ol class="check-summary" aria-label="{{ copy.workflow_label }}">
+          <li><span>1</span>{{ copy.message_label }}</li>
+          <li><span>2</span>{{ copy.landing_step_2_title }}</li>
+          <li><span>3</span>{{ copy.submit }}</li>
         </ol>
-
-        <ul class="trust-list" aria-label="{{ copy.trust_label }}">
-          {% for item in face_copy.trust %}
-            <li>{{ item }}</li>
-          {% endfor %}
-        </ul>
+        <p class="privacy-proof" aria-label="{{ copy.trust_label }}">{{ face_copy.trust[2] }}</p>
       </section>
 
-      <section class="check-panel" aria-labelledby="check-title">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">{{ face_copy.name }}</p>
-            <h2 id="check-title">{{ face_copy.prompt }}</h2>
-          </div>
-        </div>
-
+      <section class="check-panel" aria-label="{{ face_copy.name }}">
         <form class="check-form" action="/check" method="post" enctype="multipart/form-data">
           <input type="hidden" name="face" value="{{ face }}">
           <input type="hidden" name="language" value="{{ language }}">
 
           <label class="field primary-field">
-            <span>{{ copy.message_label }}</span>
-            <textarea name="text" rows="9" maxlength="6000" placeholder="{{ face_copy.textarea_placeholder }}"></textarea>
+            <span>{{ face_copy.prompt }}</span>
+            <textarea name="text" rows="8" maxlength="6000" placeholder="{{ face_copy.textarea_placeholder }}"></textarea>
           </label>
 
-          <div class="form-grid">
-            <label class="field">
-              <span>{{ copy.caption_label }}</span>
-              <input name="caption" type="text" maxlength="500" placeholder="{{ face_copy.caption_placeholder }}">
-            </label>
-
-            <label class="field file-field">
-              <span>{{ copy.image_label }}</span>
-              <input name="image" type="file" accept="image/*">
-              <small>{{ face_copy.image_hint }}</small>
-            </label>
+          <div class="attachment-panel">
+            <div class="form-grid">
+              <label class="field">
+                <span>{{ copy.image_label }}</span>
+                <input name="image" type="file" accept="image/*">
+              </label>
+              <label class="field">
+                <span>{{ copy.caption_label }}</span>
+                <input name="caption" type="text" maxlength="500" placeholder="{{ face_copy.caption_placeholder }}">
+              </label>
+            </div>
+            <small>{{ face_copy.image_hint }}</small>
           </div>
 
           {% if turnstile_site_key %}
@@ -123,6 +91,13 @@
               body: new FormData(form),
             });
             result.innerHTML = await response.text();
+            if (result.innerHTML.trim()) {
+              const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+              result.scrollIntoView({
+                behavior: reducedMotion ? "auto" : "smooth",
+                block: "start",
+              });
+            }
           } catch (_error) {
             result.innerHTML = "<div class=\"result-block error\"><strong>{{ copy.result_error_title }}</strong></div>";
           } finally {

@@ -15,57 +15,43 @@
 
     <main class="landing-shell">
       <section class="landing-hero" aria-labelledby="landing-title">
-        <div class="landing-copy">
-          <h1 id="landing-title">{{ face_copy.headline }}</h1>
-          <p class="lead">{{ face_copy.subhead }}</p>
-          <div id="landing-actions" class="hero-actions">
-            <a class="primary-cta" href="/check?language={{ language }}">{{ copy.landing_cta }}</a>
-            <a class="secondary-cta" href="/scams?language={{ language }}">{{ copy.nav_scams }}</a>
-          </div>
-          <p class="privacy-proof">{{ face_copy.trust[2] }}</p>
+        <p class="eyebrow">Avvalo</p>
+        <h1 id="landing-title">{{ face_copy.headline }}</h1>
+        <p class="lead">{{ face_copy.subhead }}</p>
+        <p class="result-promise">{{ copy.landing_preview_title }}</p>
+        <div id="landing-actions" class="hero-actions">
+          <a class="primary-cta" href="/check?language={{ language }}">{{ copy.landing_cta }}</a>
+          <a class="secondary-cta" href="/scams?language={{ language }}">{{ copy.nav_scams }}</a>
         </div>
-
-        <div class="landing-visual" aria-label="{{ copy.landing_preview_title }}">
-          <img class="landing-icon" src="/static/icon-512.png?v={{ static_version }}" alt="">
-          <div class="preview-card">
-            <p class="eyebrow">Avvalo</p>
-            <h2>{{ copy.landing_preview_title }}</h2>
-            <ul class="preview-list">
-              {% for item in face_copy.trust %}
-                <li>{{ item }}</li>
-              {% endfor %}
-            </ul>
-          </div>
-        </div>
+        <p class="privacy-proof">{{ face_copy.trust[2] }}</p>
       </section>
 
       <section class="landing-steps" aria-labelledby="landing-steps-title">
         <div class="section-heading">
-          <p class="eyebrow">{{ copy.workflow_label }}</p>
           <h2 id="landing-steps-title">{{ copy.landing_steps_title }}</h2>
           <p>{{ copy.landing_steps_lead }}</p>
         </div>
         <ol class="landing-step-grid" aria-label="{{ copy.workflow_label }}">
           <li>
             <span class="step-number">1</span>
-            <span>
+            <div>
               <strong>{{ copy.landing_step_1_title }}</strong>
               <small>{{ copy.landing_step_1_body }}</small>
-            </span>
+            </div>
           </li>
           <li>
             <span class="step-number">2</span>
-            <span>
+            <div>
               <strong>{{ copy.landing_step_2_title }}</strong>
               <small>{{ copy.landing_step_2_body }}</small>
-            </span>
+            </div>
           </li>
           <li>
             <span class="step-number">3</span>
-            <span>
+            <div>
               <strong>{{ copy.landing_step_3_title }}</strong>
               <small>{{ copy.landing_step_3_body }}</small>
-            </span>
+            </div>
           </li>
         </ol>
       </section>

@@ -270,7 +270,8 @@ def test_web_ip_limit_survives_cookie_reset_and_spoofed_xff(monkeypatch) -> None
     ]
 
     assert [response.status_code for response in responses] == [200, 200, 429]
-    assert CheckStatus.rate_limited.value in responses[-1].text
+    assert "Bugungi tekshiruvlar limiti tugadi" in responses[-1].text
+    assert CheckStatus.rate_limited.value not in responses[-1].text
     assert len(calls) == 2
     assert len(counts) == 1
     ((user_key, face), count) = next(iter(counts.items()))
