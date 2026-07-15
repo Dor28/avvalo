@@ -219,6 +219,7 @@ __marimo__/
 
 # Avvalo
 eval_out/                 # model eval outputs (may contain generated content)
+out/                      # generated aggregate-only operator reports
 service-account*.json     # Google Cloud Vision credentials
 secrets/                  # mounted runtime secrets (e.g. secrets/gcv.json) — never commit
 .env.prod                 # production env files, in case one is created alongside .env

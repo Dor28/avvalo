@@ -70,6 +70,8 @@ After positive feedback (`usefulness` = yes/partly), offer: *"Share what happene
 **Acceptance:** unit tests prove raw text can never reach the DB; consent flow test; deletion test; operator forward mocked-tested; founder can approve/reject via a simple CLI (`tools/stories.py list|approve|reject`) — no admin UI in this pass.
 
 ### R4. Scam Pulse — aggregate trend export — ~1 day
+**Status:** [x] Code complete on branch `launch-features` (2026-07-15); outputs aggregate counts only and remains read-only.
+
 Extend `app/tools/metrics.py` (CLI) with `pulse --month YYYY-MM`: aggregates `check_event.rule_ids` frequency by rule family × language × face, month-over-month deltas, no-signal rate, total checks — rendered to a markdown one-pager (`out/pulse_YYYY-MM.md`). Also export the **rule-hit × feedback correlation** (which rule families users mark useful / act on) — the free active-learning signal for tuning rules ([ML_RESEARCH.md](ML_RESEARCH.md) §7).
 **Acceptance:** runs read-only against prod DB; output contains counts only (zero user identifiers — assert in test); founder can paste the output into a channel post 👤.
 
