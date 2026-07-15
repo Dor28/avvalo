@@ -66,7 +66,7 @@ async def cmd_start(message: Message, state: FSMContext, settings, session_facto
 
     await state.set_state(Onboarding.choosing_language)
     await message.answer(
-        t("choose_language", DEFAULT_LANGUAGE),
+        f'{t("start_intro", DEFAULT_LANGUAGE)}\n\n{t("choose_language", DEFAULT_LANGUAGE)}',
         reply_markup=language_keyboard(),
     )
 

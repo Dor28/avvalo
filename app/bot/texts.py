@@ -17,6 +17,35 @@ LANGUAGE_LABELS = {
 _CHOOSE_LANGUAGE = "🌐 Tilni tanlang · Тилни танланг · Выберите язык"
 
 TEXTS: dict[str, dict[str, str]] = {
+    "start_intro": {
+        "uz_latn": (
+            "\U0001f44b Avvalo — shubhali vaziyatlarni tekshirishga yordam beradigan bot.\n"
+            "Avvalo — бот-помощник для проверки сомнительных ситуаций.\n\n"
+            "Qanday ishlaydi / Как пользоваться:\n"
+            "1. Tilni tanlang / Выберите язык.\n"
+            "2. Xabar, rasm yoki vaziyatni yuboring / Пришлите сообщение, изображение или опишите ситуацию.\n"
+            "3. Xavf belgilarini va tekshiruv qadamlarini oling / Получите возможные риски и шаги проверки.\n\n"
+            "Avvalo odamni emas, vaziyatni tahlil qiladi / Avvalo анализирует ситуацию, а не человека."
+        ),
+        "uz_cyrl": (
+            "\U0001f44b Avvalo — shubhali vaziyatlarni tekshirishga yordam beradigan bot.\n"
+            "Avvalo — бот-помощник для проверки сомнительных ситуаций.\n\n"
+            "Qanday ishlaydi / Как пользоваться:\n"
+            "1. Tilni tanlang / Выберите язык.\n"
+            "2. Xabar, rasm yoki vaziyatni yuboring / Пришлите сообщение, изображение или опишите ситуацию.\n"
+            "3. Xavf belgilarini va tekshiruv qadamlarini oling / Получите возможные риски и шаги проверки.\n\n"
+            "Avvalo odamni emas, vaziyatni tahlil qiladi / Avvalo анализирует ситуацию, а не человека."
+        ),
+        "ru": (
+            "\U0001f44b Avvalo — shubhali vaziyatlarni tekshirishga yordam beradigan bot.\n"
+            "Avvalo — бот-помощник для проверки сомнительных ситуаций.\n\n"
+            "Qanday ishlaydi / Как пользоваться:\n"
+            "1. Tilni tanlang / Выберите язык.\n"
+            "2. Xabar, rasm yoki vaziyatni yuboring / Пришлите сообщение, изображение или опишите ситуацию.\n"
+            "3. Xavf belgilarini va tekshiruv qadamlarini oling / Получите возможные риски и шаги проверки.\n\n"
+            "Avvalo odamni emas, vaziyatni tahlil qiladi / Avvalo анализирует ситуацию, а не человека."
+        ),
+    },
     "choose_language": {
         "uz_latn": _CHOOSE_LANGUAGE,
         "uz_cyrl": _CHOOSE_LANGUAGE,
