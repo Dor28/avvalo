@@ -30,7 +30,24 @@ class LLMProvider(Protocol):
 
 
 class LLMProviderError(RuntimeError):
-    """Raised when a provider call fails before a usable draft is returned."""
+    """Raised when a provider call fails before a usable draft is returned.
+
+    ``args[0]`` may carry provider response text and must never reach logs,
+    events, or alerts. Only the structured, content-free fields are loggable:
+    ``error_code`` (the underlying exception class name, e.g. ``RateLimitError``)
+    and ``status_code`` (the HTTP status, when the failure had one).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        error_code: str | None = None,
+        status_code: int | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+        self.status_code = status_code
 
 
 class LLMResponseFormatError(LLMProviderError):

@@ -24,7 +24,20 @@ class OCRProvider(Protocol):
 
 
 class OCRProviderError(RuntimeError):
-    """Raised when OCR cannot produce a usable provider response."""
+    """Raised when OCR cannot produce a usable provider response.
+
+    ``args[0]`` may carry provider response text and must never reach logs,
+    events, or alerts. ``error_code`` (the underlying exception class name)
+    is the only loggable field.
+    """
+
+    def __init__(self, message: str, *, error_code: str | None = None) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+
+
+class OCRInvalidImageError(OCRProviderError):
+    """The submitted bytes are not a decodable image — an input fault, not an outage."""
 
 
 def strip_image_metadata(image_bytes: bytes) -> bytes:
@@ -41,4 +54,6 @@ def strip_image_metadata(image_bytes: bytes) -> bytes:
             image.save(output, format="PNG")
             return output.getvalue()
     except (OSError, UnidentifiedImageError) as exc:
-        raise OCRProviderError("image bytes are not a readable image") from exc
+        raise OCRInvalidImageError(
+            "image bytes are not a readable image", error_code=type(exc).__name__
+        ) from exc

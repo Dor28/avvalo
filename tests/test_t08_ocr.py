@@ -2,14 +2,18 @@
 
 Live acceptance specs that skip until the OCR providers land. The GCV/Tesseract
 calls need credentials or binaries, so the offline-checkable contract is tested:
-the OCRResult shape and the on-prem stub raising NotImplementedError.
+the OCRResult shape, the on-prem stub raising NotImplementedError, and how the
+pipeline maps each OCR failure class to a user-facing status.
 """
 
 import inspect
+import logging
 
 import pytest
 
 from app.config import Settings
+from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
+from app.engine.ocr import OCRInvalidImageError, OCRProviderError, OCRResult
 
 
 def _settings(**overrides) -> Settings:
@@ -51,6 +55,73 @@ async def test_on_prem_stub_raises_not_implemented() -> None:
 
     with pytest.raises(NotImplementedError):
         await provider.extract(b"\x89PNG\r\n")
+
+
+class _FailingOCRProvider:
+    def __init__(self, exc: Exception) -> None:
+        self._exc = exc
+
+    async def extract(self, _image_bytes: bytes) -> OCRResult:
+        raise self._exc
+
+
+def _image_input(user_key: str) -> CheckInput:
+    return CheckInput(
+        face="family",
+        user_key=user_key,
+        language=Language.ru,
+        input_type=InputType.image,
+        image_bytes=b"\x89PNG\r\n",
+    )
+
+
+async def test_ocr_provider_outage_maps_to_ocr_error_with_cause_class(caplog) -> None:
+    caplog.set_level(logging.ERROR, logger="app.obs.events")
+    result = await run_check(
+        _image_input("u-ocr-outage"),
+        ocr_provider=_FailingOCRProvider(
+            OCRProviderError(
+                "vision said: quota exceeded for project scam-check",
+                error_code="ServiceUnavailable",
+            )
+        ),
+    )
+
+    assert result.status == CheckStatus.ocr_error
+    assert result.error_class == "ServiceUnavailable"
+
+    # Logs carry the cause class only, never the provider's message.
+    messages = "\n".join(record.getMessage() for record in caplog.records)
+    assert "'error_type': 'ServiceUnavailable'" in messages
+    assert "quota exceeded" not in messages
+
+
+async def test_unreadable_image_maps_to_unsupported_media() -> None:
+    result = await run_check(
+        _image_input("u-ocr-bad-image"),
+        ocr_provider=_FailingOCRProvider(
+            OCRInvalidImageError(
+                "image bytes are not a readable image", error_code="UnidentifiedImageError"
+            )
+        ),
+    )
+
+    assert result.status == CheckStatus.unsupported_media
+    assert result.error_class == "UnidentifiedImageError"
+
+
+async def test_misconfigured_ocr_provider_maps_to_ocr_error(caplog) -> None:
+    caplog.set_level(logging.ERROR, logger="app.obs.events")
+    result = await run_check(
+        _image_input("u-ocr-config"),
+        settings=_settings(ocr_provider="bogus"),
+    )
+
+    assert result.status == CheckStatus.ocr_error
+    assert result.error_class == "OCRConfigError"
+    assert "'error_type': 'OCRConfigError'" in "\n".join(
+        record.getMessage() for record in caplog.records
+    )
 
 
 def test_provider_selection_is_configurable(callable_or_skip) -> None:

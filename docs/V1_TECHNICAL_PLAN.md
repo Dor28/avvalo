@@ -58,7 +58,9 @@
 | `DAILY_LIMIT_FAMILY` / `DAILY_LIMIT_MERCHANTS` | defaults 5 / 20 |
 | `LLM_TIMEOUT_S` / `OCR_TIMEOUT_S` | latency guards (§14) |
 | `MAX_OUTPUT_TOKENS` | default `600` |
-| `OPERATOR_ALERT_CHAT_ID` | where to alert on a critical safety violation (§9) |
+| `OPERATOR_ALERT_CHAT_ID` | founder chat for minimized story review and debounced technical failures |
+| `OPERATOR_ALERT_DEBOUNCE_S` | duplicate technical-alert debounce in seconds (default `900`) |
+| `SENTRY_DSN` / `SENTRY_ENVIRONMENT` | optional privacy-safe error tracking; blank DSN disables Sentry |
 | `WEB_ENABLED` | `true` to serve the web app alongside the bot |
 | `WEB_HOST` / `WEB_PORT` | uvicorn bind for FastAPI |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | Cloudflare Turnstile (captcha) keys |
@@ -303,7 +305,7 @@ class InputType(str, Enum): text="text"; image="image"
 class CheckStatus(str, Enum):
     ok="ok"; no_signal="no_signal"; empty_input="empty_input"
     low_ocr="low_ocr"; rate_limited="rate_limited"; timeout="timeout"
-    llm_error="llm_error"; safety_fallback="safety_fallback"; unsupported_media="unsupported_media"
+    llm_error="llm_error"; ocr_error="ocr_error"; safety_fallback="safety_fallback"; unsupported_media="unsupported_media"
 
 class CheckInput(BaseModel):
     face: str

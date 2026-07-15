@@ -73,7 +73,12 @@ class OpenAICompatibleProvider:
                 response_format={"type": "json_object"},
             )
         except APIError as exc:
-            raise LLMProviderError(str(exc)) from exc
+            status_code = getattr(exc, "status_code", None)
+            raise LLMProviderError(
+                str(exc),
+                error_code=type(exc).__name__,
+                status_code=status_code if isinstance(status_code, int) else None,
+            ) from exc
 
         content = _response_content(response)
         draft = _parse_draft(content)

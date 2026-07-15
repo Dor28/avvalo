@@ -25,12 +25,14 @@ class GoogleCloudVisionOCRProvider:
             client = self._client or self._build_client()
             response = await asyncio.to_thread(client.document_text_detection, image=image)
         except Exception as exc:
-            raise OCRProviderError("google cloud vision OCR failed") from exc
+            raise OCRProviderError(
+                "google cloud vision OCR failed", error_code=type(exc).__name__
+            ) from exc
 
         error = getattr(response, "error", None)
         error_message = getattr(error, "message", None)
         if error_message:
-            raise OCRProviderError(error_message)
+            raise OCRProviderError(error_message, error_code="VisionAPIError")
 
         annotation = getattr(response, "full_text_annotation", None)
         text = (getattr(annotation, "text", "") or "").strip()

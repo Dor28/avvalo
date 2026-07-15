@@ -35,6 +35,7 @@ def test_check_status_enum_values() -> None:
         "rate_limited",
         "timeout",
         "llm_error",
+        "ocr_error",
         "safety_fallback",
         "unsupported_media",
     }

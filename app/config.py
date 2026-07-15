@@ -38,9 +38,14 @@ class Settings(BaseSettings):
     daily_limit_family: int = Field(default=5, ge=1)
     daily_limit_merchants: int = Field(default=20, ge=1)
     operator_alert_chat_id: int | None = None
+    operator_alert_debounce_s: float = Field(default=900.0, gt=0)
     story_max_chars: int = Field(default=2000, ge=1, le=10000)
     story_daily_limit: int = Field(default=3, ge=1, le=20)
     story_rejected_retention_days: int = Field(default=30, ge=1)
+
+    # Unset disables Sentry entirely — log_error() falls back to the local log only.
+    sentry_dsn: SecretStr | None = None
+    sentry_environment: str = "production"
 
     web_enabled: bool = False
     web_host: str = "0.0.0.0"

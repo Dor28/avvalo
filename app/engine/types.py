@@ -31,6 +31,7 @@ class CheckStatus(StrEnum):
     rate_limited = "rate_limited"
     timeout = "timeout"
     llm_error = "llm_error"
+    ocr_error = "ocr_error"
     safety_fallback = "safety_fallback"
     unsupported_media = "unsupported_media"
 

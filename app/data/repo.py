@@ -31,6 +31,7 @@ CHECK_EVENT_STATUSES = {
     "rate_limited",
     "timeout",
     "llm_error",
+    "ocr_error",
     "safety_fallback",
     "unsupported_media",
 }

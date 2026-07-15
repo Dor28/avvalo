@@ -15,7 +15,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES, t
 from app.config import Settings, get_settings
 from app.data import repo
-from app.engine import CheckInput, CheckResult, CheckStatus, InputType, Language, run_check
+from app.engine import (
+    BILLABLE_STATUSES,
+    CheckInput,
+    CheckResult,
+    CheckStatus,
+    InputType,
+    Language,
+    run_check,
+)
 from app.engine.faces import FACES
 from app.engine.format import format_status_message
 from app.privacy.consent import is_consent_current
@@ -51,9 +59,9 @@ DEV_WEB_SESSION_SECRET = "development-web-session-secret"
 WEB_MAX_TEXT_CHARS = 6000
 WEB_MAX_CAPTION_CHARS = 500
 WEB_IP_FACE_PREFIX = "web_ip:"
-WEB_BILLABLE_STATUSES = frozenset(
-    {CheckStatus.ok, CheckStatus.no_signal, CheckStatus.safety_fallback}
-)
+# The per-IP web limit refunds exactly the statuses the engine's per-user
+# limit refunds — one shared definition so the two can't drift.
+WEB_BILLABLE_STATUSES = BILLABLE_STATUSES
 
 WEB_COPY = {
     "uz_latn": {

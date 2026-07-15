@@ -8,7 +8,12 @@ from typing import Any
 
 from PIL import Image
 
-from app.engine.ocr.base import OCRProviderError, OCRResult, strip_image_metadata
+from app.engine.ocr.base import (
+    OCRInvalidImageError,
+    OCRProviderError,
+    OCRResult,
+    strip_image_metadata,
+)
 
 # PaddleOCR groups models by script rather than combining languages in one call
 # the way Tesseract's "rus+uzb+uzb_cyrl" does, so we try each configured
@@ -47,7 +52,9 @@ class PaddleOCRProvider:
             with Image.open(BytesIO(image_bytes)) as image:
                 array = np.array(image.convert("RGB"))
         except Exception as exc:
-            raise OCRProviderError("paddleocr could not decode the image") from exc
+            raise OCRInvalidImageError(
+                "paddleocr could not decode the image", error_code=type(exc).__name__
+            ) from exc
 
         best: OCRResult | None = None
         for lang in self.langs:
@@ -55,7 +62,8 @@ class PaddleOCRProvider:
                 candidate = self._run_engine(lang, array)
             except Exception as exc:
                 raise OCRProviderError(
-                    "paddleocr OCR failed; ensure paddleocr and paddlepaddle are installed"
+                    "paddleocr OCR failed; ensure paddleocr and paddlepaddle are installed",
+                    error_code=type(exc).__name__,
                 ) from exc
 
             if best is None or candidate.confidence > best.confidence:

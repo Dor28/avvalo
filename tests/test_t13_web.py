@@ -1,5 +1,7 @@
 """T13 - web channel parity and abuse gates."""
 
+import logging
+
 from fastapi.testclient import TestClient
 
 from app.config import Settings
@@ -47,6 +49,24 @@ def test_web_app_exposes_core_routes() -> None:
     assert "/check" in paths
     assert "/privacy" in paths
     assert "/healthz" in paths
+
+
+def test_unhandled_route_exception_logs_and_returns_500(caplog) -> None:
+    caplog.set_level(logging.ERROR, logger="app.obs.events")
+    app = create_app(settings=_settings())
+
+    @app.get("/__test_boom")
+    def _boom():
+        raise ValueError("unexpected")
+
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.get("/__test_boom")
+
+    assert response.status_code == 500
+    messages = "\n".join(record.getMessage() for record in caplog.records)
+    assert "event=app_error" in messages
+    assert "'stage': 'web'" in messages
+    assert "'error_type': 'ValueError'" in messages
 
 
 def test_product_pages_are_separate_and_localized() -> None:

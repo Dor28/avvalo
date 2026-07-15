@@ -16,6 +16,8 @@ from app.data.db import (
 )
 from app.data.retention import RetentionPolicy, start_retention_scheduler
 from app.engine.faces import FACES
+from app.obs.alerts import install_operator_alerts
+from app.obs.sentry import init_sentry
 from app.web.app import create_app
 
 LOGGER = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ async def run(*, check_only: bool = False) -> None:
     """Validate config, connect to PostgreSQL, then run the bot (or just check)."""
 
     settings = get_settings()
+    init_sentry(settings)
     engine = create_database_engine(settings.database_url)
     try:
         await check_database_connection(engine)
@@ -68,6 +71,12 @@ async def run(*, check_only: bool = False) -> None:
                     dispatcher = build_dispatcher(settings, session_factory, FACES[spec.face_id])
                     runners.append(dispatcher.start_polling(bot))
                     LOGGER.info("Starting %s bot (polling)", spec.face_id)
+                    if settings.operator_alert_chat_id is not None:
+                        install_operator_alerts(
+                            bot,
+                            settings.operator_alert_chat_id,
+                            debounce_s=settings.operator_alert_debounce_s,
+                        )
 
             await asyncio.gather(*runners)
         finally:

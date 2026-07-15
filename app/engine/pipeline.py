@@ -28,7 +28,7 @@ from app.engine.llm import (
     draft_output_schema,
 )
 from app.engine.minimize import minimize
-from app.engine.ocr import OCRProvider, OCRProviderError
+from app.engine.ocr import OCRInvalidImageError, OCRProvider, OCRProviderError
 from app.engine.ocr import get_provider as get_ocr_provider
 from app.engine.rules import run_rules
 from app.engine.types import (
@@ -41,7 +41,7 @@ from app.engine.types import (
 )
 from app.engine.validate import validate
 from app.obs.cost import estimate_llm_cost_from_settings
-from app.obs.events import log_event
+from app.obs.events import log_error, log_event
 
 _Stage = Callable[[CheckInput], Awaitable[CheckResult]]
 _DEFAULT_MAX_OUTPUT_TOKENS = 600
@@ -51,7 +51,8 @@ _T = TypeVar("_T")
 # Outcomes that consume a daily-limit slot: a real completion (ok / no_signal)
 # or a safety fallback that still ran the model. Every other status is a
 # pre-analysis or system fault and is refunded so it doesn't burn the quota.
-_BILLABLE_STATUSES = frozenset(
+# Public because the web channel's per-IP limit applies the same refund rule.
+BILLABLE_STATUSES = frozenset(
     {CheckStatus.ok, CheckStatus.no_signal, CheckStatus.safety_fallback}
 )
 
@@ -94,7 +95,7 @@ async def run_check(
     )
 
     if session is not None:
-        if check_input.face in FACES and result.status not in _BILLABLE_STATUSES:
+        if check_input.face in FACES and result.status not in BILLABLE_STATUSES:
             await repo.refund_usage(
                 session, user_key=check_input.user_key, face=check_input.face
             )
@@ -297,50 +298,27 @@ async def _content_from_input(
             ),
         )
 
-    started = perf_counter()
     try:
         provider = ocr_provider or get_ocr_provider(settings)
-        timeout_s = settings.ocr_timeout_s if settings is not None else 30.0
+    except ValueError:
+        # Misconfigured OCR_PROVIDER — an operator fault, not the user's image.
+        log_error(stage="ocr", error_type="OCRConfigError", face=check_input.face)
+        return _ContentStageResult(
+            text=None,
+            status=_result(
+                check_input,
+                CheckStatus.ocr_error,
+                text=format_status_message(CheckStatus.ocr_error, check_input.language),
+                error_class="OCRConfigError",
+            ),
+        )
+
+    started = perf_counter()
+    timeout_s = settings.ocr_timeout_s if settings is not None else 30.0
+    try:
         ocr_result = await _with_timeout(provider.extract(check_input.image_bytes), timeout_s)
-    except TimeoutError as exc:
-        ocr_ms = max(0, round((perf_counter() - started) * 1000))
-        return _ContentStageResult(
-            text=None,
-            ocr_ms=ocr_ms,
-            status=_result(
-                check_input,
-                CheckStatus.timeout,
-                text=format_status_message(CheckStatus.timeout, check_input.language),
-                ocr_ms=ocr_ms,
-                error_class=exc.__class__.__name__,
-            ),
-        )
-    except NotImplementedError as exc:
-        ocr_ms = max(0, round((perf_counter() - started) * 1000))
-        return _ContentStageResult(
-            text=None,
-            ocr_ms=ocr_ms,
-            status=_result(
-                check_input,
-                CheckStatus.unsupported_media,
-                text=format_status_message(CheckStatus.unsupported_media, check_input.language),
-                ocr_ms=ocr_ms,
-                error_class=exc.__class__.__name__,
-            ),
-        )
-    except OCRProviderError as exc:
-        ocr_ms = max(0, round((perf_counter() - started) * 1000))
-        return _ContentStageResult(
-            text=None,
-            ocr_ms=ocr_ms,
-            status=_result(
-                check_input,
-                CheckStatus.unsupported_media,
-                text=format_status_message(CheckStatus.unsupported_media, check_input.language),
-                ocr_ms=ocr_ms,
-                error_class=exc.__class__.__name__,
-            ),
-        )
+    except (TimeoutError, NotImplementedError, OCRProviderError) as exc:
+        return _ocr_failure(check_input, exc, started=started, timeout_s=timeout_s)
 
     ocr_ms = max(0, round((perf_counter() - started) * 1000))
     min_confidence = (
@@ -366,6 +344,47 @@ async def _content_from_input(
         text="\n".join(parts),
         ocr_ms=ocr_ms,
         ocr_confidence=ocr_result.confidence,
+    )
+
+
+def _ocr_failure_status(exc: Exception) -> CheckStatus:
+    """Map one OCR failure to a user-facing status: a slow provider is a
+    timeout, an unreadable image or a stub provider is an input problem, and
+    anything else is a provider fault the user should simply retry later."""
+
+    if isinstance(exc, TimeoutError):
+        return CheckStatus.timeout
+    if isinstance(exc, OCRInvalidImageError | NotImplementedError):
+        return CheckStatus.unsupported_media
+    return CheckStatus.ocr_error
+
+
+def _ocr_failure(
+    check_input: CheckInput,
+    exc: Exception,
+    *,
+    started: float,
+    timeout_s: float,
+) -> _ContentStageResult:
+    ocr_ms = max(0, round((perf_counter() - started) * 1000))
+    status = _ocr_failure_status(exc)
+    # Only content-free metadata leaves here: the underlying exception class
+    # name, never the provider's message.
+    error_class = getattr(exc, "error_code", None) or type(exc).__name__
+    fields: dict[str, object] = {"face": check_input.face}
+    if isinstance(exc, TimeoutError):
+        fields["timeout_s"] = timeout_s
+    log_error(stage="ocr", error_type=error_class, **fields)
+    return _ContentStageResult(
+        text=None,
+        ocr_ms=ocr_ms,
+        status=_result(
+            check_input,
+            status,
+            text=format_status_message(status, check_input.language),
+            ocr_ms=ocr_ms,
+            error_class=error_class,
+        ),
     )
 
 
@@ -413,6 +432,9 @@ async def _call_llm(
 
     for attempt in range(2):
         attempt_system = system if attempt == 0 else _retry_system_prompt(system, validation_reason)
+        llm_timeout_s = (
+            resolved_settings.llm_timeout_s if resolved_settings is not None else 30.0
+        )
         try:
             response = await _with_timeout(
                 provider.analyze(
@@ -421,49 +443,21 @@ async def _call_llm(
                     schema=draft_output_schema(),
                     max_output_tokens=max_output_tokens,
                 ),
-                resolved_settings.llm_timeout_s if resolved_settings is not None else 30.0,
+                llm_timeout_s,
             )
-        except TimeoutError as exc:
-            llm_ms = max(0, round((perf_counter() - started) * 1000))
-            cost_usd = _estimate_cost(total_input_tokens, total_output_tokens, resolved_settings)
-            return _LLMStageResult(
-                response=None,
-                llm_ms=llm_ms,
-                cost_usd=cost_usd,
-                status=_result(
-                    check_input,
-                    CheckStatus.timeout,
-                    text=format_status_message(CheckStatus.timeout, check_input.language),
-                    rule_ids=[hit.rule_id for hit in rule_hits],
-                    error_class=exc.__class__.__name__,
-                    ocr_ms=ocr_ms,
-                    ocr_confidence=ocr_confidence,
-                    llm_ms=llm_ms,
-                    input_tokens=total_input_tokens or None,
-                    output_tokens=total_output_tokens or None,
-                    cost_usd=cost_usd,
-                ),
-            )
-        except LLMProviderError as exc:
-            llm_ms = max(0, round((perf_counter() - started) * 1000))
-            cost_usd = _estimate_cost(total_input_tokens, total_output_tokens, resolved_settings)
-            return _LLMStageResult(
-                response=None,
-                llm_ms=llm_ms,
-                cost_usd=cost_usd,
-                status=_result(
-                    check_input,
-                    CheckStatus.llm_error,
-                    text=format_status_message(CheckStatus.llm_error, check_input.language),
-                    rule_ids=[hit.rule_id for hit in rule_hits],
-                    error_class=exc.__class__.__name__,
-                    ocr_ms=ocr_ms,
-                    ocr_confidence=ocr_confidence,
-                    llm_ms=llm_ms,
-                    input_tokens=total_input_tokens or None,
-                    output_tokens=total_output_tokens or None,
-                    cost_usd=cost_usd,
-                ),
+        except (TimeoutError, LLMProviderError) as exc:
+            return _llm_failure(
+                check_input,
+                exc,
+                started=started,
+                attempt=attempt,
+                timeout_s=llm_timeout_s,
+                rule_hits=rule_hits,
+                input_tokens=total_input_tokens,
+                output_tokens=total_output_tokens,
+                settings=resolved_settings,
+                ocr_ms=ocr_ms,
+                ocr_confidence=ocr_confidence,
             )
 
         total_input_tokens += response.input_tokens
@@ -486,6 +480,12 @@ async def _call_llm(
 
     llm_ms = max(0, round((perf_counter() - started) * 1000))
     cost_usd = _estimate_cost(total_input_tokens, total_output_tokens, resolved_settings)
+    log_error(
+        stage="validate",
+        error_type="SafetyValidationError",
+        face=check_input.face,
+        reason=validation_reason,
+    )
     return _LLMStageResult(
         response=None,
         llm_ms=llm_ms,
@@ -502,6 +502,60 @@ async def _call_llm(
             llm_ms=llm_ms,
             input_tokens=total_input_tokens,
             output_tokens=total_output_tokens,
+            cost_usd=cost_usd,
+        ),
+    )
+
+
+def _llm_failure(
+    check_input: CheckInput,
+    exc: Exception,
+    *,
+    started: float,
+    attempt: int,
+    timeout_s: float,
+    rule_hits: list[RuleHit],
+    input_tokens: int,
+    output_tokens: int,
+    settings: Settings | None,
+    ocr_ms: int | None,
+    ocr_confidence: float | None,
+) -> _LLMStageResult:
+    """Map one failed provider call to its terminal stage result.
+
+    Only content-free metadata leaves here: the underlying exception class
+    name (``error_code``) and its HTTP status, never the provider's message.
+    """
+
+    llm_ms = max(0, round((perf_counter() - started) * 1000))
+    cost_usd = _estimate_cost(input_tokens, output_tokens, settings)
+    fields: dict[str, object] = {"face": check_input.face, "attempt": attempt}
+    if isinstance(exc, TimeoutError):
+        status = CheckStatus.timeout
+        error_class = type(exc).__name__
+        fields["timeout_s"] = timeout_s
+    else:
+        status = CheckStatus.llm_error
+        error_class = getattr(exc, "error_code", None) or type(exc).__name__
+        status_code = getattr(exc, "status_code", None)
+        if status_code is not None:
+            fields["status_code"] = status_code
+    log_error(stage="llm", error_type=error_class, **fields)
+    return _LLMStageResult(
+        response=None,
+        llm_ms=llm_ms,
+        cost_usd=cost_usd,
+        status=_result(
+            check_input,
+            status,
+            text=format_status_message(status, check_input.language),
+            rule_ids=[hit.rule_id for hit in rule_hits],
+            error_class=error_class,
+            ocr_ms=ocr_ms,
+            ocr_confidence=ocr_confidence,
+            llm_ms=llm_ms,
+            input_tokens=input_tokens or None,
+            output_tokens=output_tokens or None,
             cost_usd=cost_usd,
         ),
     )

@@ -1,6 +1,7 @@
 """T12 - hardening: provider timeouts and graceful failure."""
 
 import asyncio
+import logging
 
 from app.config import Settings
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
@@ -43,7 +44,8 @@ def test_pipeline_has_a_timeout_wrapper() -> None:
     assert callable(_with_timeout)
 
 
-async def test_llm_timeout_returns_timeout_without_safety_conclusion() -> None:
+async def test_llm_timeout_returns_timeout_without_safety_conclusion(caplog) -> None:
+    caplog.set_level(logging.ERROR, logger="app.obs.events")
     result = await run_check(
         CheckInput(
             face="family",
@@ -61,8 +63,14 @@ async def test_llm_timeout_returns_timeout_without_safety_conclusion() -> None:
     assert not result.safety_blocked
     assert result.rule_ids
 
+    messages = "\n".join(record.getMessage() for record in caplog.records)
+    assert "event=app_error" in messages
+    assert "'stage': 'llm'" in messages
+    assert "SMS kodni" not in messages
 
-async def test_ocr_timeout_returns_timeout_before_llm_call() -> None:
+
+async def test_ocr_timeout_returns_timeout_before_llm_call(caplog) -> None:
+    caplog.set_level(logging.ERROR, logger="app.obs.events")
     result = await run_check(
         CheckInput(
             face="family",
@@ -79,3 +87,7 @@ async def test_ocr_timeout_returns_timeout_before_llm_call() -> None:
     assert result.status == CheckStatus.timeout
     assert result.error_class == "TimeoutError"
     assert result.ocr_ms is not None
+
+    messages = "\n".join(record.getMessage() for record in caplog.records)
+    assert "event=app_error" in messages
+    assert "'stage': 'ocr'" in messages

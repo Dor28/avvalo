@@ -1,5 +1,6 @@
 """T7 safety validator and formatter tests."""
 
+import logging
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -166,6 +167,19 @@ def test_status_messages_are_localized() -> None:
     assert "Tekshirish" in format_status_message(CheckStatus.empty_input, Language.uz_latn)
 
 
+def test_status_message_map_covers_every_non_model_status() -> None:
+    from app.engine.format import _STATUS_MESSAGES
+
+    # ok / no_signal render the model draft; safety_fallback has its own formatter.
+    # Everything else must have an explicit entry so format_status_message()'s
+    # unsupported_media fallback never silently mislabels a new status.
+    formatted_elsewhere = {CheckStatus.ok, CheckStatus.no_signal, CheckStatus.safety_fallback}
+    assert set(_STATUS_MESSAGES) == set(CheckStatus) - formatted_elsewhere
+    for translations in _STATUS_MESSAGES.values():
+        assert set(translations) == set(Language)
+        assert all(text.strip() for text in translations.values())
+
+
 async def test_pipeline_retries_once_after_validation_failure(session) -> None:
     provider = SequenceLLMProvider(
         [
@@ -200,7 +214,10 @@ async def test_pipeline_retries_once_after_validation_failure(session) -> None:
     assert stored_event.cost_usd == Decimal("0.000360")
 
 
-async def test_pipeline_returns_safety_fallback_after_double_validation_failure(session) -> None:
+async def test_pipeline_returns_safety_fallback_after_double_validation_failure(
+    session, caplog
+) -> None:
+    caplog.set_level(logging.ERROR, logger="app.obs.events")
     provider = SequenceLLMProvider(
         [
             DraftOutput(red_flags=["This is safe."], verify=["Open the link."], ask=["?"]),
@@ -236,3 +253,10 @@ async def test_pipeline_returns_safety_fallback_after_double_validation_failure(
     stored_event = (await session.execute(select(CheckEvent))).scalar_one()
     assert stored_event.status == "safety_fallback"
     assert stored_event.safety_blocked is True
+
+    # The rejection reason is a fixed description, never the leaked value itself.
+    messages = "\n".join(record.getMessage() for record in caplog.records)
+    assert "event=app_error" in messages
+    assert "'stage': 'validate'" in messages
+    assert "raw phone number leaked" in messages
+    assert "+998 90 123 45 67" not in messages

@@ -205,6 +205,14 @@ _STATUS_MESSAGES = {
             "Попробуйте ещё раз."
         ),
     },
+    CheckStatus.ocr_error: {
+        Language.uz_latn: "Hozir bu rasmni qayta ishlay olmadim. Qayta urinib ko'ring.",
+        Language.uz_cyrl: "Ҳозир бу расмни қайта ишлай олмадим. Қайта уриниб кўринг.",
+        Language.ru: (
+            "Сейчас не получилось обработать изображение. "
+            "Попробуйте ещё раз."
+        ),
+    },
     CheckStatus.unsupported_media: {
         Language.uz_latn: "Matn yoki o'qilishi mumkin bo'lgan skrinshot yuboring.",
         Language.uz_cyrl: "Матн ёки ўқилиши мумкин бўлган скриншот юборинг.",

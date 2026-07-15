@@ -1,9 +1,13 @@
 """T6 LLM prompt/provider/cost integration tests."""
 
 import json
+import logging
 from decimal import Decimal
 from types import SimpleNamespace
 
+import httpx
+import pytest
+from openai import RateLimitError
 from sqlalchemy import select
 
 from app.config import Settings
@@ -192,7 +196,68 @@ async def test_pipeline_records_llm_usage_and_cost_without_content(session) -> N
     assert "+998 90 123 45 67" not in "".join(stored_values)
 
 
-async def test_pipeline_llm_error_keeps_deterministic_rule_ids() -> None:
+async def test_openai_provider_classifies_api_status_errors() -> None:
+    request = httpx.Request("POST", "https://openrouter.test/api/v1/chat/completions")
+    response = httpx.Response(429, request=request, json={"error": {"message": "rate limited"}})
+
+    class RaisingCompletions:
+        async def create(self, **_kwargs):
+            raise RateLimitError("Error code: 429 - rate limited", response=response, body=None)
+
+    client = SimpleNamespace(chat=SimpleNamespace(completions=RaisingCompletions()))
+    provider = OpenAICompatibleProvider(
+        base_url="http://localhost:11434/v1",
+        api_key="key",
+        model="qwen2.5:7b-instruct",
+        client=client,
+    )
+
+    with pytest.raises(LLMProviderError) as excinfo:
+        await provider.analyze(
+            system="system",
+            user="user",
+            schema=draft_output_schema(),
+            max_output_tokens=10,
+        )
+
+    # The structured fields survive classification; the SDK message stays in args only.
+    assert excinfo.value.error_code == "RateLimitError"
+    assert excinfo.value.status_code == 429
+
+
+async def test_pipeline_llm_error_logs_status_code_but_never_provider_text(caplog) -> None:
+    caplog.set_level(logging.ERROR, logger="app.obs.events")
+
+    class ClassifiedFailingProvider:
+        async def analyze(self, **_kwargs) -> LLMResponse:
+            raise LLMProviderError(
+                "Error code: 429 - Rate limit exceeded: free-tier quota reset at midnight",
+                error_code="RateLimitError",
+                status_code=429,
+            )
+
+    result = await run_check(
+        CheckInput(
+            face="family",
+            user_key="u-llm-429",
+            language=Language.ru,
+            input_type=InputType.text,
+            raw_text="Мне позвонили и сказали, что из прокуратуры.",
+        ),
+        llm_provider=ClassifiedFailingProvider(),
+    )
+
+    assert result.status == CheckStatus.llm_error
+    assert result.error_class == "RateLimitError"
+
+    messages = "\n".join(record.getMessage() for record in caplog.records)
+    assert "'error_type': 'RateLimitError'" in messages
+    assert "'status_code': 429" in messages
+    assert "free-tier quota" not in messages
+
+
+async def test_pipeline_llm_error_keeps_deterministic_rule_ids(caplog) -> None:
+    caplog.set_level(logging.ERROR, logger="app.obs.events")
     result = await run_check(
         CheckInput(
             face="family",
@@ -207,4 +272,11 @@ async def test_pipeline_llm_error_keeps_deterministic_rule_ids() -> None:
     assert result.status == CheckStatus.llm_error
     assert result.error_class == "LLMProviderError"
     assert "fs.credential.otp" in result.rule_ids
+
+    # The technical error log carries the exception class, never str(exc) —
+    # "boom" (FailingLLMProvider's message) must not reach logs.
+    messages = "\n".join(record.getMessage() for record in caplog.records)
+    assert "event=app_error" in messages
+    assert "'error_type': 'LLMProviderError'" in messages
+    assert "boom" not in messages
     assert result.llm_ms is not None

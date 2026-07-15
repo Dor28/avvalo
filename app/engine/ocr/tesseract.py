@@ -36,7 +36,8 @@ class TesseractOCRProvider:
                 )
         except Exception as exc:
             raise OCRProviderError(
-                "tesseract OCR failed; ensure the binary and language packs are installed"
+                "tesseract OCR failed; ensure the binary and language packs are installed",
+                error_code=type(exc).__name__,
             ) from exc
 
         return OCRResult(text=text, confidence=_confidence_from_data(data))

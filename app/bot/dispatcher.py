@@ -2,8 +2,10 @@
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import ErrorEvent
 
 from app.bot.handlers import router
+from app.obs.events import log_error
 
 
 def build_bot(token: str) -> Bot:
@@ -24,4 +26,16 @@ def build_dispatcher(settings, session_factory, face) -> Dispatcher:
     dispatcher["session_factory"] = session_factory
     dispatcher["face"] = face
     dispatcher.include_router(router)
+    dispatcher.errors.register(_handle_unexpected_error)
     return dispatcher
+
+
+async def _handle_unexpected_error(event: ErrorEvent) -> bool:
+    """Catch-all for exceptions that escape a handler without going through run_check().
+
+    Returning ``True`` marks the update as handled so aiogram's own polling loop
+    doesn't also re-raise and log it a second time through its internal logger.
+    """
+
+    log_error(stage="bot", error_type=event.exception.__class__.__name__)
+    return True

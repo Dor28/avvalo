@@ -565,7 +565,8 @@ These are the numbers you'll show the grant panel. The output is aggregate-only 
 **Uptime & disk alerts (do this):**
 - Point an external monitor (UptimeRobot, Better Stack — free tiers) at `https://AVVALO_DOMAIN/healthz`, or use a Telegram "dead-man's switch" for bot-only.
 - Watch the Volume: `df -h /mnt/avvalo-data`. Alert at 80%. The DB is tiny, but logs and backups live here too.
-- **Safety alerts (not yet wired up):** `OPERATOR_ALERT_CHAT_ID` is reserved for paging you on repeated safety blocks (per [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) §9), but no code currently sends that message. Safe to leave blank until it's implemented.
+- **Operator alerts:** set `OPERATOR_ALERT_CHAT_ID` to receive minimized story submissions and debounced OCR, LLM, web, and bot failure notifications. `OPERATOR_ALERT_DEBOUNCE_S` defaults to 900 seconds; safety-validation fallbacks are logged but intentionally do not page the operator.
+- **Optional Sentry:** set `SENTRY_DSN` (and normally keep `SENTRY_ENVIRONMENT=production`) to send the same allowlisted error type/stage metadata to Sentry. Automatic integrations, request capture, PII, exception messages, and local-variable capture are disabled. Leave the DSN blank to keep all error tracking local.
 
 ---
 

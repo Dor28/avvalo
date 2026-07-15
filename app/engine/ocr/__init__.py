@@ -1,7 +1,13 @@
 """OCR provider interfaces and implementations."""
 
 from app.config import Settings, get_settings
-from app.engine.ocr.base import OCRProvider, OCRProviderError, OCRResult, strip_image_metadata
+from app.engine.ocr.base import (
+    OCRInvalidImageError,
+    OCRProvider,
+    OCRProviderError,
+    OCRResult,
+    strip_image_metadata,
+)
 from app.engine.ocr.gcv import GoogleCloudVisionOCRProvider
 from app.engine.ocr.local_stub import LocalStubOCRProvider, OnPremOCRProvider
 from app.engine.ocr.paddleocr import PaddleOCRProvider
@@ -34,6 +40,7 @@ build_provider = get_provider
 __all__ = [
     "GoogleCloudVisionOCRProvider",
     "LocalStubOCRProvider",
+    "OCRInvalidImageError",
     "OCRProvider",
     "OCRProviderError",
     "OCRResult",
