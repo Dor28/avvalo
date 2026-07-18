@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
 
 from app.engine.faces import FACES
+from app.engine.knowledge import KnowledgeCard
 from app.engine.rules import load_rule_pack
 from app.engine.types import DraftOutput, Language, RuleHit, Signal
 
@@ -21,6 +23,7 @@ def build_prompt(
     minimized_text: str,
     rule_hits: list[RuleHit],
     signals: list[Signal],
+    knowledge_cards: Sequence[KnowledgeCard] = (),
 ) -> tuple[str, str]:
     """Render the system and face prompt for one check."""
 
@@ -36,6 +39,7 @@ def build_prompt(
         minimized_text=minimized_text,
         rule_hits=_render_rule_hits(face_id, rule_hits),
         signals=_render_signals(signals),
+        knowledge=_render_knowledge(knowledge_cards),
     )
     return system, user
 
@@ -70,3 +74,27 @@ def _render_signals(signals: list[Signal]) -> str:
         return "[]"
     payload = [signal.model_dump(exclude_none=True) for signal in signals]
     return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+
+def _render_knowledge(cards: Sequence[KnowledgeCard]) -> str:
+    if not cards:
+        return "- (none selected)"
+    if len(cards) > 3:
+        raise ValueError("At most three knowledge cards may enter the answer prompt")
+
+    blocks = []
+    for card in cards:
+        blocks.append(
+            "\n".join(
+                [
+                    f"- CARD {card.id} version={card.version}",
+                    f"  mechanism: {card.mechanism}",
+                    f"  possible warning signs: {json.dumps(card.red_flags, ensure_ascii=False)}",
+                    f"  verification guidance: {json.dumps(card.verify_steps, ensure_ascii=False)}",
+                    f"  questions: {json.dumps(card.questions, ensure_ascii=False)}",
+                    "  Treat this as reviewed guidance, never as proof that the current "
+                    "person or situation matches a previous case.",
+                ]
+            )
+        )
+    return "\n".join(blocks)

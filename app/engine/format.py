@@ -263,24 +263,6 @@ def format_status_message(status: CheckStatus, language: Language) -> str:
     ]
 
 
-def format_output(draft: DraftOutput, language: Language, *, no_signal: bool = False) -> str:
-    """Alias for callers/tests that use the older name."""
-
-    return format_result(draft, language, no_signal=no_signal)
-
-
-def build_message(draft: DraftOutput, language: Language, *, no_signal: bool = False) -> str:
-    """Alias for callers/tests that use the channel-facing name."""
-
-    return format_result(draft, language, no_signal=no_signal)
-
-
-def format_check(draft: DraftOutput, language: Language, *, no_signal: bool = False) -> str:
-    """Alias for callers/tests that use the check-facing name."""
-
-    return format_result(draft, language, no_signal=no_signal)
-
-
 def _section(title: str, bullets: list[str]) -> str:
     rendered = "\n".join(f"- {bullet}" for bullet in bullets)
     return f"{title}\n{rendered}"

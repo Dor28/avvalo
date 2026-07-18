@@ -84,6 +84,11 @@ class CheckResult(BaseModel):
     check_id: UUID | None = None
     text: str | None = None
     rule_ids: list[str] = Field(default_factory=list)
+    knowledge_card_ids: list[str] = Field(default_factory=list)
+    reviewed_case_ids: list[str] = Field(default_factory=list)
+    retrieval_mode: str | None = None
+    retrieval_status: str | None = None
+    kb_version: str | None = None
     no_signal: bool = False
     safety_blocked: bool = False
     language: Language

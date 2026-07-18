@@ -82,6 +82,26 @@ _UNSAFE_PATTERNS = (
     r"(?:қўнғироқ|ёз)\b",
 )
 
+_UNSUPPORTED_LOOKUP_PATTERNS = (
+    r"(?i)\b(?:i|we|avvalo)\s+(?:checked|searched|verified)\s+(?:the\s+)?"
+    r"(?:database|records|account|identity|website|organization)\b",
+    r"(?iu)\b(?:я|мы|avvalo)\s+проверил(?:а|и)?\s+"
+    r"(?:базу|аккаунт|сч[её]т|личность|сайт|организацию)\b",
+    r"(?i)\b(?:men|biz|avvalo)\s+(?:baza|hisob|shaxs|sayt|tashkilot)(?:ni)?\s+"
+    r"tekshird(?:im|ik|i)\b",
+    r"(?iu)\b(?:мен|биз|avvalo)\s+(?:база|ҳисоб|шахс|сайт|ташкилот)(?:ни)?\s+"
+    r"текширд(?:им|ик|и)\b",
+)
+
+_CASE_PROOF_PATTERNS = (
+    r"(?i)\b(?:same|identical)\s+(?:reviewed\s+)?case\b.*\b(?:proves?|confirms?)\b",
+    r"(?iu)\b(?:тот\s+же|такой\s+же)\s+случай\b.*\b(?:доказывает|подтверждает)\b",
+    r"(?i)\b(?:aynan\s+o'sha|xuddi\s+shu)\s+(?:holat|voqea)\b.*\b(?:isbot|tasdiq)\b",
+    r"(?iu)\b(?:айнан\s+ўша|худди\s+шу)\s+(?:ҳолат|воқеа)\b.*\b(?:исбот|тасдиқ)\b",
+)
+
+_INTERNAL_KNOWLEDGE_ID_RE = re.compile(r"(?i)\b(?:family|merchants)\.[a-z0-9_.-]+\b")
+
 
 class ValidationResult(BaseModel):
     """Result of deterministic draft validation."""
@@ -97,6 +117,9 @@ def validate(
     signals: list[Signal],
     rule_hits: list[RuleHit],
     language: Language,
+    *,
+    knowledge_card_ids: list[str] | None = None,
+    authoritative_lookup: bool = False,
 ) -> ValidationResult:
     """Validate and normalize one LLM draft."""
 
@@ -106,7 +129,14 @@ def validate(
     requires_red_flag = any(hit.severity >= _RED_FLAG_MIN_SEVERITY for hit in rule_hits)
     text = _joined_text(normalized)
 
-    reason = _first_rejection_reason(text, normalized, requires_red_flag, language)
+    reason = _first_rejection_reason(
+        text,
+        normalized,
+        requires_red_flag,
+        language,
+        knowledge_card_ids=knowledge_card_ids or [],
+        authoritative_lookup=authoritative_lookup,
+    )
     return ValidationResult(
         ok=reason is None,
         draft=normalized,
@@ -131,7 +161,13 @@ def _joined_text(draft: DraftOutput) -> str:
 
 
 def _first_rejection_reason(
-    text: str, draft: DraftOutput, requires_red_flag: bool, language: Language
+    text: str,
+    draft: DraftOutput,
+    requires_red_flag: bool,
+    language: Language,
+    *,
+    knowledge_card_ids: list[str],
+    authoritative_lookup: bool,
 ) -> str | None:
     lower = text.casefold()
     _ = language
@@ -153,6 +189,17 @@ def _first_rejection_reason(
     for pattern in _UNSAFE_PATTERNS:
         if re.search(pattern, text):
             return "unsafe instruction to use suspicious contact path"
+    if _INTERNAL_KNOWLEDGE_ID_RE.search(text) or any(
+        card_id.casefold() in lower for card_id in knowledge_card_ids
+    ):
+        return "internal knowledge id leaked"
+    for pattern in _CASE_PROOF_PATTERNS:
+        if re.search(pattern, text):
+            return "reviewed case represented as proof"
+    if not authoritative_lookup:
+        for pattern in _UNSUPPORTED_LOOKUP_PATTERNS:
+            if re.search(pattern, text):
+                return "unsupported external lookup claim"
     if not draft.verify:
         return "verify block is empty"
     if not draft.ask:

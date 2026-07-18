@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     llm_out_rate_per_m: float = Field(default=0.0, ge=0)
     llm_timeout_s: float = Field(default=30.0, gt=0)
     max_output_tokens: int = Field(default=600, ge=1, le=600)
+    llm_fallback_base_url: str | None = None
+    llm_fallback_api_key: SecretStr | None = None
+    llm_fallback_model: str | None = None
 
     google_application_credentials: str | None = None
     ocr_provider: str = "gcv"

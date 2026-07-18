@@ -1,6 +1,6 @@
 # Avvalo — v1 Technical Plan & Architecture (executable build spec)
 
-> **Status:** Technical architecture · ready to implement · 2026-06-24
+> **Status:** Implemented v1 baseline plus required knowledge-grounding revision · 2026-07-15
 > **Audience:** The implementing engineer / coding model. **This document makes the decisions so you don't have to.** Where it says "MUST," do exactly that. Where it says "verify," check current external docs before coding (APIs change). Do not introduce new dependencies, services, or patterns not listed here without flagging it.
 > **Implements:** [V1_BUILD_SCOPE.md](archive/V1_BUILD_SCOPE.md) — one engine, two faces (Avvalo + Avvalo Merchants). Safety/vision authority: [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). Engine behaviour & golden examples: [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md).
 
@@ -26,7 +26,7 @@
 | Web API | **FastAPI** (async) | Runs in the same process; shares the engine + DB; pydantic-native; OpenAPI for free | Thin HTTP face over `run_check()` |
 | Web UI | **Jinja2 templates + HTMX** + vanilla CSS | No SPA / Node build step; submit→swap-result; minimal for a solo build | Reuses the 3-language UI strings |
 | Web abuse | **Cloudflare Turnstile** + IP/session rate-limit + upload caps | Open web has NO built-in anti-spam (unlike Telegram) — this is a v1 requirement | Captcha gates image upload |
-| LLM | **Qwen (open weights)** via a neutral OpenAI-compatible host (OpenRouter / Together / Fireworks) | Chinese model with the broadest multilingual coverage → best odds on low-resource Uzbek; open weights ⇒ served off mainland China (US/EU/SG), so user data never enters China (key for a privacy product); OpenAI-compatible; cheap | Behind the provider interface (§8). Host + model set by env (`LLM_BASE_URL` / `LLM_MODEL`). Choose a host offering a **DPA + no-retention / no-training**. Confirm Uzbek quality with the eval (§8.1) before locking. **Self-hosting Qwen in-region is the production roadmap** (full data residency). |
+| LLM | **Qwen (open weights)** via a neutral OpenAI-compatible host (OpenRouter / Together / Fireworks) | Chinese model with the broadest multilingual coverage → best odds on low-resource Uzbek; open weights ⇒ served off mainland China (US/EU/SG), so user data never enters China (key for a privacy product); OpenAI-compatible; cheap | Behind the provider interface (§8). Host + model set by env (`LLM_BASE_URL` / `LLM_MODEL`). Choose a host offering a **DPA + no-retention / no-training**. Confirm Uzbek quality with the eval (§8.2) before locking. **Self-hosting Qwen in-region is the production roadmap** (full data residency). |
 | OCR | **Google Cloud Vision** `DOCUMENT_TEXT_DETECTION` | Strong Latin+Cyrillic; clear DPA | Behind an interface (§7). On-prem (Tesseract/PaddleOCR) is a later swap, stubbed now. |
 | DB | **PostgreSQL 16** | Relational is enough (no graph DB); JSONB for event payloads; real TTL/backup story | SQLite allowed for *local unit tests only* |
 | ORM / migrations | **SQLAlchemy 2.x + Alembic** | Standard | |
@@ -71,7 +71,7 @@
 
 ### 1.2 Local dev (Ollama, offline — no API keys)
 
-You can build and integration-test the **entire pipeline with zero API keys, fully offline.** This is the recommended way to develop T1–T9 and T13. **Use it for plumbing, not for judging Uzbek quality** — a small local model writes rough Uzbek; that's the model size, not your code. Make the quality/model decision against hosted Qwen via the eval (§8.1).
+You can build and integration-test the **entire pipeline with zero API keys, fully offline.** This is the recommended way to develop T1–T9, T13, and T14. **Use it for plumbing, not for judging Uzbek quality** — a small local model writes rough Uzbek; that's the model size, not your code. Make the quality/model decision against hosted Qwen via the eval (§8.2).
 
 **LLM via Ollama — two ways to run it.** The `openai_compat.py` adapter is host-agnostic, so "local" is just a different `LLM_BASE_URL`.
 
@@ -118,16 +118,20 @@ Postgres, the bot, and the web app already run locally via `docker compose`, so 
         ┌───────────────────────────────────────────────────────────────────┐
         │                         CORE ENGINE (one pipeline)                  │
         │                                                                     │
-        │  intake ─▶ OCR(if image) ─▶ rules(on RAW local text) ──┐           │
-        │                                   │ emits RuleHit[] +   │           │
-        │                                   │ structured signals  │           │
-        │                                   ▼                     ▼           │
-        │                          minimize(text) ─────▶ LLM(minimized text + │
-        │                          (PII stripped,         rule hits + face +  │
-        │                           signals kept)          language → JSON)   │
-        │                                                       │             │
-        │                                                       ▼             │
-        │                                          safety validator ─▶ format │
+        │  intake ─▶ OCR(if image) ─▶ rules/signals(on RAW local text)        │
+        │                                   │                                 │
+        │                                   ▼                                 │
+        │                          minimize(text)                              │
+        │                                   │                                 │
+        │               rule IDs/signals/cues + minimized text                │
+        │                                   ▼                                 │
+        │                    validated knowledge retrieval (0-3 cards)         │
+        │                                   │                                 │
+        │                                   ▼                                 │
+        │                  answer LLM(minimized text + grounded context)       │
+        │                                   │                                 │
+        │                                   ▼                                 │
+        │                          safety validator ─▶ format                   │
         │                                                       │             │
         │   privacy-safe events + cost ◀── (no content) ────────┘             │
         └───────────────────────────────────────────────────────────────────┘
@@ -138,7 +142,9 @@ Postgres, the bot, and the web app already run locally via `docker compose`, so 
                        feedback / limits            1-hour hard TTL, then deleted)
 ```
 
-**Key ordering decision (resolves the review's privacy-vs-analysis tension):** the **rule engine runs on the RAW local text first** (it never leaves the server), extracts structured signals (links, phone "newness", card destination, etc.), *then* the text is minimized for the LLM. The LLM receives **minimized text + the structured signals as grounded facts.** This is why it can still explain "lookalike link" without the raw URL leaving in the prompt.
+**Key ordering decision (resolves the review's privacy-vs-analysis tension):** the **rule engine runs on the RAW local text first** (it never leaves the server), extracts structured signals (links, phone "newness", card destination, etc.), *then* the text is minimized before any external model boundary. Retrieval selects reviewed knowledge from rule IDs, signals, broad non-authoritative cues, and—only when needed—an allowlisted semantic router over the minimized text. The answer LLM receives **minimized text + grounded facts + at most three reviewed cards/cases.** Rules are authoritative facts, not a gate: `rule_hits=[]` still reaches semantic analysis.
+
+The complete rules/knowledge/LLM contract is [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md). That document is the authority for retrieval, reviewed-case handling, zero-rule behavior, failure degradation, and knowledge/version metadata.
 
 **The two faces share 100% of this pipeline.** A `Face` value (`family` | `merchants`) selects (a) which rule pack loads and (b) which output template/prompt is used. Nothing else differs.
 
@@ -154,10 +160,12 @@ Postgres, the bot, and the web app already run locally via `docker compose`, so 
 2. **ocr** — if image: strip EXIF/GPS, run OCR → `ocr_text` + `ocr_confidence`. If confidence < threshold → fail path "ask for pasted text" (no LLM call).
 3. **rules** — run the face's rule pack over the **raw** text (`raw_text` or `ocr_text`) → `RuleHit[]` + `ExtractedSignals`. Authoritative facts.
 4. **minimize** — produce `minimized_text` (PII values replaced by typed tokens, signal structure preserved).
-5. **llm** — call the model with `minimized_text + rule_hits + signals + face + language + JSON schema` → `DraftOutput`.
-6. **validate** — run the safety validator over `DraftOutput`. On fail: one retry with a stricter instruction; on second fail: `FALLBACK` (generic safe message, no analysis) and flag `safety_blocked`.
-7. **format** — assemble the fixed output block in the target language.
-8. **persist (no content)** — write a privacy-safe `check_event` + cost/latency; **delete the ephemeral workspace.**
+5. **retrieval plan** — resolve mandatory knowledge IDs from `face + rule_ids + signal kinds`, then add broad multilingual retrieval-cue candidates. When empty or ambiguous, an optional semantic router sees only `minimized_text` and may return at most three IDs from a server-provided allowlist.
+6. **knowledge lookup** — backend code validates/dedupes IDs and loads zero to three versioned, reviewed cards/cases. A failed lookup degrades to the remaining context; it never fabricates a match.
+7. **answer llm** — call the model with `minimized_text + rule_hits + signals + selected knowledge + face + language + JSON schema` → `DraftOutput`. This stage runs even when rules and retrieval are empty.
+8. **validate** — run the safety and grounding validator over `DraftOutput`. On fail: one retry with a stricter instruction; on second fail: `FALLBACK` (generic safe message, no analysis) and flag `safety_blocked`.
+9. **format** — assemble the fixed output block in the target language.
+10. **persist (no content)** — write a privacy-safe `check_event` + cost/latency + rule/knowledge/version IDs; **delete the ephemeral workspace.**
 
 Every stage records timing into the event. A failure at any stage returns a typed failure (see §6 `CheckStatus`) and still deletes content.
 
@@ -202,6 +210,7 @@ avvalo/
 │  │  ├─ ocr/{base.py,gcv.py,tesseract.py,local_stub.py}   # gcv=prod · tesseract=offline dev · local_stub=on-prem roadmap
 │  │  ├─ minimize.py
 │  │  ├─ rules/{engine.py,loader.py}
+│  │  ├─ knowledge/{types.py,loader.py,retrieve.py,router.py}   # target T14 retrieval layer
 │  │  ├─ llm/{base.py,openai_compat.py,prompt.py}   # openai_compat = Qwen via neutral host (host-agnostic)
 │  │  ├─ validate.py
 │  │  └─ format.py
@@ -219,6 +228,9 @@ avvalo/
 ├─ rules/
 │  ├─ family/*.yaml           # 5 consumer families (§ rule format)
 │  └─ merchants/*.yaml        # ~5 merchant families
+├─ knowledge/
+│  ├─ family/*.yaml           # versioned reviewed consumer pattern cards
+│  └─ merchants/*.yaml        # versioned reviewed merchant workflow cards
 ├─ prompts/
 │  ├─ system_safety.txt       # shared system prompt (output contract + prohibitions)
 │  ├─ family.txt              # consumer task template
@@ -379,10 +391,10 @@ class LLMProvider(Protocol):
     async def analyze(self, *, system: str, user: str, schema: dict, max_output_tokens: int) -> LLMResponse: ...
 ```
 - `openai_compat.py` — call the host with the **OpenAI Chat Completions** API (`openai` SDK, `base_url=LLM_BASE_URL`, `api_key=LLM_API_KEY`, `model=LLM_MODEL`), **JSON mode** via `response_format={"type":"json_object"}`. Map the result into `DraftOutput`. `max_output_tokens` bounded (default 600). Temperature 0.2. One retry on transient error. This single adapter serves **Qwen, DeepSeek, or a self-hosted endpoint** — only env changes, no code. Pick a host with a **DPA + no-retention / no-training**; the request still sends only minimized text.
-- `prompt.py` — `build_prompt(face, language, minimized_text, rule_hits, signals) -> (system, user)`:
+- `prompt.py` — `build_prompt(face, language, minimized_text, rule_hits, signals, knowledge_cards) -> (system, user)`:
   - **system** = contents of `prompts/system_safety.txt` (the shared output contract + prohibitions, see §9 list).
-  - **user** = the face template (`prompts/{face}.txt`) filled with: target language, the minimized text, a bulleted list of rule hits rendered as their **neutral English `desc`** (the `loader` builds a `rule_id → desc` map from the YAML), the structured signals, and the instruction to return JSON matching the schema and to **write the final wording in the target language/script.** (The LLM translates/expresses the `desc`; it must not erase a hit or add one not supplied.)
-- **Cost accounting** (`obs/cost.py`): `cost_usd = input_tokens/1e6 * IN_RATE + output_tokens/1e6 * OUT_RATE` using `LLM_IN_RATE_PER_M` / `LLM_OUT_RATE_PER_M`. Set the rates from the chosen host's Qwen pricing.
+  - **user** = the face template (`prompts/{face}.txt`) filled with: target language, the minimized text, a bulleted list of rule hits rendered as their **neutral English `desc`** (the `loader` builds a `rule_id → desc` map from the YAML), structured signals, zero to three reviewed knowledge cards/cases, and the instruction to return JSON matching the schema and to **write the final wording in the target language/script.** The LLM must preserve every rule-grade fact, may add only observations grounded in the submitted text, and must treat retrieved cases as examples rather than proof.
+- **Cost accounting** (`obs/cost.py`): aggregate semantic-router and answer-model tokens, then compute `cost_usd = input_tokens/1e6 * IN_RATE + output_tokens/1e6 * OUT_RATE` using `LLM_IN_RATE_PER_M` / `LLM_OUT_RATE_PER_M`. Set the rates from the chosen host's Qwen pricing.
 
 ### Prompt hard constraints (must appear in `system_safety.txt`, all enforced again by the validator §9)
 - Ground every red flag in the supplied text/signals; invent nothing.
@@ -394,7 +406,28 @@ class LLMProvider(Protocol):
 - NEVER invent facts, policies, contact details, prices, or legal conclusions.
 - (Avvalo Merchants) NEVER state that money arrived/was received based on a screenshot.
 
-### 8.1 Model selection — current default + eval gate
+### 8.1 Knowledge retrieval contract
+
+```python
+async def retrieve_knowledge(
+    *,
+    face_id: str,
+    minimized_text: str,
+    rule_hits: list[RuleHit],
+    signals: list[Signal],
+    router: KnowledgeRouter | None = None,
+) -> RetrievalResult: ...  # validated 0-3 cards; never raw content persistence
+```
+
+- `knowledge/loader.py` loads only schema-valid, `status=approved`, versioned cards for the selected face and exposes an allowlist by card ID.
+- `knowledge/retrieve.py` first maps `rule_ids` and signal kinds deterministically, then applies broad multilingual retrieval aliases. Aliases retrieve context; they do not emit rule hits or red flags.
+- `knowledge/router.py` is optional fallback recall. It sees minimized content only and can return at most three IDs from the supplied allowlist plus `unmatched`; backend code rejects invented/disabled IDs.
+- Lookup returns no more than three cards/cases. If nothing matches, the answer LLM still runs with an empty knowledge block.
+- Approved case derivatives are minimized, manually reviewed, and tied to a card. Raw submissions and raw story records are never runtime knowledge.
+- Events may record `knowledge_card_ids`, `reviewed_case_ids`, `retrieval_mode`, `retrieval_status`, and component versions. They never record content or the router's generated query/explanation.
+- Knowledge/router outage degrades to the remaining rule/signal context. Answer-model outage uses the provider fallback/degraded behavior in [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) §5.
+
+### 8.2 Model selection — current default + eval gate
 
 **Research snapshot, 2026-07-01:** use **OpenRouter first** for hosted-model validation, with Zero Data Retention enforced. The current best default to evaluate is `qwen/qwen3-235b-a22b-2507`: OpenRouter lists it as a multilingual Qwen3 235B A22B Instruct model, non-thinking mode, OpenAI-compatible, with `response_format` / structured-output support, and current list pricing around `$0.09/M` input and `$0.10/M` output tokens. At Avvalo's prompt shape (~1k input tokens, bounded ≤600 output tokens), this is far below the `$0.03/check` hard ceiling.
 
@@ -424,7 +457,7 @@ Before locking any model, run `tools/eval_models.py` (self-contained; see its he
 
 ## 9. Safety validator (`engine/validate.py`) — safety-critical, specify exactly
 
-`validate(draft: DraftOutput, signals: list[Signal], rule_hits: list[RuleHit], language: Language) -> ValidationResult`
+`validate(draft: DraftOutput, signals: list[Signal], rule_hits: list[RuleHit], knowledge_card_ids: list[str], language: Language) -> ValidationResult`
 
 Run these **deterministic** checks over the concatenated draft strings:
 
@@ -433,6 +466,7 @@ Run these **deterministic** checks over the concatenated draft strings:
 3. **Unsafe instruction** — reject if the draft tells the user to open/click/follow the link, scan the QR, call/write the number from the message, or "reply to check." (Keyword patterns per language.)
 4. **Secret leakage** — reject if the draft contains a full PAN (13–19 digit run), an OTP-looking 4–8 digit code labeled as code, or "password/parol/пароль" followed by a value.
 5. **Structure** — reject if `verify` or `ask` is empty. `red_flags` may be empty **only** on the no-signal path (below); otherwise reject if empty. A block exceeding 3 bullets is **truncated** (not rejected) for length.
+6. **Knowledge grounding** — reject invented knowledge IDs, claims that a retrieved case proves identity/intent, and claims that Avvalo checked an external database or organization when no authoritative lookup stage supplied that fact. Retrieved cards do not force a red flag by themselves.
 
 **Determining `no_signal`:** set `no_signal = (len(rule_hits) == 0 and len(draft.red_flags) == 0)`. On this path `format.py` prepends the mandatory *"No clear warning signs were found in the content provided. This does not prove that the situation is safe."* lead (localized) and still renders `verify`/`ask`. The prompt MUST tell the LLM that an empty `red_flags` list is correct when nothing concrete is found — it must never invent a flag to fill the block.
 
@@ -564,12 +598,15 @@ volumes: { pg: {}, ollama_models: {} }
 **T13 — Web client (bot + web).** A FastAPI app in the same process, sharing the engine and DB. `GET /` renders a page with a language selector, a face toggle (Avvalo default), a consent gate, a text box, and an image upload. `POST /check` builds a `CheckInput` and calls **the same `run_check()`** — no analysis logic in the web layer — and returns the result as an HTMX partial. `GET /privacy`. Image upload is gated by **Cloudflare Turnstile**; all checks are **IP/session rate-limited** (reuse the `rate_limit` table with a web `user_key` = HMAC of a signed session cookie). Reuse `bot/texts.py` for the three languages. Web is **anonymous** — no accounts, no history. *(Can be built any time after T10; it adds zero engine logic.)*
 *Accept:* a web check returns the **same structured output as the bot** for the same input (assert both paths call `run_check`); image upload fails without a valid Turnstile token; the per-day limit refuses extra checks; **no submitted content is persisted** (same guarantee as the bot — verified by test); the consent notice is shown before the first check; all three languages render.
 
+**T14 — Knowledge-grounded semantic analysis.** Implement §8.1 and [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md): approved versioned cards, deterministic rule/signal/cue retrieval, optional allowlisted semantic router for empty/ambiguous matches, prompt injection, grounding validation, privacy-safe IDs/versions, and provider/degraded failure paths.
+*Accept:* zero-rule input still reaches the answer model; the Russian `прокуратура` regression retrieves the authority card without treating the word alone as proof; rule-triggered cards are mandatory; invalid router IDs are rejected; no-match and lookup-down paths remain useful; model/provider failure does not become `no_signal`; Telegram and web both exercise the same tests through `run_check()`; persistence/log tests prove zero content leakage.
+
 ---
 
 ## 14. Cost & performance budget (enforce in code)
 
 - Model = Flash-tier; `max_output_tokens` ≤ 600; temperature 0.2; **one** retry max.
-- Bounded prompt: send only minimized text + rule hits + signals (not the raw image, not history).
+- Bounded prompt: send only minimized text + rule hits + signals + at most three reviewed knowledge cards/cases (not the raw image, not history, not unrestricted database rows).
 - **Targets:** blended ≤ $0.015/check, hard ceiling ≤ $0.03; single check ≤ $0.05 after one retry.
 - **Latency:** p90 ≤ 30s text, ≤ 45s image. Wrap OCR and LLM calls in `asyncio.wait_for`; on timeout → `CheckStatus.timeout`, offer one retry, give no safety conclusion.
 - Record `input_tokens, output_tokens, cost_usd, latency_ms, ocr_ms, llm_ms` on every event. A daily metrics line shows blended cost; alert if it drifts above ceiling.
@@ -582,6 +619,7 @@ volumes: { pg: {}, ollama_models: {} }
 **Done when** all §13 acceptance criteria pass and:
 - both faces run on the identical pipeline (only rule pack + template differ);
 - **both channels (Telegram bot + web app) call the same `run_check()` and return matching output;**
+- zero-rule checks still receive semantic analysis; relevant reviewed knowledge is retrieved by validated IDs and never represented as proof;
 - 5 family + ≥3 merchants golden examples pass; safety test set fully blocked;
 - no submitted content in any DB/log/backup (verified by test + manual log inspection) — on bot **and** web;
 - web image upload is captcha-gated and all web checks are rate-limited;

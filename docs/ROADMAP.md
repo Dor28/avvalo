@@ -12,7 +12,7 @@ Read, in order: this doc → [PRODUCT_VISION.md](PRODUCT_VISION.md) → [PRODUCT
 
 1. **Never persist submitted content** — with exactly **one new sanctioned exception**: task R3's opt-in story capture stores the **minimized** text only, after explicit user consent, pending founder review. Nothing else changes. If you are about to store any other user-supplied string, stop.
 2. **Safety output contract:** no verdicts ("safe"/"scammer"/"fraud confirmed"), no risk scores, no claims of checking external databases, no raw contacts/PII in output.
-3. **Pipeline order stays:** rules on raw local text → signals → minimize → LLM. One engine, all channels; no analysis logic in a client.
+3. **Pipeline order stays:** rules/signals on raw local text → minimize → validated knowledge retrieval → answer LLM → validator. Rules are facts, not a gate; zero-rule inputs still reach semantic analysis. One engine, all channels; no analysis logic in a client. Full contract: [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md).
 4. **Do not touch** the safety prompts or weaken rule packs without flagging; extend, don't rewrite.
 5. **Do not build** anything on the do-not list ([PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md) §7): person lookup, open forum, payments, mobile app, new faces.
 6. Work **one task at a time**, in order; each task ends with its acceptance criteria demonstrably passing (tests where code, artifacts where content).
@@ -39,6 +39,13 @@ Deliverable: a short `docs/ops/SMOKE_2026-07.md` (or session report) recording p
 ---
 
 ## Phase B — Launch features (build in this order)
+
+### R0. Knowledge-grounded semantic analysis — ~3–5 days · blocks wider alpha
+**Status:** [ ] Contract locked on 2026-07-15; implementation and code audit required.
+
+Implement [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md): versioned approved pattern cards; deterministic `face + rule_ids + signals + retrieval cues` lookup; allowlisted semantic routing only when deterministic retrieval is empty/ambiguous; at most three cards/cases in the answer prompt; grounding validation; privacy-safe card/version metadata; and provider/degraded failure behavior.
+
+**Acceptance:** an exact zero-rule regression (`Мне позвонили и сказали, что из прокуратуры`) still receives semantic analysis and retrieves the authority card without converting the word alone into proof; rule-triggered cards cannot be erased; no-match, invalid-ID, retrieval-down, and provider-down tests pass; both channels use the same `run_check()`; no content reaches persistence or logs.
 
 ### R1. "Forward this warning" share button — ~0.5 day
 **Status:** [x] Code complete on branch `launch-features` (2026-07-06); do not merge to `main` until Phase A smoke evidence is recorded.
@@ -115,4 +122,4 @@ Set calendar dates for these when Phase B lands; each gate has a pre-committed c
 
 ## Definition of done for this roadmap
 
-Phase A all green · R1–R4 + R6 live in production (R5 memo written) · channel exists with ≥8 posts · alpha recruiting started · ≥10 merchant interviews logged · IT Park application submitted. At that point, write the next roadmap **from evidence** — usage data, interview notes, and gate outcomes — not from strategy discussion. The failure mode to avoid is documented in [PRODUCT_VISION.md](PRODUCT_VISION.md) §8: more documents than users.
+Phase A all green · R0–R4 + R6 live in production (R5 memo written) · channel exists with ≥8 posts · alpha recruiting started · ≥10 merchant interviews logged · IT Park application submitted. At that point, write the next roadmap **from evidence** — usage data, interview notes, and gate outcomes — not from strategy discussion. The failure mode to avoid is documented in [PRODUCT_VISION.md](PRODUCT_VISION.md) §8: more documents than users.

@@ -1,26 +1,27 @@
-# Avvalo — Launch-Phase Executor Prompt (R1–R4 + R6)
+# Avvalo — Launch-Phase Executor Prompt (R0–R4 + R6)
 
 > Copy everything below the line into the session that will build the launch features, or just tell it:
-> *"Read docs/LAUNCH_EXECUTOR_PROMPT.md and execute it, starting at R1."*
+> *"Read docs/LAUNCH_EXECUTOR_PROMPT.md and execute it, starting at R0."*
 > It assumes repository access. Architecture decisions here were made 2026-07-06 against the real code; where this doc and [ROADMAP.md](ROADMAP.md) disagree on mechanics, this doc wins (it corrects stale facts); where they disagree on *scope or safety*, ROADMAP and [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) win.
 
 ---
 
-You are the implementing engineer for **Avvalo** (see `CLAUDE.md` for the system map). v1 is **deployed to production** (bot @Avvalo_official_bot + web); there are zero real users yet. You are building the **launch feature set**: the viral loop, the findability surface, the consented story corpus, the trend export, and one engine upgrade (URL reputation). Everything reuses the existing engine; nothing forks it.
+You are the implementing engineer for **Avvalo** (see `CLAUDE.md` for the system map). v1 is **deployed to production** (bot @Avvalo_official_bot + web); there are zero real users yet. You are building the **launch feature set**: the knowledge-grounded semantic pipeline, viral loop, findability surface, consented story corpus, trend export, and URL-reputation upgrade. Everything reuses the existing engine; nothing forks it.
 
 ## Read first, in order
-1. `docs/ROADMAP.md` — the task list this prompt executes (R1–R4; R6 is added here).
-2. `docs/PRODUCT_GUIDE.md` — safety rules; they override everything.
-3. `docs/ML_RESEARCH.md` §3–§4, §7 — why R3 and R6 are shaped the way they are.
-4. Skim `docs/PRODUCT_VISION.md` §4 and `docs/PRODUCT_HORIZONS.md` §7 for the why.
+1. `docs/ROADMAP.md` — the task list this prompt executes (R0–R4; R6 is added here).
+2. `docs/AI_KNOWLEDGE_PIPELINE.md` — the R0 rules + retrieval + LLM execution contract.
+3. `docs/PRODUCT_GUIDE.md` — safety rules; they override everything.
+4. `docs/ML_RESEARCH.md` §3–§4, §7 — why R3 and R6 are shaped the way they are.
+5. Skim `docs/PRODUCT_VISION.md` §4 and `docs/PRODUCT_HORIZONS.md` §7 for the why.
 
 ## Non-negotiables (unchanged from the build era, one new exception)
 - **Never persist or log submitted content** — with exactly **one sanctioned exception**: R3 stores the **minimized** story text after explicit user consent. Nothing else. If you are about to store any other user-supplied string, stop.
 - **No verdicts, no risk scores, no "checked a database" claims** — except R6's blocklist line, which is allowed *because* it is a sourced statement of fact about a URL (an artifact, not a person), phrased as "appears in a public phishing blocklist", never "this is a scam".
-- **Pipeline order stays:** rules on raw local text → signals → minimize → LLM → validate. R6 inserts a *local* lookup between rules and minimize; it sends nothing anywhere.
+- **Pipeline order stays:** rules/signals on raw local text → optional authoritative local lookup (R6) → minimize → validated knowledge retrieval (R0) → answer LLM → validate. Rules are mandatory facts, not an answer gate; zero-rule inputs still reach semantic analysis.
 - Every user-facing string in **all three languages** (`uz_latn`, `uz_cyrl`, `ru`).
 - Every tunable via `Settings` (`app/config.py`) + `.env.example`. Providers injectable for tests.
-- **Do not touch** `prompts/*` safety wording or weaken rule packs; extend only.
+- **Do not weaken** `prompts/*` safety wording or rule packs. R0 may add reviewed-knowledge placeholders/instructions, but the existing prohibitions remain intact.
 - Do-not-build list unchanged: person lookup, open forum, payments, mobile app, new faces, deepfake/image-forensics claims.
 
 ## Branch & deploy discipline (critical)
@@ -32,6 +33,16 @@ You are the implementing engineer for **Avvalo** (see `CLAUDE.md` for the system
 - `app/bot/keyboards.py` already has a placeholder share button (`DEFAULT_SHARE_URL = "https://t.me/share/url?text=Avvalo"`, used in `post_check_keyboard`). R1 replaces it, not adds alongside it.
 - `CheckResult.check_id` is already populated by the pipeline after event recording, and `check_event.rule_ids` is already persisted — R1 rides on these.
 - Config already has `notice_version = "2026-06-24-v1"` and `operator_alert_chat_id` (unused so far — R3 uses it).
+
+---
+
+## R0 — Knowledge-grounded semantic analysis (~3–5 days; blocks wider alpha)
+
+**Goal:** every valid in-scope submission reaches semantic analysis, while relevant Avvalo knowledge and reviewed cases ground the response without becoming a person-level accusation or proof claim.
+
+**Architecture:** implement `docs/AI_KNOWLEDGE_PIPELINE.md` and T14 in `docs/V1_TECHNICAL_PLAN.md`. Add versioned approved cards under `knowledge/<face>/`, deterministic rule/signal/cue retrieval, an optional allowlisted semantic router for empty/ambiguous retrieval, prompt injection of at most three cards/cases, knowledge-grounding validation, privacy-safe IDs/versions, and explicit lookup/provider degradation. Do not add a vector database for the alpha.
+
+**Acceptance:** exact zero-rule `прокуратура` regression; mandatory-card, no-match, invalid-ID, retrieval-down, provider-down, and no-content-persistence tests; both Telegram and web continue to call the same `run_check()`.
 
 ---
 

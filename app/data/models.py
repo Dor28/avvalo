@@ -58,6 +58,15 @@ class CheckEvent(Base):
     input_type: Mapped[str] = mapped_column(Text, nullable=False)
     language: Mapped[str] = mapped_column(Text, nullable=False)
     rule_ids: Mapped[list[str]] = mapped_column(RULE_IDS_TYPE, nullable=False, default=list)
+    knowledge_card_ids: Mapped[list[str]] = mapped_column(
+        RULE_IDS_TYPE, nullable=False, default=list
+    )
+    reviewed_case_ids: Mapped[list[str]] = mapped_column(
+        RULE_IDS_TYPE, nullable=False, default=list
+    )
+    retrieval_mode: Mapped[str | None] = mapped_column(Text, nullable=True)
+    retrieval_status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    kb_version: Mapped[str | None] = mapped_column(Text, nullable=True)
     no_signal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
     error_class: Mapped[str | None] = mapped_column(Text, nullable=True)

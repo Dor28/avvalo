@@ -17,4 +17,7 @@ FACTS ALREADY DETECTED (treat as true; explain them and build on them; do not er
 STRUCTURED SIGNALS (extra grounded hints; may be empty):
 {signals}
 
+REVIEWED KNOWLEDGE GUIDANCE (backend-selected; may be empty; guidance is not proof):
+{knowledge}
+
 Now write the JSON response in {language}, following the output format and the absolute rules. If there are no concrete warning signs, return "red_flags": [] and still give useful "verify" and "ask" items — never imply the message is safe.

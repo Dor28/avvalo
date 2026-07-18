@@ -107,6 +107,32 @@ def test_log_event_accepts_metadata_and_refuses_content(callable_or_skip) -> Non
         log_event("check_failed", face="family", error_class="+998 90 123 45 67")
 
 
+def test_kb_version_is_exempt_from_heuristics_but_held_to_a_strict_shape(
+    callable_or_skip,
+) -> None:
+    """kb_version is operator-controlled metadata from knowledge/version.yaml, so
+    date-based versions must not trip the phone-number heuristic. The exemption
+    swaps that heuristic for a *stricter* rule -- it must not become a hole
+    through which free-form content reaches the log."""
+
+    log_event = callable_or_skip("app.obs.events", "log_event")
+
+    # Date-based versions are accepted (they look phone-like to the heuristics).
+    assert log_event("check_completed", kb_version="2026-07-15-v1")["kb_version"] == "2026-07-15-v1"
+    log_event("check_completed", kb_version="1.0.0")
+
+    # ...but the field still cannot carry free-form content.
+    for bad in (
+        "contact me at a@b.com",  # whitespace + email
+        "https://evil.example/x",  # url punctuation
+        "+998 90 123 45 67",  # whitespace
+        "x" * 81,  # over the length cap (matches VERSION_RE in app/data/repo.py)
+        "",  # empty
+    ):
+        with pytest.raises(ValueError):
+            log_event("check_completed", kb_version=bad)
+
+
 def test_log_error_accepts_metadata_and_refuses_content() -> None:
     log_error("llm", "LLMProviderError", face="family", attempt=1)
 

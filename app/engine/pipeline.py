@@ -18,6 +18,13 @@ from app.config import Settings, get_settings
 from app.data import repo
 from app.engine.faces import FACES, Face
 from app.engine.format import format_fallback, format_result, format_status_message
+from app.engine.knowledge import (
+    KnowledgeCard,
+    KnowledgeRouter,
+    KnowledgeStore,
+    RetrievalResult,
+    retrieve_knowledge,
+)
 from app.engine.language import resolve_content_language
 from app.engine.llm import (
     LLMProvider,
@@ -62,7 +69,10 @@ async def run_check(
     session: AsyncSession | None = None,
     *,
     llm_provider: LLMProvider | None = None,
+    fallback_llm_provider: LLMProvider | None = None,
     ocr_provider: OCRProvider | None = None,
+    knowledge_store: KnowledgeStore | None = None,
+    knowledge_router: KnowledgeRouter | None = None,
     settings: Settings | None = None,
     rate_limit_override: int | None = None,
 ) -> CheckResult:
@@ -86,7 +96,10 @@ async def run_check(
         result = await _run_stages(
             check_input,
             llm_provider=llm_provider,
+            fallback_llm_provider=fallback_llm_provider,
             ocr_provider=ocr_provider,
+            knowledge_store=knowledge_store,
+            knowledge_router=knowledge_router,
             settings=settings,
         )
     result.latency_ms = max(0, round((perf_counter() - started) * 1000))
@@ -165,6 +178,8 @@ def _log_check_finished(
         "face": check_input.face,
         "input_tokens": result.input_tokens,
         "input_type": result.input_type,
+        "kb_version": result.kb_version,
+        "knowledge_card_ids": result.knowledge_card_ids,
         "language": result.language,
         "latency_ms": result.latency_ms,
         "limit": _event_limit(check_input, limit_override, settings),
@@ -174,6 +189,9 @@ def _log_check_finished(
         "ocr_ms": result.ocr_ms,
         "output_tokens": result.output_tokens,
         "rule_ids": result.rule_ids,
+        "retrieval_mode": result.retrieval_mode,
+        "retrieval_status": result.retrieval_status,
+        "reviewed_case_ids": result.reviewed_case_ids,
         "safety_blocked": result.safety_blocked,
         "status": result.status,
     }
@@ -195,7 +213,10 @@ async def _run_stages(
     check_input: CheckInput,
     *,
     llm_provider: LLMProvider | None,
+    fallback_llm_provider: LLMProvider | None,
     ocr_provider: OCRProvider | None,
+    knowledge_store: KnowledgeStore | None,
+    knowledge_router: KnowledgeRouter | None,
     settings: Settings | None,
 ) -> CheckResult:
     if check_input.face not in FACES:
@@ -222,18 +243,28 @@ async def _run_stages(
     )
     rule_hits, signals = run_rules(text, check_input.face)
     minimized_text = minimize(text, signals)
+    retrieval = await retrieve_knowledge(
+        face_id=check_input.face,
+        minimized_text=minimized_text,
+        rule_hits=rule_hits,
+        signals=signals,
+        store=knowledge_store,
+        router=knowledge_router,
+    )
     llm_result = await _call_llm(
         effective_input,
         minimized_text=minimized_text,
         rule_hits=rule_hits,
         signals=signals,
+        knowledge_cards=list(retrieval.cards),
         llm_provider=llm_provider,
+        fallback_llm_provider=fallback_llm_provider,
         settings=settings,
         ocr_ms=content.ocr_ms,
         ocr_confidence=content.ocr_confidence,
     )
     if llm_result.status is not None:
-        return llm_result.status
+        return _attach_retrieval(llm_result.status, retrieval)
 
     assert llm_result.response is not None
     draft = llm_result.response.draft
@@ -245,6 +276,11 @@ async def _run_stages(
         status,
         text=format_result(draft, effective_input.language, no_signal=no_signal),
         rule_ids=[hit.rule_id for hit in rule_hits],
+        knowledge_card_ids=retrieval.knowledge_card_ids,
+        reviewed_case_ids=retrieval.reviewed_case_ids,
+        retrieval_mode=retrieval.mode,
+        retrieval_status=retrieval.status,
+        kb_version=retrieval.kb_version,
         no_signal=no_signal,
         ocr_ms=content.ocr_ms,
         ocr_confidence=content.ocr_confidence,
@@ -402,7 +438,9 @@ async def _call_llm(
     minimized_text: str,
     rule_hits: list[RuleHit],
     signals: list[Signal],
+    knowledge_cards: list[KnowledgeCard],
     llm_provider: LLMProvider | None,
+    fallback_llm_provider: LLMProvider | None,
     settings: Settings | None,
     ocr_ms: int | None,
     ocr_confidence: float | None,
@@ -412,6 +450,7 @@ async def _call_llm(
     if provider is None:
         resolved_settings = resolved_settings or get_settings()
         provider = OpenAICompatibleProvider.from_settings(resolved_settings)
+    fallback_provider = fallback_llm_provider or _configured_fallback_provider(resolved_settings)
 
     system, user = build_prompt(
         face_id=check_input.face,
@@ -419,6 +458,7 @@ async def _call_llm(
         minimized_text=minimized_text,
         rule_hits=rule_hits,
         signals=signals,
+        knowledge_cards=knowledge_cards,
     )
     started = perf_counter()
     max_output_tokens = (
@@ -446,23 +486,55 @@ async def _call_llm(
                 llm_timeout_s,
             )
         except (TimeoutError, LLMProviderError) as exc:
-            return _llm_failure(
-                check_input,
-                exc,
-                started=started,
-                attempt=attempt,
-                timeout_s=llm_timeout_s,
-                rule_hits=rule_hits,
-                input_tokens=total_input_tokens,
-                output_tokens=total_output_tokens,
-                settings=resolved_settings,
-                ocr_ms=ocr_ms,
-                ocr_confidence=ocr_confidence,
-            )
+            if fallback_provider is None:
+                return _llm_failure(
+                    check_input,
+                    exc,
+                    started=started,
+                    attempt=attempt,
+                    timeout_s=llm_timeout_s,
+                    rule_hits=rule_hits,
+                    input_tokens=total_input_tokens,
+                    output_tokens=total_output_tokens,
+                    settings=resolved_settings,
+                    ocr_ms=ocr_ms,
+                    ocr_confidence=ocr_confidence,
+                )
+            _log_llm_error(check_input, exc, attempt=attempt, timeout_s=llm_timeout_s)
+            try:
+                response = await _with_timeout(
+                    fallback_provider.analyze(
+                        system=attempt_system,
+                        user=user,
+                        schema=draft_output_schema(),
+                        max_output_tokens=max_output_tokens,
+                    ),
+                    llm_timeout_s,
+                )
+            except (TimeoutError, LLMProviderError) as fallback_exc:
+                return _llm_failure(
+                    check_input,
+                    fallback_exc,
+                    started=started,
+                    attempt=attempt,
+                    timeout_s=llm_timeout_s,
+                    rule_hits=rule_hits,
+                    input_tokens=total_input_tokens,
+                    output_tokens=total_output_tokens,
+                    settings=resolved_settings,
+                    ocr_ms=ocr_ms,
+                    ocr_confidence=ocr_confidence,
+                )
 
         total_input_tokens += response.input_tokens
         total_output_tokens += response.output_tokens
-        validation = validate(response.draft, signals, rule_hits, check_input.language)
+        validation = validate(
+            response.draft,
+            signals,
+            rule_hits,
+            check_input.language,
+            knowledge_card_ids=[card.id for card in knowledge_cards],
+        )
         if validation.ok:
             safe_response = LLMResponse(
                 draft=validation.draft,
@@ -561,6 +633,43 @@ def _llm_failure(
     )
 
 
+def _log_llm_error(
+    check_input: CheckInput,
+    exc: Exception,
+    *,
+    attempt: int,
+    timeout_s: float,
+) -> None:
+    fields: dict[str, object] = {"face": check_input.face, "attempt": attempt}
+    error_class = getattr(exc, "error_code", None) or type(exc).__name__
+    if isinstance(exc, TimeoutError):
+        fields["timeout_s"] = timeout_s
+    else:
+        status_code = getattr(exc, "status_code", None)
+        if status_code is not None:
+            fields["status_code"] = status_code
+    log_error(stage="llm", error_type=error_class, **fields)
+
+
+def _configured_fallback_provider(settings: Settings | None) -> LLMProvider | None:
+    if settings is None:
+        return None
+    api_key = settings.llm_fallback_api_key
+    if not (
+        settings.llm_fallback_base_url
+        and api_key is not None
+        and api_key.get_secret_value()
+        and settings.llm_fallback_model
+    ):
+        return None
+    return OpenAICompatibleProvider(
+        base_url=settings.llm_fallback_base_url,
+        api_key=api_key,
+        model=settings.llm_fallback_model,
+        timeout_s=settings.llm_timeout_s,
+    )
+
+
 def _retry_system_prompt(system: str, reason: str) -> str:
     return (
         f"{system}\n\n"
@@ -598,6 +707,11 @@ def _result(
     *,
     text: str | None = None,
     rule_ids: list[str] | None = None,
+    knowledge_card_ids: list[str] | None = None,
+    reviewed_case_ids: list[str] | None = None,
+    retrieval_mode: str | None = None,
+    retrieval_status: str | None = None,
+    kb_version: str | None = None,
     no_signal: bool = False,
     safety_blocked: bool = False,
     error_class: str | None = None,
@@ -612,6 +726,11 @@ def _result(
         status=status,
         text=text,
         rule_ids=rule_ids or [],
+        knowledge_card_ids=knowledge_card_ids or [],
+        reviewed_case_ids=reviewed_case_ids or [],
+        retrieval_mode=retrieval_mode,
+        retrieval_status=retrieval_status,
+        kb_version=kb_version,
         no_signal=no_signal,
         safety_blocked=safety_blocked,
         language=check_input.language,
@@ -637,6 +756,11 @@ async def _record_event(
         language=result.language.value,
         status=result.status.value,
         rule_ids=result.rule_ids,
+        knowledge_card_ids=result.knowledge_card_ids,
+        reviewed_case_ids=result.reviewed_case_ids,
+        retrieval_mode=result.retrieval_mode,
+        retrieval_status=result.retrieval_status,
+        kb_version=result.kb_version,
         no_signal=result.no_signal,
         error_class=result.error_class,
         ocr_confidence=result.ocr_confidence,
@@ -647,4 +771,16 @@ async def _record_event(
         output_tokens=result.output_tokens,
         cost_usd=result.cost_usd,
         safety_blocked=result.safety_blocked,
+    )
+
+
+def _attach_retrieval(result: CheckResult, retrieval: RetrievalResult) -> CheckResult:
+    return result.model_copy(
+        update={
+            "knowledge_card_ids": retrieval.knowledge_card_ids,
+            "reviewed_case_ids": retrieval.reviewed_case_ids,
+            "retrieval_mode": retrieval.mode,
+            "retrieval_status": retrieval.status,
+            "kb_version": retrieval.kb_version,
+        }
     )

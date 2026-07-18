@@ -1,6 +1,6 @@
 # Avvalo — Validation Spec
 
-> **Status:** Ready to build · validation version 1.0 · 2026-06-21  
+> **Status:** Active acceptance contract · validation version 1.1 · 2026-07-15
 > **Authority:** Implements the Avvalo micro-MVP defined in [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). If this document conflicts with the guide's vision or safety rules, the guide wins.  
 > **Experiment length:** 2–4 weeks to build, followed by a 21-day measured private alpha.
 
@@ -43,6 +43,7 @@ The measured alpha runs for **21 days** once the minimum cohort is recruited. If
 - Local/on-prem OCR for images.
 - PII minimization before any external model call.
 - A small deterministic rule library for the five launch patterns in §7.
+- Versioned, reviewed knowledge cards selected from rules, signals, and broad retrieval cues; an allowlisted semantic router may fill zero-rule/ambiguous gaps.
 - LLM-assisted explanation constrained to the fixed output contract in §6.
 - Categorical feedback, privacy-safe analytics, cost measurement, and deletion requests.
 - Five full checks per user per day during the alpha.
@@ -98,11 +99,13 @@ If the input is empty, illegible, unsupported, or lacks enough context, the bot 
 1. Download the input into an encrypted ephemeral workspace.
 2. Strip EXIF/GPS metadata from images.
 3. Run OCR locally for images; do not send the image to a cloud OCR service.
-4. Detect and minimize names, phone numbers, card/account numbers, usernames, email addresses, exact addresses, and other direct identifiers.
-5. Run deterministic rules over the locally held text.
-6. Send only minimized text, rule hits, requested language, and the output schema to the LLM. Never send the raw image.
-7. Validate the draft against the prohibited-output rules in §6.
-8. Return the response, then delete the submitted content and derived text under §9.
+4. Run deterministic rules and structural extractors over the raw locally held text.
+5. Detect and minimize names, phone numbers, card/account numbers, usernames, email addresses, exact addresses, secrets, and other direct identifiers.
+6. Select zero to three reviewed knowledge cards/cases from rule IDs, signals, and broad retrieval cues. If deterministic retrieval is empty or ambiguous, an allowlisted semantic router may classify the minimized text; backend code validates every returned ID.
+7. Send only minimized text, rule hits, structured signals, selected reviewed knowledge, requested language, and the output schema to the answer LLM. Never send the raw image or raw identifiers.
+8. The answer LLM analyzes the whole submitted meaning even when no rule or knowledge item matches. It may add only observations grounded in the submitted content.
+9. Validate the draft against the prohibited-output and knowledge-grounding rules in §6.
+10. Return the response, then delete the submitted content and derived text under §9.
 
 ### Step 4 — Fixed response
 
@@ -133,6 +136,7 @@ Then show `Check another message` and a privacy-safe `Share Avvalo` button. The 
 
 - **Low OCR confidence:** ask the user to paste the important text; do not guess.
 - **Timeout or model failure:** say the check could not be completed and give no safety conclusion; allow one retry.
+- **Knowledge lookup or semantic-router failure:** continue with the remaining deterministic context and the answer LLM; do not invent a match or claim that the knowledge base was checked successfully.
 - **Daily limit reached:** do not accept or retain the new input; explain when the allowance resets.
 - **Unsupported media:** list the supported text/image formats.
 - **Potential immediate danger:** recommend contacting a trusted person or the relevant organization through an independently found official channel. Do not invent emergency contacts.
@@ -147,12 +151,14 @@ A build is ready for the private alpha only when all of the following are true:
 - Direct identifiers are minimized before the external model boundary.
 - Output follows the structure and safety rules in §6 in all three language forms.
 - The rules layer can detect the five launch patterns independently of the LLM.
+- Missing rule hits do not block the answer LLM; zero-rule paraphrases and new situations still receive a grounded analysis.
+- Relevant reviewed knowledge cards are injected by validated IDs; a retrieved card/case is never presented as proof about the current person or organization.
 - Low-confidence and failed checks do not imply that content is safe.
 - Feedback, latency, token use, and cost are recorded without submitted content.
 - `/privacy` explains processing and retention; `/delete_my_data` completes the deletion workflow.
 - Before recruiting beyond supervised internal testers, a licensed Uzbek lawyer reviews the alpha privacy notice, operator identity, and any foreign LLM processing path.
 - p90 response time in staging is no more than 30 seconds for text and 45 seconds for images.
-- Automated tests cover the five examples, “no clear warning signs,” PII minimization, timeout, low-OCR, and prohibited wording.
+- Automated tests cover the five examples, zero-rule semantic analysis, deterministic and semantic retrieval, invalid knowledge IDs, retrieval failure, “no clear warning signs,” PII minimization, timeout/provider fallback, low-OCR, and prohibited wording.
 
 ## 6. Output contract and safety guardrails
 

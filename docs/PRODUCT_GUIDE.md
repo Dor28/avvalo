@@ -1,7 +1,7 @@
 # Avvalo — Product Guide (single source of truth)
 
-> **Status:** Authoritative product direction (pre-build). Supersedes the accusation-graph model where they conflict.
-> **Last updated:** 2026-06-21 *(rev. 2 — founder-review corrections applied to §1a, §2, §3, §7, §9, §10, §11, §12, §16)*
+> **Status:** Authoritative product direction. Supersedes the accusation-graph model where they conflict.
+> **Last updated:** 2026-07-15 *(rev. 3 — knowledge-grounded AI pipeline locked in §3)*
 > **Owner:** Solo technical founder (Uzbekistan)
 > **Read first.** This is the consolidated guide. The older docs remain as background and reusable detail — see §15 for what carries over and what is retired.
 
@@ -62,8 +62,9 @@ All products are thin packages over **one backend**. Build the engine once; pack
             ┌──────────────────────────────────────────────┐
  Telegram ─▶│  intake (guided categories + text + images)  │
             │   → OCR (LOCAL / on-prem, v1) UZ + RU         │◀─ Web
-            │   → PII minimization → minimized text only    │
-            │   → hybrid analysis: rule checklist + LLM     │
+            │   → local rules/signals → PII minimization     │
+            │   → retrieve reviewed knowledge/cards          │
+            │   → LLM semantic analysis + safe validation    │
             │   → 🚩/✅/❓ output (no verdict, no naming)     │
             │   → no retention by default (v1)               │
             └──────────────────────────────────────────────┘
@@ -72,7 +73,8 @@ All products are thin packages over **one backend**. Build the engine once; pack
 - **Intake:** guided categories + freeform text + image upload (screenshots, photos).
 - **OCR — local-first ✅:** run **OCR locally / on-prem for v1**. A cloud OCR sees the *raw* screenshot (full cards, faces, third parties) *before* any redaction is possible — a cross-border-transfer problem SCCs don't fully solve (§12). Do OCR on home soil; send only minimized text onward.
 - **Minimization:** strip/minimize PII and **never store full card numbers**; strip EXIF/GPS from images; send only **genuinely minimized text** to the LLM.
-- **Hybrid analysis (the locally-tuned asset):** a deterministic, versioned, per-category **rule checklist** with UZ/RU keyword sets runs first and is authoritative; the **LLM** adds nuance and writes the UZ/RU output. The LLM never emits a score or a "safe/scammer" verdict. *(Engine detail: [PRODUCT_DESIGN.md](archive/PRODUCT_DESIGN.md) §8a.)*
+- **Hybrid analysis (the locally-tuned asset):** a deterministic, versioned, per-category **rule checklist** with UZ/RU keyword sets runs first and is authoritative; rules are high-precision facts, **not a gate for the LLM**. After minimization, the engine retrieves up to three relevant, reviewed knowledge cards/cases. The **LLM** still analyzes the full meaning when no rule or card matches, then writes the UZ/RU output. The validator prevents scores, person-level verdicts, invented database claims, and unsafe instructions. The executable contract is [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md).
+- **Knowledge roles stay separate:** broad retrieval cues may select a potentially relevant card without becoming a red flag; a reviewed case is guidance, never proof that the current situation or person matches it. Backend code validates allowlisted knowledge IDs instead of giving the model unrestricted database access.
 - **Pattern capture (later; useful asset — 🔬 not the moat):** the Avvalo micro-MVP retains **no submitted content or pattern examples by default**. After validation, Avvalo may retain only an **explicitly opt-in, manually reviewed, genuinely de-identified derivative** that improves the rules and powers community pattern-alerts (*"a new fake-delivery scam is circulating"*). The submitter's consent alone does **not** cover every person appearing in a forwarded message or screenshot. Useful — but **competitors can reproduce rules, anonymized examples, and alerts**, so don't mistake it for defensibility. The **stronger future moats** are: local **payment-provider integrations**, **merchant workflows + historical outcomes**, **labeled receipt/document examples**, **distribution partnerships**, and a **trusted UZ/RU safety brand**.
   - **De-identification caveat:** removing obvious identifiers (names/phones/cards/usernames/faces) does **not** guarantee de-identification — distinctive wording and transaction context can still re-identify a person. Do not retain the derivative unless manual review confirms that re-identification risk is acceptably low; treat every retained example as still-sensitive.
 
@@ -261,7 +263,7 @@ The §1 principle (verify the situation, not the person) **materially reduces** 
 | `USER_STORIES.md` *(removed from repo — git history)* | Background. Epic 1 (check), Epic 4 (education), and the cross-cutting consent/limits/redaction stories carry over; Epics 2/3/5/6 (reports, accusation-based alerts, accusation moderation, the accused) are retired with the graph. |
 | [SESSION_DECISIONS.md](archive/SESSION_DECISIONS.md) | History — includes the 2026-06-21 pivot entry. |
 
-**Carried-over engine = reusable code/spec.** The pivot changes *what we store and output about people*, not the OCR → minimize → rules + LLM → 🚩/✅/❓ pipeline.
+**Carried-over engine = reusable code/spec.** The pivot changes *what we store and output about people*, while the target engine is now OCR → local rules/signals → minimize → reviewed-knowledge retrieval → LLM → validator → 🚩/✅/❓. See [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md); updating the contract does not by itself prove the current code implements every stage.
 
 ---
 

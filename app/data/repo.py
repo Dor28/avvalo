@@ -38,6 +38,15 @@ CHECK_EVENT_STATUSES = {
 STORY_STATUSES = {"submitted", "approved", "rejected", "published"}
 RULE_ID_RE = re.compile(r"^[a-z][a-z0-9_.-]{0,79}$")
 ERROR_CLASS_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,79}$")
+VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
+RETRIEVAL_MODES = {"rule", "signal", "cue", "router", "none"}
+RETRIEVAL_STATUSES = {
+    "ok",
+    "empty",
+    "unavailable",
+    "router_unavailable",
+    "invalid_router_ids",
+}
 
 
 def _utcnow() -> datetime:
@@ -87,6 +96,11 @@ async def record_check_event(
     language: str,
     status: str,
     rule_ids: list[str] | None = None,
+    knowledge_card_ids: list[str] | None = None,
+    reviewed_case_ids: list[str] | None = None,
+    retrieval_mode: str | None = None,
+    retrieval_status: str | None = None,
+    kb_version: str | None = None,
     no_signal: bool = False,
     error_class: str | None = None,
     ocr_confidence: float | None = None,
@@ -106,6 +120,11 @@ async def record_check_event(
         language=language,
         status=status,
         rule_ids=rule_ids or [],
+        knowledge_card_ids=knowledge_card_ids or [],
+        reviewed_case_ids=reviewed_case_ids or [],
+        retrieval_mode=retrieval_mode,
+        retrieval_status=retrieval_status,
+        kb_version=kb_version,
         error_class=error_class,
     )
     event = CheckEvent(
@@ -116,6 +135,11 @@ async def record_check_event(
         input_type=input_type,
         language=language,
         rule_ids=list(rule_ids or []),
+        knowledge_card_ids=list(knowledge_card_ids or []),
+        reviewed_case_ids=list(reviewed_case_ids or []),
+        retrieval_mode=retrieval_mode,
+        retrieval_status=retrieval_status,
+        kb_version=kb_version,
         no_signal=no_signal,
         status=status,
         error_class=error_class,
@@ -146,6 +170,11 @@ def _validate_check_event_metadata(
     language: str,
     status: str,
     rule_ids: list[str],
+    knowledge_card_ids: list[str],
+    reviewed_case_ids: list[str],
+    retrieval_mode: str | None,
+    retrieval_status: str | None,
+    kb_version: str | None,
     error_class: str | None,
 ) -> None:
     if face not in CHECK_EVENT_FACES:
@@ -159,6 +188,15 @@ def _validate_check_event_metadata(
     for rule_id in rule_ids:
         if not RULE_ID_RE.fullmatch(rule_id):
             raise ValueError(f"Unsupported rule_id: {rule_id}")
+    for knowledge_id in [*knowledge_card_ids, *reviewed_case_ids]:
+        if not RULE_ID_RE.fullmatch(knowledge_id):
+            raise ValueError(f"Unsupported knowledge metadata id: {knowledge_id}")
+    if retrieval_mode is not None and retrieval_mode not in RETRIEVAL_MODES:
+        raise ValueError(f"Unsupported retrieval_mode: {retrieval_mode}")
+    if retrieval_status is not None and retrieval_status not in RETRIEVAL_STATUSES:
+        raise ValueError(f"Unsupported retrieval_status: {retrieval_status}")
+    if kb_version is not None and not VERSION_RE.fullmatch(kb_version):
+        raise ValueError(f"Unsupported kb_version: {kb_version}")
     if error_class is not None and not ERROR_CLASS_RE.fullmatch(error_class):
         raise ValueError(f"Unsupported error_class: {error_class}")
 

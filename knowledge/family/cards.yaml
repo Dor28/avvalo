@@ -1,0 +1,161 @@
+cards:
+  - id: family.credential_theft
+    face: family
+    version: 1.0.0
+    status: approved
+    reviewer: product-contract-2026-07-15
+    trigger_rule_ids: [fs.credential.otp, fs.credential.secret_docs]
+    trigger_signal_kinds: [otp_request, code]
+    retrieval_aliases:
+      uz_latn: [sms kod, tasdiqlash kodi, cvv, parol, pasport rasmi]
+      uz_cyrl: [смс код, тасдиқлаш коди, парол, паспорт расми]
+      ru: [код из смс, код подтверждения, cvv, пароль, фото паспорта]
+    mechanism: The sender asks for authentication secrets or identity documents through an ordinary conversation.
+    red_flags:
+      - A one-time code, password, card secret, or identity document is requested.
+      - The request uses a chat or call instead of a service's official secure flow.
+    verify_steps:
+      - Stop sharing information and open the official app or website independently.
+      - Contact the organization through a number or channel found independently.
+    questions:
+      - Why is this information needed outside the official app or office?
+      - Can the request be confirmed through an independently found official channel?
+    reviewed_case_ids: []
+
+  - id: family.urgency_secrecy
+    face: family
+    version: 1.0.0
+    status: approved
+    reviewer: product-contract-2026-07-15
+    trigger_rule_ids: [fs.urgency.deadline, fs.secrecy.tell_nobody]
+    trigger_signal_kinds: []
+    retrieval_aliases:
+      uz_latn: [hozir, shoshiling, hech kimga aytmang, sir saqla]
+      uz_cyrl: [ҳозир, шошилинг, ҳеч кимга айтманг, сир сақла]
+      ru: [срочно, немедленно, никому не говорите, держите в тайне]
+    mechanism: Time pressure or secrecy reduces the user's chance to verify independently.
+    red_flags:
+      - The sender demands action before there is time to check.
+      - The sender discourages contact with trusted people or official channels.
+    verify_steps:
+      - Pause the conversation and verify without using the sender's contact path.
+      - Ask a trusted person to review the situation before acting.
+    questions:
+      - Why must this be completed immediately?
+      - Why should independent verification or discussion be avoided?
+    reviewed_case_ids: []
+
+  - id: family.authority_impersonation
+    face: family
+    version: 1.0.0
+    status: approved
+    reviewer: product-contract-2026-07-15
+    trigger_rule_ids: [fs.authority.impersonation]
+    trigger_signal_kinds: []
+    retrieval_aliases:
+      uz_latn: [bank xodimi, bank xavfsizlik, politsiya, prokuratura, soliq]
+      uz_cyrl: [банк ходими, банк хавфсизлик, полиция, прокуратура, солиқ]
+      ru: [сотрудник банка, служба безопасности, полиция, прокуратура, прокуратуры, из прокуратуры, налоговая]
+    mechanism: A caller or sender invokes an institution, official role, or familiar identity without an independently verifiable channel.
+    red_flags:
+      - The claimed role is asserted inside the same unverified call or message.
+      - Authority or fear may be used to make ordinary verification feel forbidden.
+    verify_steps:
+      - End the contact and find the institution's official channel independently.
+      - Confirm the situation without using any number, link, or instruction supplied by the sender.
+    questions:
+      - What official reference can be verified independently?
+      - Can the matter be confirmed through the institution's published channel or office?
+    reviewed_case_ids: []
+
+  - id: family.upfront_payment
+    face: family
+    version: 1.0.0
+    status: approved
+    reviewer: product-contract-2026-07-15
+    trigger_rule_ids: [fs.payment.prepay]
+    trigger_signal_kinds: [card_personal]
+    retrieval_aliases:
+      uz_latn: [oldindan to'lov, depozit, avans, kartaga o'tkazing]
+      uz_cyrl: [олдиндан тўлов, депозит, аванс, картага ўтказинг]
+      ru: [предоплата, депозит, аванс, переведите на карту]
+    mechanism: Payment is requested before the goods, agreement, identity, or service can be independently checked.
+    red_flags:
+      - Money is requested before independent verification or delivery.
+      - A personal transfer path may replace a protected or documented payment flow.
+    verify_steps:
+      - Verify the offer, counterparty, and terms before transferring money.
+      - Prefer a documented or protected payment method appropriate to the transaction.
+    questions:
+      - What written terms explain the payment and refund conditions?
+      - Can the goods or service be verified before payment?
+    reviewed_case_ids: []
+
+  - id: family.verification_avoidance
+    face: family
+    version: 1.0.0
+    status: approved
+    reviewer: product-contract-2026-07-15
+    trigger_rule_ids: [fs.verify.avoids]
+    trigger_signal_kinds: []
+    retrieval_aliases:
+      uz_latn: [uchrashmayman, videoga chiqmayman, faqat telegramda]
+      uz_cyrl: [учрашмайман, видеога чиқмайман, фақат телеграмда]
+      ru: [не встречаюсь, на видео не выхожу, только в телеграм]
+    mechanism: The other side keeps verification inside a channel they control and avoids independent evidence.
+    red_flags:
+      - Reasonable meeting, video, document, or official-channel checks are refused.
+      - The user is pushed to rely only on the sender's own contact path.
+    verify_steps:
+      - Require an independent verification route before paying or sharing information.
+      - Stop if ordinary verification remains unavailable.
+    questions:
+      - Why is an independent meeting, call, or official confirmation unavailable?
+      - What evidence can be checked without relying on this chat?
+    reviewed_case_ids: []
+
+  - id: family.implausible_promise
+    face: family
+    version: 1.0.0
+    status: approved
+    reviewer: product-contract-2026-07-15
+    trigger_rule_ids: [fs.promise.toogood]
+    trigger_signal_kinds: []
+    retrieval_aliases:
+      uz_latn: [kafolatlangan daromad, oson pul, juda arzon, tajriba kerak emas]
+      uz_cyrl: [кафолатланган даромад, осон пул, жуда арзон, тажриба керак эмас]
+      ru: [гарантированный доход, лёгкие деньги, очень дёшево, без опыта]
+    mechanism: An unusually attractive promise is used to reduce scrutiny of costs, conditions, or feasibility.
+    red_flags:
+      - Benefits are guaranteed or unusually large while important conditions are absent.
+      - The offer discourages normal comparison or documentation.
+    verify_steps:
+      - Compare the offer with independent market information and written terms.
+      - Verify costs, obligations, withdrawal rules, and the responsible entity.
+    questions:
+      - What conditions, fees, and risks are stated in writing?
+      - What independent evidence supports the promised result?
+    reviewed_case_ids: []
+
+  - id: family.suspicious_link_qr
+    face: family
+    version: 1.0.0
+    status: approved
+    reviewer: product-contract-2026-07-15
+    trigger_rule_ids: [fs.link.payorlogin]
+    trigger_signal_kinds: [link, link_shortened, link_lookalike]
+    retrieval_aliases:
+      uz_latn: [linkni bosing, havolani oching, qr kod, saytga kiring]
+      uz_cyrl: [линкни босинг, ҳаволани очинг, qr код, сайтга киринг]
+      ru: [перейдите по ссылке, откройте ссылку, qr-код, зайдите на сайт]
+    mechanism: A supplied link or QR path is used to collect a login, payment, or secret outside a channel the user opened independently.
+    red_flags:
+      - The message directs payment or login through its own link or QR code.
+      - A shortened or lookalike link can hide the actual destination.
+    verify_steps:
+      - Do not use the supplied path; open the official app or type a known official address independently.
+      - Confirm the request through an independently found official channel.
+    questions:
+      - Can the same action be completed from the official app opened independently?
+      - Why is the supplied link or QR code required?
+    reviewed_case_ids: []

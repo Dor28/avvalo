@@ -26,7 +26,8 @@ Live Telegram bot: [@Avvalo_official_bot](https://t.me/Avvalo_official_bot)
 The v1 codebase contains the production-shaped checker: Telegram bot, anonymous
 web app, rule packs, OCR providers, OpenAI-compatible LLM adapter, safety
 validator, consent/deletion flows, privacy-safe metrics, Docker deployment, and
-tests.
+tests. The target knowledge-grounding contract is documented separately; do not
+assume every retrieval stage exists merely because the base checker is present.
 
 The current product direction is **Check, Learn, Share**:
 
@@ -63,11 +64,13 @@ Telegram bot            Anonymous web app
               |
       OCR when image input
               |
-      rules on local raw text
+      rules/signals on local raw text
               |
       PII minimization
               |
- OpenAI-compatible LLM call
+ reviewed knowledge retrieval
+              |
+ OpenAI-compatible answer LLM
               |
  deterministic safety validator
               |
@@ -79,8 +82,12 @@ Telegram bot            Anonymous web app
 Important design choices:
 
 - The rule engine runs locally on raw text before minimization.
-- The LLM receives minimized text plus structured rule signals, not raw contact
-  details.
+- Rules are authoritative facts, not a gate: a zero-rule message still reaches
+  semantic analysis.
+- The target LLM input is minimized text plus structured rule facts/signals and
+  zero to three backend-selected, reviewed knowledge cards/cases — never raw
+  contact details or unrestricted database access.
+- A retrieved case is guidance, not proof about the current situation or person.
 - Submitted text, OCR text, images, captions, model prompts, and model outputs
   are not stored in the database.
 - PostgreSQL stores consent, check metadata, feedback, rate limits, deletion
@@ -100,6 +107,7 @@ app/
   privacy/      consent and pseudonymous user-key helpers
   tools/        operator CLI modules
 rules/          YAML rule packs for family and merchant faces
+knowledge/      target versioned knowledge cards and reviewed case derivatives
 prompts/        safety and face-specific prompt templates
 tests/          unit/integration tests and golden fixtures
 tools/          standalone operator/research tools, including model eval
@@ -315,6 +323,8 @@ python tools/secret_scan.py --all
 Start here:
 
 - [docs/ROADMAP.md](docs/ROADMAP.md) - current launch-phase work and next tasks.
+- [docs/AI_KNOWLEDGE_PIPELINE.md](docs/AI_KNOWLEDGE_PIPELINE.md) - target rules +
+  knowledge + LLM retrieval and safety contract.
 - [docs/PRODUCT_VISION.md](docs/PRODUCT_VISION.md) - Check, Learn, Share vision.
 - [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) - authoritative product and
   safety direction.

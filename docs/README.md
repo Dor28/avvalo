@@ -8,13 +8,14 @@
 
 | Doc | What it is |
 |---|---|
-| [ROADMAP.md](ROADMAP.md) | 🚀 **START HERE for the next work session.** Post-deployment launch roadmap: live-verification checklist (Phase A), numbered launch features R1–R6 with acceptance criteria, launch ops, and evidence gates. Written for handoff to agents; founder-only tasks marked. |
-| [LAUNCH_EXECUTOR_PROMPT.md](LAUNCH_EXECUTOR_PROMPT.md) | 🛠️ **Executor handoff for the launch build (R1–R4 + R6)** — code-verified task specs, branch/deploy discipline (build on `launch-features`; merging to `main` deploys), and corrections to stale facts. Give this to the implementing session. |
+| [ROADMAP.md](ROADMAP.md) | 🚀 **START HERE for the next work session.** Post-deployment launch roadmap: live-verification checklist (Phase A), numbered launch features R0–R6 with acceptance criteria, launch ops, and evidence gates. Written for handoff to agents; founder-only tasks marked. |
+| [LAUNCH_EXECUTOR_PROMPT.md](LAUNCH_EXECUTOR_PROMPT.md) | 🛠️ **Executor handoff for the launch build (R0–R4 + R6)** — code-verified task specs, branch/deploy discipline (build on `launch-features`; merging to `main` deploys), and corrections to stale facts. Give this to the implementing session. |
+| [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) | 🧠 **Authoritative R0 execution contract:** local rules and minimization, validated retrieval of reviewed cards/cases, zero-rule semantic analysis, grounding validation, privacy-safe versions, and failure degradation. |
 | [PRODUCT_VISION.md](PRODUCT_VISION.md) | 🧭 **Product vision (2026-07-04): "Check · Learn · Share."** Reconciles the original design, the pivot, and the built v1; adds the content/community layer (scam library, curated stories, Scam Pulse) and the legal data-asset story. |
 | [PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md) | 🔭 **3-year option map + ranked feature shortlist.** Tiered future bets — pattern-similarity evidence, voice checks, agentic verification, awareness training, payment-context API, Group Guard, JobPass, sovereign model, escrow — with scoring, hard pull-forward criteria, and the build order (§7). Options, not a to-do list. |
 | [ML_RESEARCH.md](ML_RESEARCH.md) | 🔬 **Deep research (2026-07-06): ML capabilities.** Cited build/skip verdicts — embedding similarity vs story corpus (the flagship), URL reputation feeds, SetFit classifier at 300–500 examples; skip screenshot-forensics verdicts, deepfake claims, federated learning. The legal training path = the opt-in story corpus. |
 | [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) | ✅ **The authoritative product principles & safety rules — they win on any conflict.** Vision, the shared engine, monetization posture, legal/privacy posture. |
-| [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) | 🧱 **Engineering contract for the built surface** — locked stack, contracts, safety validator spec, and the numbered T1–T13 build tasks (completed). Closest thing to architecture docs. |
+| [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) | 🧱 **Engineering contract for the built baseline plus T14** — locked stack, contracts, safety validator spec, completed T1–T13 tasks, and the required knowledge-grounding revision. Closest thing to architecture docs. |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | 🖥️ **Production ops guide** (Hetzner, hardened Docker, TLS, backups) — the stack currently live. |
 | [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md) | ✅ **The alpha contract:** one flow, five golden outputs, retention, cost ceiling, go/pivot/stop gates. Revise the cohort per the PM review before recruiting. |
 | [V1_CURRENT_PM_REVIEW.md](V1_CURRENT_PM_REVIEW.md) | 🔎 **Senior-PM review (2026-06-30)** — weak spots and improvement backlog; §6 holds the merchant-discovery interview script the roadmap uses. |
@@ -31,6 +32,6 @@
 
 Removed from the repo entirely (retrieve via git history if ever needed): `USER_STORIES.md`, `FUNDABILITY_AND_GTM.md`, `V1_MVP_PRODUCT_REVIEW.md`, `prompts/fraud_intelligence_startup_prompt.md`.
 
-## Status (2026-07-06)
+## Status (2026-07-15)
 
-v1 (one engine, two faces — Avvalo + Avvalo Merchants — over Telegram + anonymous web) is **built, tested, and deployed to production with live provider tokens**. Strategy is consolidated: vision in [PRODUCT_VISION.md](PRODUCT_VISION.md), future options in [PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md), ML direction in [ML_RESEARCH.md](ML_RESEARCH.md). The active work queue is [ROADMAP.md](ROADMAP.md): verify the live deployment (Phase A), ship launch features R1–R6, run launch ops, and decide at the evidence gates. The failure mode to avoid: producing more documents than users.
+The v1 baseline (one engine, two faces — Avvalo + Avvalo Merchants — over Telegram + anonymous web) is built and deployed. The 2026-07-15 target adds R0/T14 knowledge-grounded semantic analysis; documentation alone does not mean that retrieval layer is implemented. The active queue in [ROADMAP.md](ROADMAP.md) starts with production verification and R0 compliance, then continues the launch features and evidence gates.
