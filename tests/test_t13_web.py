@@ -51,6 +51,12 @@ def test_web_app_exposes_core_routes() -> None:
     assert "/healthz" in paths
 
 
+def test_web_app_does_not_publish_an_openapi_schema() -> None:
+    client = TestClient(create_app(settings=_settings()))
+
+    assert client.get("/openapi.json").status_code == 404
+
+
 def test_unhandled_route_exception_logs_and_returns_500(caplog) -> None:
     caplog.set_level(logging.ERROR, logger="app.obs.events")
     app = create_app(settings=_settings())
@@ -82,8 +88,9 @@ def test_product_pages_are_separate_and_localized() -> None:
     assert landing.status_code == 200
     assert family.status_code == 200
     assert merchants.status_code == 200
-    assert "<form" not in landing.text
-    assert "/check?language=uz_latn" in landing.text
+    # Home and /check both post the family face to the same POST /check handler.
+    assert 'action="/check"' in landing.text
+    assert 'value="family"' in landing.text
     assert 'value="family"' in family.text
     assert 'value="merchants"' in merchants.text
     assert "/merchants?language=uz_latn" not in landing.text
@@ -129,6 +136,7 @@ def test_web_reuses_the_shared_engine(monkeypatch) -> None:
     )
 
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
     assert "checked by shared engine" in response.text
     assert len(calls) == 1
     check_input, _args, kwargs = calls[0]
@@ -137,6 +145,83 @@ def test_web_reuses_the_shared_engine(monkeypatch) -> None:
     assert check_input.raw_text.startswith("Bank xavfsizlik")
     assert kwargs["rate_limit_override"] == 5
     assert kwargs["session"].__class__ is FakeSession
+
+
+def test_web_rejects_cross_site_post_before_engine_or_database(monkeypatch) -> None:
+    async def fake_run_check(*_args, **_kwargs):
+        raise AssertionError("cross-site request must not reach the engine")
+
+    monkeypatch.setattr(routes, "run_check", fake_run_check)
+    client = TestClient(create_app(settings=_settings(), session_factory=FakeSessionFactory()))
+
+    response = client.post(
+        "/check",
+        data={
+            "face": "family",
+            "language": "ru",
+            "text": "SMS code",
+            "consent": "yes",
+        },
+        headers={
+            "Origin": "https://attacker.example",
+            "Sec-Fetch-Site": "cross-site",
+        },
+    )
+
+    assert response.status_code == 403
+
+
+def test_web_accepts_matching_origin(monkeypatch) -> None:
+    calls = []
+
+    async def fake_run_check(check_input, *args, **kwargs):
+        calls.append(check_input)
+        return CheckResult(
+            status=CheckStatus.ok,
+            text="ok",
+            language=check_input.language,
+            input_type=check_input.input_type,
+        )
+
+    async def fake_ensure_web_consent(*_args, **_kwargs) -> bool:
+        return True
+
+    async def fake_reserve_web_ip_limit(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(routes, "run_check", fake_run_check)
+    monkeypatch.setattr(routes, "_ensure_web_consent", fake_ensure_web_consent)
+    monkeypatch.setattr(routes, "_reserve_web_ip_limit", fake_reserve_web_ip_limit)
+    client = TestClient(
+        create_app(settings=_settings(), session_factory=FakeSessionFactory()),
+        base_url="https://avvalo.uz",
+    )
+
+    response = client.post(
+        "/check",
+        data={
+            "face": "family",
+            "language": "ru",
+            "text": "SMS code",
+            "consent": "yes",
+        },
+        headers={"Origin": "https://avvalo.uz", "Sec-Fetch-Site": "same-origin"},
+    )
+
+    assert response.status_code == 200
+    assert len(calls) == 1
+
+
+def test_https_request_always_sets_secure_session_cookie() -> None:
+    client = TestClient(
+        create_app(settings=_settings(web_cookie_secure=False)),
+        base_url="https://avvalo.uz",
+    )
+
+    response = client.get("/check?language=ru")
+
+    assert response.status_code == 200
+    assert "Secure" in response.headers["set-cookie"]
 
 
 def test_web_check_fails_closed_without_session_factory(monkeypatch) -> None:

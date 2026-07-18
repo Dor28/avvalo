@@ -8,6 +8,10 @@ from typing import Protocol
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pydantic import BaseModel, Field
 
+MAX_IMAGE_PIXELS = 16_000_000
+MAX_IMAGE_DIMENSION = 8192
+MAX_IMAGE_FRAMES = 1
+
 
 class OCRResult(BaseModel):
     """Extracted text and provider confidence for one image."""
@@ -45,6 +49,7 @@ def strip_image_metadata(image_bytes: bytes) -> bytes:
 
     try:
         with Image.open(BytesIO(image_bytes)) as image:
+            _validate_image_geometry(image)
             image = ImageOps.exif_transpose(image)
             image.load()
             if image.mode not in {"1", "L", "P", "RGB", "RGBA"}:
@@ -53,7 +58,32 @@ def strip_image_metadata(image_bytes: bytes) -> bytes:
             output = BytesIO()
             image.save(output, format="PNG")
             return output.getvalue()
+    except Image.DecompressionBombError as exc:
+        raise OCRInvalidImageError(
+            "image exceeds the safe pixel limit", error_code="ImagePixelLimitExceeded"
+        ) from exc
     except (OSError, UnidentifiedImageError) as exc:
         raise OCRInvalidImageError(
             "image bytes are not a readable image", error_code=type(exc).__name__
         ) from exc
+
+
+def _validate_image_geometry(image: Image.Image) -> None:
+    width, height = image.size
+    if width <= 0 or height <= 0:
+        raise OCRInvalidImageError(
+            "image dimensions are invalid", error_code="ImageDimensionInvalid"
+        )
+    if max(width, height) > MAX_IMAGE_DIMENSION:
+        raise OCRInvalidImageError(
+            "image dimension exceeds the safe limit",
+            error_code="ImageDimensionLimitExceeded",
+        )
+    if width * height > MAX_IMAGE_PIXELS:
+        raise OCRInvalidImageError(
+            "image exceeds the safe pixel limit", error_code="ImagePixelLimitExceeded"
+        )
+    if getattr(image, "n_frames", 1) > MAX_IMAGE_FRAMES:
+        raise OCRInvalidImageError(
+            "animated images are not supported", error_code="ImageFrameLimitExceeded"
+        )

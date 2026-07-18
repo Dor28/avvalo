@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Avvalo</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#008aa8"/>
+      <stop offset="1" stop-color="#00445d"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#003f53" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g fill="none" stroke="#d9ad3a" stroke-width="2.5" stroke-opacity="0.65">
+    <path d="M256 34 478 256 256 478 34 256Z"/>
+    <path d="M256 72 440 256 256 440 72 256Z" stroke-opacity="0.45"/>
+    <path d="M256 76 314 134H398V198L456 256 398 314V398H314L256 456 198 398H114V314L56 256 114 198V134H198Z" stroke="#43abbc" stroke-opacity="0.28" stroke-width="4"/>
+  </g>
+  <g fill="#d9ad3a">
+    <path d="M256 39 265 48 256 57 247 48Z"/>
+    <path d="M464 247 473 256 464 265 455 256Z"/>
+    <path d="M256 455 265 464 256 473 247 464Z"/>
+    <path d="M48 247 57 256 48 265 39 256Z"/>
+  </g>
+  <g filter="url(#shadow)">
+    <path d="M96 156Q96 110 142 110H326Q372 110 372 156V250Q372 296 326 296H212L140 384V296Q96 296 96 250Z" fill="#fffffa"/>
+    <g fill="#00485c">
+      <circle cx="166" cy="187" r="16"/>
+      <circle cx="226" cy="187" r="16"/>
+      <circle cx="286" cy="187" r="16"/>
+    </g>
+    <path d="M382 378 428 424" stroke="#fffffa" stroke-width="34" stroke-linecap="round"/>
+    <circle cx="319" cy="315" r="93" fill="#fffffa"/>
+    <circle cx="319" cy="315" r="67" fill="#00485c"/>
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M319 255 379 315 319 375 259 315Z" stroke="#ab7e25" stroke-width="4"/>
+      <rect x="276" y="272" width="86" height="86" stroke="#d9ad3a" stroke-width="4"/>
+      <path d="M319 263 333 279H357V303L373 315 357 327V353H333L319 369 305 353H281V327L265 315 281 303V279H305Z" stroke="#fffffa" stroke-width="7"/>
+      <path d="M292 320 313 341 355 291" stroke="#d9ad3a" stroke-width="10"/>
+    </g>
+  </g>
+</svg>

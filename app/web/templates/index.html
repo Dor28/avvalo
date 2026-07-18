@@ -13,7 +13,7 @@
     {% endif %}
   </head>
   <body>
-    <a class="skip-link" href="#check-title">{{ copy.skip_to_check }}</a>
+    <a class="skip-link" href="#check-text">{{ copy.skip_to_check }}</a>
     {% include "_header.html" %}
 
     <main class="app-shell" data-face="{{ face }}">
@@ -30,83 +30,10 @@
       </section>
 
       <section class="check-panel" aria-label="{{ face_copy.name }}">
-        <form class="check-form" action="/check" method="post" enctype="multipart/form-data">
-          <input type="hidden" name="face" value="{{ face }}">
-          <input type="hidden" name="language" value="{{ language }}">
-
-          <label class="field primary-field">
-            <span>{{ face_copy.prompt }}</span>
-            <textarea name="text" rows="8" maxlength="6000" placeholder="{{ face_copy.textarea_placeholder }}"></textarea>
-          </label>
-
-          <div class="attachment-panel">
-            <div class="form-grid">
-              <label class="field">
-                <span>{{ copy.image_label }}</span>
-                <input name="image" type="file" accept="image/*">
-              </label>
-              <label class="field">
-                <span>{{ copy.caption_label }}</span>
-                <input name="caption" type="text" maxlength="500" placeholder="{{ face_copy.caption_placeholder }}">
-              </label>
-            </div>
-            <small>{{ face_copy.image_hint }}</small>
-          </div>
-
-          {% if turnstile_site_key %}
-            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
-          {% endif %}
-
-          <details class="privacy-details">
-            <summary>{{ copy.privacy_link }}</summary>
-            <p>{{ privacy_text }}</p>
-          </details>
-
-          <label class="consent">
-            <input type="checkbox" name="consent" value="yes">
-            <span>{{ copy.consent_label }}</span>
-          </label>
-
-          <button type="submit" data-busy-label="{{ copy.checking }}">{{ copy.submit }}</button>
-        </form>
-
-        <section id="result" class="result" aria-live="polite"></section>
+        {% include "_check_form.html" %}
       </section>
     </main>
 
-    <script>
-      document.querySelectorAll(".check-form").forEach((form) => {
-        form.addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const result = document.querySelector("#result");
-          const button = form.querySelector("button");
-          const buttonLabel = button.textContent;
-          button.disabled = true;
-          button.textContent = button.dataset.busyLabel;
-          result.setAttribute("aria-busy", "true");
-          result.innerHTML = "";
-          try {
-            const response = await fetch(form.action, {
-              method: "POST",
-              body: new FormData(form),
-            });
-            result.innerHTML = await response.text();
-            if (result.innerHTML.trim()) {
-              const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-              result.scrollIntoView({
-                behavior: reducedMotion ? "auto" : "smooth",
-                block: "start",
-              });
-            }
-          } catch (_error) {
-            result.innerHTML = "<div class=\"result-block error\"><strong>{{ copy.result_error_title }}</strong></div>";
-          } finally {
-            button.disabled = false;
-            button.textContent = buttonLabel;
-            result.setAttribute("aria-busy", "false");
-          }
-        });
-      });
-    </script>
+    <script src="/static/check.js?v={{ static_version }}" defer></script>
   </body>
 </html>

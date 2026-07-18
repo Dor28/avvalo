@@ -8,12 +8,15 @@ pipeline maps each OCR failure class to a user-facing status.
 
 import inspect
 import logging
+from io import BytesIO
 
 import pytest
+from PIL import Image
 
 from app.config import Settings
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.ocr import OCRInvalidImageError, OCRProviderError, OCRResult
+from app.engine.ocr.base import MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS, strip_image_metadata
 
 
 def _settings(**overrides) -> Settings:
@@ -36,6 +39,29 @@ def test_ocr_result_contract() -> None:
     ocr_result = OCRResult
     fields = getattr(ocr_result, "model_fields", {})
     assert "text" in fields and "confidence" in fields
+
+
+def test_image_preprocessing_rejects_excessive_pixel_count() -> None:
+    side = int(MAX_IMAGE_PIXELS**0.5) + 1
+    image = Image.new("1", (side, side))
+    payload = BytesIO()
+    image.save(payload, format="PNG")
+
+    with pytest.raises(OCRInvalidImageError) as exc_info:
+        strip_image_metadata(payload.getvalue())
+
+    assert exc_info.value.error_code == "ImagePixelLimitExceeded"
+
+
+def test_image_preprocessing_rejects_excessive_dimension() -> None:
+    image = Image.new("1", (MAX_IMAGE_DIMENSION + 1, 1))
+    payload = BytesIO()
+    image.save(payload, format="PNG")
+
+    with pytest.raises(OCRInvalidImageError) as exc_info:
+        strip_image_metadata(payload.getvalue())
+
+    assert exc_info.value.error_code == "ImageDimensionLimitExceeded"
 
 
 async def test_on_prem_stub_raises_not_implemented() -> None:
