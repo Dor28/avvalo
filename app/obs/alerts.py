@@ -43,7 +43,11 @@ class OperatorAlertHandler(logging.Handler):
 
         key = f"{stage}:{error_type}"
         now = time.monotonic()
-        if now - self._last_sent.get(key, 0.0) < self._debounce_s:
+        # `None` (never sent) rather than 0.0: time.monotonic() counts from boot, so a
+        # 0.0 sentinel silently debounces the *first* alert of every key for the first
+        # `debounce_s` seconds of uptime -- i.e. right after each deploy or restart.
+        last_sent = self._last_sent.get(key)
+        if last_sent is not None and now - last_sent < self._debounce_s:
             return
         self._last_sent[key] = now
 
