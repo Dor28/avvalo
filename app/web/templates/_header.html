@@ -6,7 +6,7 @@
     <span>Avvalo</span>
   </a>
   <nav class="product-nav" aria-label="{{ copy.product_label }}">
-    <a class="{% if current_page == 'check' %}active{% endif %}" {% if current_page == 'check' %}aria-current="page"{% endif %} href="/check?language={{ language }}">{{ copy.nav_check }}</a>
+    <a class="{% if current_page == 'check' %}active{% endif %}" {% if current_page == 'check' %}aria-current="page"{% endif %} href="/?language={{ language }}">{{ copy.nav_check }}</a>
     <a class="{% if current_page == 'scams' %}active{% endif %}" {% if current_page == 'scams' %}aria-current="page"{% endif %} href="/scams?language={{ language }}">{{ copy.nav_scams }}</a>
   </nav>
   <nav class="language-nav compact" aria-label="{{ copy.language_label }}">

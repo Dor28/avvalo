@@ -27,7 +27,12 @@ from app.engine import (
 from app.engine.faces import FACES
 from app.engine.format import format_status_message
 from app.privacy.consent import is_consent_current
-from app.web.abuse import pseudonymous_ip_key, read_limited_upload, require_turnstile_for_image
+from app.web.abuse import (
+    pseudonymous_ip_key,
+    read_limited_upload,
+    require_same_origin,
+    require_turnstile_for_image,
+)
 from app.web.content import available_languages, get_article, list_articles, sitemap_articles
 from app.web.session import get_or_create_web_session, set_web_session_cookie
 
@@ -42,6 +47,7 @@ def _static_version() -> str:
     digest = sha256()
     for name in (
         "styles.css",
+        "check.js",
         "favicon.ico",
         "apple-touch-icon.png",
         "icon-192.png",
@@ -59,6 +65,11 @@ DEV_WEB_SESSION_SECRET = "development-web-session-secret"
 WEB_MAX_TEXT_CHARS = 6000
 WEB_MAX_CAPTION_CHARS = 500
 WEB_IP_FACE_PREFIX = "web_ip:"
+
+# The form's own maxlength attributes come from the same constants the POST
+# handler validates against, so the browser can never invite an oversized body.
+templates.env.globals["max_text_chars"] = WEB_MAX_TEXT_CHARS
+templates.env.globals["max_caption_chars"] = WEB_MAX_CAPTION_CHARS
 # The per-IP web limit refunds exactly the statuses the engine's per-user
 # limit refunds — one shared definition so the two can't drift.
 WEB_BILLABLE_STATUSES = BILLABLE_STATUSES
@@ -93,12 +104,16 @@ WEB_COPY = {
         "scams_empty": "Hozircha maqolalar ko'rib chiqilmoqda.",
         "scams_fallback": "Bu maqola hozircha tanlangan tilda yo'q, mavjud tarjima ko'rsatildi.",
         "scams_cta": "Shubhali xabarni Avvalo orqali tekshiring",
+        "scams_promo": "Ko'p uchraydigan firibgarlik turlari bilan tanishing.",
         "scams_open": "O'qish",
         "privacy_title": "Maxfiylik",
         "consent_label": "Maxfiylik shartlarini o'qidim va roziman",
         "message_label": "Xabar matni",
         "caption_label": "Qo'shimcha izoh",
         "image_label": "Skrinshot yoki rasm",
+        "optional_label": "ixtiyoriy",
+        "choose_file": "Rasm tanlash",
+        "clear_file": "Faylni olib tashlash",
         "submit": "Tekshirish",
         "checking": "Tekshirilmoqda...",
         "result_error_title": "Hozir tekshirib bo'lmadi",
@@ -181,12 +196,16 @@ WEB_COPY = {
         "scams_empty": "Ҳозирча мақолалар кўриб чиқилмоқда.",
         "scams_fallback": "Бу мақола ҳозирча танланган тилда йўқ, мавжуд таржима кўрсатилди.",
         "scams_cta": "Шубҳали хабарни Avvalo орқали текширинг",
+        "scams_promo": "Кўп учрайдиган фирибгарлик турлари билан танишинг.",
         "scams_open": "Ўқиш",
         "privacy_title": "Махфийлик",
         "consent_label": "Махфийлик шартларини ўқидим ва розиман",
         "message_label": "Хабар матни",
         "caption_label": "Қўшимча изоҳ",
         "image_label": "Скриншот ёки расм",
+        "optional_label": "ихтиёрий",
+        "choose_file": "Расм танлаш",
+        "clear_file": "Файлни олиб ташлаш",
         "submit": "Текшириш",
         "checking": "Текширилмоқда...",
         "result_error_title": "Ҳозир текшириб бўлмади",
@@ -269,12 +288,16 @@ WEB_COPY = {
         "scams_empty": "Материалы пока на проверке.",
         "scams_fallback": "Этой статьи пока нет на выбранном языке, показан доступный перевод.",
         "scams_cta": "Проверить сомнительное сообщение в Avvalo",
+        "scams_promo": "Познакомьтесь с самыми частыми схемами мошенничества.",
         "scams_open": "Читать",
         "privacy_title": "Конфиденциальность",
         "consent_label": "Я прочитал условия конфиденциальности и согласен",
         "message_label": "Текст сообщения",
         "caption_label": "Короткий контекст",
         "image_label": "Скриншот или фото",
+        "optional_label": "необязательно",
+        "choose_file": "Выбрать фото",
+        "clear_file": "Убрать файл",
         "submit": "Проверить",
         "checking": "Проверяем...",
         "result_error_title": "Сейчас проверить не получилось",
@@ -344,7 +367,13 @@ async def healthz() -> dict[str, bool]:
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
-    """Render the public Avvalo landing page without a check form."""
+    """Render the home page: the consumer check form above how-it-works.
+
+    The form posts to the same POST /check handler as the standalone page, so
+    landing here costs a visitor no extra click. Unlike ``_face_page`` this
+    deliberately does *not* mint a session cookie — nothing on a GET needs one,
+    and POST /check creates it on first submit anyway.
+    """
 
     language = _normalize_language(language)
     copy = WEB_COPY[language]
@@ -353,12 +382,15 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
         "landing.html",
         {
             "copy": copy,
+            "face": "family",
             "face_copy": copy["faces"]["family"],
-            "current_page": "home",
+            "current_page": "check",
             "language_path": "/",
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
             "language": language,
+            "privacy_text": t("privacy_notice", language),
+            "turnstile_site_key": _turnstile_site_key(_settings_or_none(request)),
         },
     )
 
@@ -473,15 +505,17 @@ def _face_page(request: Request, *, face: str, language: str) -> HTMLResponse:
             "language_labels": LANGUAGE_LABELS,
             "language": language,
             "privacy_text": t("privacy_notice", language),
-            "turnstile_site_key": (
-                settings.turnstile_site_key.get_secret_value()
-                if settings and settings.turnstile_site_key
-                else None
-            ),
+            "turnstile_site_key": _turnstile_site_key(settings),
         },
     )
-    set_web_session_cookie(response, web_session, secure=_cookie_secure(settings))
+    set_web_session_cookie(response, web_session, secure=_cookie_secure(request, settings))
     return response
+
+
+def _turnstile_site_key(settings: Settings | None) -> str | None:
+    if settings is None or not settings.turnstile_site_key:
+        return None
+    return settings.turnstile_site_key.get_secret_value()
 
 
 @router.get("/privacy", response_class=HTMLResponse)
@@ -518,6 +552,7 @@ async def check(
 ) -> HTMLResponse:
     """Build a CheckInput and call the shared engine pipeline."""
 
+    require_same_origin(request)
     settings = _settings_or_error(request)
     language = _normalize_language(language)
     copy = WEB_COPY[language]
@@ -695,13 +730,20 @@ def _partial(
     )
     if web_session is not None:
         set_web_session_cookie(
-            response, web_session, secure=_cookie_secure(_settings_or_none(request))
+            response,
+            web_session,
+            secure=_cookie_secure(request, _settings_or_none(request)),
         )
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
     return response
 
 
-def _cookie_secure(settings: Settings | None) -> bool:
-    return bool(settings.web_cookie_secure) if settings is not None else False
+def _cookie_secure(request: Request, settings: Settings | None) -> bool:
+    if settings is not None and settings.web_cookie_secure:
+        return True
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip()
+    return request.url.scheme.casefold() == "https" or forwarded.casefold() == "https"
 
 
 def _settings_or_none(request: Request) -> Settings | None:

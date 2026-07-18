@@ -13,7 +13,7 @@ cards:
     mechanism: A payment story relies on delays or inconsistent details instead of an incoming transfer visible to the merchant.
     red_flags: [The claimed payment details or explanation do not line up consistently.]
     verify_steps: [Open the merchant's own bank or payment app and confirm the real incoming transfer before handing over goods.]
-    questions: [Which exact order and amount does the claimed transfer relate to?]
+    questions: ["Which exact order and amount does the claimed transfer relate to?"]
     reviewed_case_ids: []
 
   - id: merchants.amount_mismatch
@@ -30,7 +30,7 @@ cards:
     mechanism: An alleged overpayment creates pressure for the merchant to send a separate refund before confirming the original transfer.
     red_flags: [A refund is requested based on a claimed or screenshot-only overpayment.]
     verify_steps: [Confirm the original incoming transfer and amount in the merchant's own bank app before any refund.]
-    questions: [What verified incoming transaction supports the refund request?]
+    questions: ["What verified incoming transaction supports the refund request?"]
     reviewed_case_ids: []
 
   - id: merchants.edited_screenshot_hint
@@ -47,7 +47,7 @@ cards:
     mechanism: A screenshot is presented as payment proof even though only the receiving account can confirm settlement.
     red_flags: [A screenshot or message is being used in place of confirmation in the merchant's own account.]
     verify_steps: [Open the merchant's own bank or payment app and verify the actual incoming transfer.]
-    questions: [Does the receiving account show the matching transfer independently of the screenshot?]
+    questions: ["Does the receiving account show the matching transfer independently of the screenshot?"]
     reviewed_case_ids: []
 
   - id: merchants.fake_courier_refund
@@ -64,7 +64,7 @@ cards:
     mechanism: Courier or shipping pressure is used to move goods before the merchant confirms payment.
     red_flags: [The merchant is pressured to release goods before the incoming transfer is independently confirmed.]
     verify_steps: [Confirm payment in the merchant's own account before giving goods to any courier.]
-    questions: [Why must the goods be released before payment confirmation?]
+    questions: ["Why must the goods be released before payment confirmation?"]
     reviewed_case_ids: []
 
   - id: merchants.verify_in_bank_app
@@ -81,5 +81,5 @@ cards:
     mechanism: A payment claim must be checked in the receiving account; a message or screenshot cannot establish receipt.
     red_flags: []
     verify_steps: [Open the merchant's own real bank or payment app and confirm the incoming transfer before handing over goods.]
-    questions: [Is the matching incoming transfer visible in the receiving account?]
+    questions: ["Is the matching incoming transfer visible in the receiving account?"]
     reviewed_case_ids: []

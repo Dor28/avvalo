@@ -4,6 +4,7 @@ No handler stores or echoes submitted content. The consent gate ensures content
 is only accepted after the current privacy notice has been agreed to.
 """
 
+import hmac
 import logging
 from io import BytesIO
 from uuid import UUID
@@ -147,7 +148,7 @@ async def on_consent_accepted(
 
 
 @router.callback_query(F.data.startswith("share:"))
-async def on_share(callback: CallbackQuery, state: FSMContext, session_factory) -> None:
+async def on_share(callback: CallbackQuery, state: FSMContext, settings, session_factory) -> None:
     """Rebuild and offer a content-free Telegram share warning for a completed check."""
 
     raw_id = callback.data.split(":", 1)[1] if callback.data else ""
@@ -160,7 +161,8 @@ async def on_share(callback: CallbackQuery, state: FSMContext, session_factory) 
     async with session_factory() as session:
         event = await repo.get_check_event(session, check_id)
 
-    if event is None:
+    expected_user_key = _user_key(callback.from_user.id, settings)
+    if event is None or not hmac.compare_digest(event.user_key, expected_user_key):
         await callback.answer(t("share_expired", await _language(state)))
         return
 

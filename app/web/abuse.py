@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from ipaddress import ip_address
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
@@ -17,6 +17,44 @@ from app.privacy.user_key import derive_user_key
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+
+def require_same_origin(request: Request) -> None:
+    """Reject browser POSTs initiated by another origin.
+
+    Requests without browser origin metadata remain available to non-browser
+    clients and are still subject to the normal per-IP and per-session limits.
+    """
+
+    fetch_site = request.headers.get("sec-fetch-site", "").strip().casefold()
+    if fetch_site == "cross-site":
+        raise HTTPException(status_code=403, detail="Cross-site request rejected.")
+
+    origin = request.headers.get("origin")
+    if not origin:
+        return
+
+    try:
+        parsed = urlsplit(origin)
+        origin_port = parsed.port or _default_port(parsed.scheme)
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail="Invalid request origin.") from exc
+
+    expected_scheme = _request_scheme(request)
+    expected_host = (request.url.hostname or "").rstrip(".").casefold()
+    expected_port = request.url.port or _default_port(expected_scheme)
+    origin_host = (parsed.hostname or "").rstrip(".").casefold()
+    if (
+        parsed.scheme.casefold() not in {"http", "https"}
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+        or (parsed.scheme.casefold(), origin_host, origin_port)
+        != (expected_scheme, expected_host, expected_port)
+    ):
+        raise HTTPException(status_code=403, detail="Cross-site request rejected.")
 
 
 async def read_limited_upload(upload: UploadFile | None) -> bytes | None:
@@ -111,6 +149,17 @@ def _normalized_ip(value: str | None) -> str | None:
         return str(ip_address(value.strip()))
     except ValueError:
         return None
+
+
+def _request_scheme(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip()
+    if forwarded.casefold() in {"http", "https"}:
+        return forwarded.casefold()
+    return request.url.scheme.casefold()
+
+
+def _default_port(scheme: str) -> int | None:
+    return {"http": 80, "https": 443}.get(scheme.casefold())
 
 
 def _verify_turnstile_sync(token: str, secret: str, remote_ip: str | None) -> bool:

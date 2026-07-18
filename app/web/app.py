@@ -22,7 +22,13 @@ def create_app(
 ) -> FastAPI:
     """Create the server-rendered Avvalo web app."""
 
-    web_app = FastAPI(title="Avvalo", docs_url=None, redoc_url=None, debug=debug)
+    web_app = FastAPI(
+        title="Avvalo",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+        debug=debug,
+    )
     web_app.state.settings = settings
     web_app.state.session_factory = session_factory
     web_app.router.routes.extend(router.routes)
@@ -44,7 +50,11 @@ async def _handle_unexpected_error(request: Request, exc: Exception) -> PlainTex
     """
 
     log_error(stage="web", error_type=exc.__class__.__name__)
-    return PlainTextResponse("Internal Server Error", status_code=500)
+    return PlainTextResponse(
+        "Internal Server Error",
+        status_code=500,
+        headers={"Cache-Control": "no-store", "Pragma": "no-cache"},
+    )
 
 
 app = create_app()

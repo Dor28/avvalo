@@ -4,27 +4,41 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#008aa8">
-    <title>{{ copy.title }}</title>
+    <title>{{ copy.title }} — {{ face_copy.name }}</title>
     <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{ static_version }}">
     <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
+    {% if turnstile_site_key %}
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    {% endif %}
   </head>
-  <body class="landing-page">
-    <a class="skip-link" href="#landing-actions">{{ copy.skip_to_check }}</a>
+  <body class="home-page">
+    <a class="skip-link" href="#check-text">{{ copy.skip_to_check }}</a>
     {% include "_header.html" %}
 
-    <main class="landing-shell">
-      <section class="landing-hero" aria-labelledby="landing-title">
+    <main class="home-shell">
+      <section class="home-hero" aria-labelledby="home-title">
         <p class="eyebrow">Avvalo</p>
-        <h1 id="landing-title">{{ face_copy.headline }}</h1>
+        <h1 id="home-title">{{ face_copy.headline }}</h1>
         <p class="lead">{{ face_copy.subhead }}</p>
         <p class="result-promise">{{ copy.landing_preview_title }}</p>
-        <div id="landing-actions" class="hero-actions">
-          <a class="primary-cta" href="/check?language={{ language }}">{{ copy.landing_cta }}</a>
-          <a class="secondary-cta" href="/scams?language={{ language }}">{{ copy.nav_scams }}</a>
-        </div>
-        <p class="privacy-proof">{{ face_copy.trust[2] }}</p>
       </section>
+
+      <section class="check-panel is-primary" aria-label="{{ face_copy.name }}">
+        {% with form_steps = true %}{% include "_check_form.html" %}{% endwith %}
+      </section>
+
+      <ul class="trust-points" aria-label="{{ copy.trust_label }}">
+        {% for point in face_copy.trust %}
+          <li>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <path d="m4.5 10.5 3.5 3.5 7.5-8" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <span>{{ point }}</span>
+          </li>
+        {% endfor %}
+      </ul>
 
       <section class="landing-steps" aria-labelledby="landing-steps-title">
         <div class="section-heading">
@@ -55,6 +69,13 @@
           </li>
         </ol>
       </section>
+
+      <aside class="scams-callout">
+        <p>{{ copy.scams_promo }}</p>
+        <a class="secondary-cta" href="/scams?language={{ language }}">{{ copy.nav_scams }}</a>
+      </aside>
     </main>
+
+    <script src="/static/check.js?v={{ static_version }}" defer></script>
   </body>
 </html>

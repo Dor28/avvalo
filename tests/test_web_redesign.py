@@ -23,7 +23,14 @@ def test_redesign_assets_are_cache_busted_across_public_pages() -> None:
         assert re.search(r'/static/icon-192\.png\?v=[0-9a-f]{12}', response.text)
 
 
-def test_landing_separates_marketing_from_checker_and_hides_merchants() -> None:
+def test_home_leads_with_the_checker_and_hides_merchants() -> None:
+    """The home page IS the checker.
+
+    This deliberately reverses the earlier landing/checker split: a visitor who
+    lands on ``/`` must be able to paste a message without a second click.
+    ``/check`` stays live for existing links, QR codes and bot deep links.
+    """
+
     client = TestClient(create_app())
 
     landing = client.get("/?language=uz_latn")
@@ -33,8 +40,10 @@ def test_landing_separates_marketing_from_checker_and_hides_merchants() -> None:
     assert landing.status_code == 200
     assert checker.status_code == 200
     assert merchant.status_code == 200
-    assert "<form" not in landing.text
-    assert 'href="/check?language=uz_latn"' in landing.text
+    assert 'class="check-form"' in landing.text
+    assert 'action="/check"' in landing.text
+    assert 'value="family"' in landing.text
+    assert 'id="result"' in landing.text
     assert 'href="/merchants' not in landing.text
     assert 'class="check-form"' in checker.text
     assert 'id="result"' in checker.text
@@ -56,6 +65,11 @@ def test_public_flow_uses_the_minimal_shell_without_duplicate_explainers() -> No
 
     assert 'class="landing-visual"' not in landing.text
     assert 'class="preview-card"' not in landing.text
+    # The home form carries its own 1/2/3 chips, so it must not also repeat the
+    # workflow summary that only /check shows above its form.
+    assert 'class="check-summary"' not in landing.text
+    assert 'class="field-step"' in landing.text
+    assert 'class="field-step"' not in checker.text
     assert 'class="workflow-list"' not in checker.text
     assert 'class="trust-list"' not in checker.text
     assert 'class="check-summary"' in checker.text
