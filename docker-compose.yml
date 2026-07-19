@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     environment:
       POSTGRES_DB: avvalo
       POSTGRES_USER: avvalo
@@ -62,7 +62,7 @@ services:
   ollama:
     # Optional local LLM for dev: docker compose --profile local-llm up -d ollama
     # Then pull once: docker compose exec ollama ollama pull qwen2.5:7b-instruct
-    image: ollama/ollama:latest
+    image: ollama/ollama:latest@sha256:6345fbc18bd73a1e16404be681dbc6fd291a027cab43ed541abe78c4c81051b0
     profiles: ["local-llm"]
     ports:
       - "${OLLAMA_PORT:-11434}:11434"

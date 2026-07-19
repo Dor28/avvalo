@@ -15,9 +15,26 @@
 # address. Used together with the $avvalo_upstream variable in proxy_pass below.
 resolver 127.0.0.11 valid=10s ipv6=off;
 
+# Keep implementation versions out of every response, including default-host
+# rejections, and reserve bounded per-IP state for the public check endpoint.
+server_tokens off;
+map $request_method $check_limit_key {
+    default "";
+    POST $binary_remote_addr;
+}
+limit_req_zone $check_limit_key zone=web_check_posts:10m rate=12r/m;
+limit_conn_zone $binary_remote_addr zone=web_clients:10m;
+
 # Access logs carry client IPs and request paths; Avvalo keeps only
 # application-level privacy-safe events.
 access_log off;
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    return 444;
+}
 
 # --- :80 — ACME HTTP-01 challenge, then redirect everything to HTTPS ---------
 server {
@@ -33,7 +50,7 @@ server {
     }
 
     location / {
-        return 301 https://$host$request_uri;
+        return 301 https://${AVVALO_DOMAIN}$request_uri;
     }
 }
 
@@ -43,6 +60,11 @@ server {
     listen [::]:443 ssl;
     http2 on;
     server_name ${AVVALO_DOMAIN};
+
+    # Reject direct-IP and forged Host requests before they reach FastAPI.
+    if ($host != ${AVVALO_DOMAIN}) {
+        return 444;
+    }
 
     ssl_certificate         /etc/letsencrypt/live/${AVVALO_DOMAIN}/fullchain.pem;
     ssl_certificate_key     /etc/letsencrypt/live/${AVVALO_DOMAIN}/privkey.pem;
@@ -71,7 +93,7 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
     add_header Cross-Origin-Opener-Policy "same-origin" always;
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://challenges.cloudflare.com; base-uri 'none'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-src https://challenges.cloudflare.com; base-uri 'none'; form-action 'self'; frame-ancestors 'none'" always;
 
     # Compression (the stock nginx image has no zstd; gzip matches Caddy's gzip).
     gzip on;
@@ -83,14 +105,21 @@ server {
 
     # Match the app's 10 MB image cap, with a little multipart/header headroom.
     client_max_body_size 12m;
+    client_body_timeout 15s;
+    client_header_timeout 15s;
+    keepalive_timeout 30s;
+    send_timeout 75s;
 
     # Surface the real client IP + scheme to the app (abuse / Turnstile layer).
     # Inherited by the location blocks (none of them set their own).
-    proxy_set_header Host $host;
+    proxy_set_header Host ${AVVALO_DOMAIN};
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_http_version 1.1;
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 15s;
+    proxy_read_timeout 75s;
 
     set $avvalo_upstream app;
 
@@ -101,6 +130,15 @@ server {
     location /static/ {
         proxy_pass http://$avvalo_upstream:8000;
         expires 1d;
+    }
+
+    # Only POST receives a non-empty rate-limit key (see the map above), so
+    # ordinary GET navigation remains unaffected.
+    location = /check {
+        limit_req zone=web_check_posts burst=4 nodelay;
+        limit_req_status 429;
+        limit_conn web_clients 5;
+        proxy_pass http://$avvalo_upstream:8000;
     }
 
     location / {

@@ -681,7 +681,7 @@ docker compose -f docker-compose.prod.yml exec db psql -U avvalo -d avvalo
 
 Pushes to `main` are tested, built into an image, and deployed to this VM automatically by [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml). Three jobs:
 
-1. **test** — `pip install -e ".[dev]"`, `ruff check` (non-blocking), then `pytest`. **Nothing builds or deploys unless `pytest` is green.**
+1. **test** — installs the hash-verified `requirements-dev.lock`, runs blocking lint and security lint, then `pytest`. **Nothing builds or deploys unless every gate is green.**
 2. **build-and-push** — builds the image on GitHub's runners (**not** this box) and pushes it to **GHCR** as `ghcr.io/dor28/avvalo:latest` and `:sha-<commit>`.
 3. **deploy** — rsyncs repo config to the server (excluding `.env` and `secrets/`), then runs [`deploy/remote-update.sh`](../deploy/remote-update.sh): pins `IMAGE_TAG` in `.env`, `docker compose pull`, `up -d`. Migrations run on app start.
 
@@ -696,6 +696,12 @@ ssh-copy-id -i ci_deploy.pub -p 2222 deploy@157.180.115.209   # add the PUBLIC h
 ```
 Put the **private** half (`ci_deploy`, whole file incl. BEGIN/END lines) into the `DEPLOY_SSH_KEY` secret below.
 
+From the trusted server console, also print the exact SSH host-key line that CI
+must trust (replace the address/port if they differ):
+```bash
+awk '{print "[157.180.115.209]:2222 "$1" "$2}' /etc/ssh/ssh_host_ed25519_key.pub
+```
+
 **2. GitHub repo secrets** (Settings → Secrets and variables → Actions):
 
 | Secret | Value |
@@ -704,6 +710,7 @@ Put the **private** half (`ci_deploy`, whole file incl. BEGIN/END lines) into th
 | `DEPLOY_PORT` | `2222` |
 | `DEPLOY_USER` | `deploy` |
 | `DEPLOY_SSH_KEY` | the **private** `ci_deploy` key |
+| `DEPLOY_HOST_KEY` | the complete `[host]:port ssh-ed25519 ...` line printed above |
 
 No GHCR secret is needed for *pushing* — the workflow's built-in `GITHUB_TOKEN` (`packages: write`) handles it.
 
@@ -722,8 +729,8 @@ This persists in `~/.docker/config.json`.
 - The deploy key is **dedicated** and only logs into this box — revoke it by deleting its line from `~deploy/.ssh/authorized_keys`.
 - `GITHUB_TOKEN` is scoped to `contents: read` + `packages: write`; the server's GHCR pull PAT is `read:packages` only. Least privilege both directions.
 - CI **never** sends or overwrites `.env` / `secrets/` (rsync excludes them).
-- The workflow trusts the host key on first contact (`ssh-keyscan`). To close that TOFU window, capture the key (`ssh-keyscan -p 2222 157.180.115.209`) into a `DEPLOY_KNOWN_HOSTS` secret and write it to `known_hosts` instead.
-- For stricter supply-chain safety, pin the `actions/*` and `docker/*` actions to commit SHAs rather than `@vN`.
+- The workflow requires the pretrusted `DEPLOY_HOST_KEY`; it never learns a host key from the deployment network.
+- Python requirements are hash-locked, workflow actions are pinned to commit SHAs, and container bases are pinned to manifest digests. Dependabot proposes reviewed updates for each input.
 
 ---
 

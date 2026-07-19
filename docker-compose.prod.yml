@@ -12,7 +12,7 @@
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     # NOTE: no `ports:` — PostgreSQL is reachable only on the internal compose
     # network as host `db`. It is never exposed to the VM's public interface.
     environment:
@@ -62,9 +62,9 @@ services:
 
   app:
     # Image is built and pushed to GHCR by .github/workflows/deploy.yml.
-    # IMAGE_TAG is pinned in .env by deploy/remote-update.sh; falls back to :latest.
+    # IMAGE_TAG is pinned in .env by deploy/remote-update.sh and is mandatory.
     # For a local build instead, use docker-compose.yml (dev) or add `build: .` back.
-    image: ghcr.io/dor28/avvalo:${IMAGE_TAG:-latest}
+    image: ghcr.io/dor28/avvalo:${IMAGE_TAG:?set IMAGE_TAG in .env}
     depends_on:
       db:
         condition: service_healthy
@@ -84,6 +84,12 @@ services:
       - ./secrets/gcv.json:/run/secrets/gcv.json:ro
     restart: unless-stopped
     stop_grace_period: 20s
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=256m
+    cap_drop:
+      - ALL
     security_opt:
       - no-new-privileges:true
     deploy:
@@ -106,7 +112,7 @@ services:
         max-file: "5"
 
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
     depends_on:
       - app
     # The only ports open to the internet. UFW + Hetzner Cloud Firewall should
@@ -146,7 +152,7 @@ services:
         max-file: "3"
 
   certbot:
-    image: certbot/certbot:latest
+    image: certbot/certbot:latest@sha256:34ee91d2f43008eb78a007d22f23ed4b2eaa9a454cb27ca2c042b49527a695b4
     volumes:
       - certbot_certs:/etc/letsencrypt
       - certbot_www:/var/www/certbot

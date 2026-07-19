@@ -60,7 +60,7 @@ def test_production_app_container_is_least_privilege_and_immutable() -> None:
     )
     app = compose["services"]["app"]
 
-    assert re.search(r"^FROM python:[^\\s]+@sha256:[0-9a-f]{64}$", dockerfile, re.MULTILINE)
+    assert re.search(r"^FROM python:\S+@sha256:[0-9a-f]{64}$", dockerfile, re.MULTILINE)
     assert "USER avvalo" in dockerfile
     assert app["image"].endswith("${IMAGE_TAG:?set IMAGE_TAG in .env}")
     assert app["read_only"] is True
