@@ -1,6 +1,6 @@
 # Avvalo — Improvement Backlog (executor-ready task prompts)
 
-> **Status:** Working queue · created 2026-07-18
+> **Status:** T-01–T-07 implemented and re-verified on `codex/improvement-backlog` · 2026-07-19. Founder-only launch activities at the end remain open.
 > **Authority:** [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) wins on safety and scope. [ROADMAP.md](ROADMAP.md) remains the phase plan; this file does not replace it — it holds the *executable prompts* for the engine work the roadmap calls for, in the order they should be done.
 > **Audience:** an implementing model or engineer with repository access, one task per session.
 
@@ -23,6 +23,11 @@ The ordering is not by size — it is by what unblocks what.
 | **T-05** | Semantic router | Fixes the inflection recall gap that substring aliases cannot fix | 1–2 days |
 | **T-06** | Validator: per-fact rule preservation | Named as weak in the project's own audit and never fixed. Safety-critical | 1 day |
 | **T-07** | URL reputation stage (R6) | Cheapest real detection lift per [ML_RESEARCH.md](ML_RESEARCH.md) §4; already scoped | 2–3 days |
+
+Execution result: all seven engineering prompts are complete in the current branch. The final
+acceptance run is recorded in [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) §8; R0 and
+R6 branch status is recorded in [ROADMAP.md](ROADMAP.md). This does not claim that the
+founder-only production smoke, weekly card review, or user-distribution work has happened.
 
 **Read this before planning past T-04.** T-01 through T-04 make the system *measurably* improvable. T-05 through T-07 make it *better*. Neither group creates the compounding asset — that requires real submissions, and the project has zero users. Everything in this file is worth roughly two weeks of engineering; if it takes longer than that, the work has drifted from the actual bottleneck, which is distribution.
 

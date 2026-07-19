@@ -26,8 +26,9 @@ Live Telegram bot: [@Avvalo_official_bot](https://t.me/Avvalo_official_bot)
 The v1 codebase contains the production-shaped checker: Telegram bot, anonymous
 web app, rule packs, OCR providers, OpenAI-compatible LLM adapter, safety
 validator, consent/deletion flows, privacy-safe metrics, Docker deployment, and
-tests. The target knowledge-grounding contract is documented separately; do not
-assume every retrieval stage exists merely because the base checker is present.
+tests. The knowledge-grounding layer now includes versioned reviewed cards,
+deterministic and optional semantic retrieval, provider fallback, structural
+rule-preservation validation, and privacy-safe coverage/health reporting.
 
 The current product direction is **Check, Learn, Share**:
 
@@ -84,14 +85,15 @@ Important design choices:
 - The rule engine runs locally on raw text before minimization.
 - Rules are authoritative facts, not a gate: a zero-rule message still reaches
   semantic analysis.
-- The target LLM input is minimized text plus structured rule facts/signals and
+- The LLM input is minimized text plus structured rule facts/signals and
   zero to three backend-selected, reviewed knowledge cards/cases — never raw
   contact details or unrestricted database access.
 - A retrieved case is guidance, not proof about the current situation or person.
 - Submitted text, OCR text, images, captions, model prompts, and model outputs
   are not stored in the database.
 - PostgreSQL stores consent, check metadata, feedback, rate limits, deletion
-  logs, cost, latency, status, and rule IDs only.
+  logs, cost, latency, statuses, rule/knowledge IDs, component versions, and
+  public-feed domain hashes only.
 - Web and Telegram both call `app.engine.pipeline.run_check()`; no analysis
   logic lives in the client/channel layer.
 
@@ -107,7 +109,7 @@ app/
   privacy/      consent and pseudonymous user-key helpers
   tools/        operator CLI modules
 rules/          YAML rule packs for family and merchant faces
-knowledge/      target versioned knowledge cards and reviewed case derivatives
+knowledge/      versioned knowledge cards and reviewed case references
 prompts/        safety and face-specific prompt templates
 tests/          unit/integration tests and golden fixtures
 tools/          standalone operator/research tools, including model eval
@@ -323,7 +325,7 @@ python tools/secret_scan.py --all
 Start here:
 
 - [docs/ROADMAP.md](docs/ROADMAP.md) - current launch-phase work and next tasks.
-- [docs/AI_KNOWLEDGE_PIPELINE.md](docs/AI_KNOWLEDGE_PIPELINE.md) - target rules +
+- [docs/AI_KNOWLEDGE_PIPELINE.md](docs/AI_KNOWLEDGE_PIPELINE.md) - rules +
   knowledge + LLM retrieval and safety contract.
 - [docs/PRODUCT_VISION.md](docs/PRODUCT_VISION.md) - Check, Learn, Share vision.
 - [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) - authoritative product and

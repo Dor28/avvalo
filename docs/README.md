@@ -32,6 +32,6 @@
 
 Removed from the repo entirely (retrieve via git history if ever needed): `USER_STORIES.md`, `FUNDABILITY_AND_GTM.md`, `V1_MVP_PRODUCT_REVIEW.md`, `prompts/fraud_intelligence_startup_prompt.md`.
 
-## Status (2026-07-15)
+## Status (2026-07-19)
 
-The v1 baseline (one engine, two faces — Avvalo + Avvalo Merchants — over Telegram + anonymous web) is built and deployed. The 2026-07-15 target adds R0/T14 knowledge-grounded semantic analysis; documentation alone does not mean that retrieval layer is implemented. The active queue in [ROADMAP.md](ROADMAP.md) starts with production verification and R0 compliance, then continues the launch features and evidence gates.
+The deployed v1 baseline remains one engine and two faces — Avvalo + Avvalo Merchants — over Telegram + anonymous web. R0/T14 knowledge-grounded semantic analysis and R6 URL reputation are code-complete with acceptance coverage on `codex/improvement-backlog`, but are not claimed live: production merge still waits for the founder-owned Phase A smoke evidence in [ROADMAP.md](ROADMAP.md).

@@ -7,13 +7,14 @@ from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.llm import LLMResponse
 from app.engine.ocr import OCRResult
 from app.engine.types import DraftOutput
+from tests.support import addressed_rule_ids
 
 
 class FakeLLMProvider:
     def __init__(self) -> None:
         self.calls = 0
 
-    async def analyze(self, **_kwargs) -> LLMResponse:
+    async def analyze(self, **kwargs) -> LLMResponse:
         self.calls += 1
         return LLMResponse(
             draft=DraftOutput(
@@ -21,6 +22,7 @@ class FakeLLMProvider:
                 pattern="authority pressure",
                 verify=["Use an official channel you find yourself."],
                 ask=["Ask why this cannot wait."],
+                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
             ),
             input_tokens=100,
             output_tokens=50,

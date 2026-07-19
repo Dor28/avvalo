@@ -12,6 +12,7 @@ from app.engine.llm import LLMResponse
 from app.engine.rules import run_rules
 from app.engine.types import DraftOutput
 from app.main import PLACEHOLDER_TOKEN, configured_bot_specs
+from tests.support import addressed_rule_ids
 
 
 class MerchantsLLMProvider:
@@ -33,6 +34,7 @@ class MerchantsLLMProvider:
                     "before handing over goods."
                 ],
                 ask=["Ask the buyer which official payment record matches this order."],
+                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
             ),
             input_tokens=100,
             output_tokens=40,

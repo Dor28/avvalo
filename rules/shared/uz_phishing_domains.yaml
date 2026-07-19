@@ -1,0 +1,4 @@
+version: 2026-07-19-v1
+# Founder-curated exact domains only. Never add a domain from an unreviewed user
+# submission; this file is public, reviewed threat intelligence.
+domains: []

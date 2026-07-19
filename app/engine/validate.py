@@ -1,4 +1,9 @@
-"""Deterministic safety validation for LLM drafts."""
+"""Deterministic safety validation for LLM drafts (§9).
+
+``addressed_rule_ids`` is a language-independent floor for rule preservation:
+it catches silently dropped authoritative facts, but a model declaring an ID is
+not proof that its wording explained that fact well.
+"""
 
 from __future__ import annotations
 
@@ -45,6 +50,7 @@ _PHONE_RE = re.compile(
     r"(?<!\d)(?:\+?\d[\d\s().-]{6,}\d)(?!\d)",
     re.IGNORECASE,
 )
+_ISO_DATE_RE = re.compile(r"(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)")
 _EMAIL_RE = re.compile(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b")
 _URL_OR_DOMAIN_RE = re.compile(
     r"(?ix)"
@@ -84,6 +90,7 @@ _UNSAFE_PATTERNS = (
 
 _UNSUPPORTED_LOOKUP_PATTERNS = (
     r"(?i)\b(?:i|we|avvalo)\s+(?:checked|searched|verified)\s+(?:the\s+)?"
+    r"(?:(?:external|public|internal)\s+)?"
     r"(?:database|records|account|identity|website|organization)\b",
     r"(?iu)\b(?:я|мы|avvalo)\s+проверил(?:а|и)?\s+"
     r"(?:базу|аккаунт|сч[её]т|личность|сайт|организацию)\b",
@@ -101,6 +108,16 @@ _CASE_PROOF_PATTERNS = (
 )
 
 _INTERNAL_KNOWLEDGE_ID_RE = re.compile(r"(?i)\b(?:family|merchants)\.[a-z0-9_.-]+\b")
+_BLOCKLIST_CLAIM_RE = re.compile(
+    r"(?iu)\b(?:"
+    r"blocklist|blacklist|ч[её]рн\w*\s+спис\w*|блоклист\w*|bloklist\w*|"
+    r"qora\s+ro.yxat\w*|"
+    r"(?:public\s+)?phishing\s+(?:list|feed|database)|"
+    r"фишинг\w*\s+(?:спис\w*|баз\w*|лент\w*)|"
+    r"(?:ochiq\s+)?fishing\s+(?:ro.yxat\w*|list|baza)|"
+    r"фишинг\w*\s+(?:рўйхат\w*|база\w*)"
+    r")\b"
+)
 
 
 class ValidationResult(BaseModel):
@@ -136,6 +153,7 @@ def validate(
         language,
         knowledge_card_ids=knowledge_card_ids or [],
         authoritative_lookup=authoritative_lookup,
+        rule_hits=rule_hits,
     )
     return ValidationResult(
         ok=reason is None,
@@ -168,6 +186,7 @@ def _first_rejection_reason(
     *,
     knowledge_card_ids: list[str],
     authoritative_lookup: bool,
+    rule_hits: list[RuleHit],
 ) -> str | None:
     lower = text.casefold()
     _ = language
@@ -178,7 +197,15 @@ def _first_rejection_reason(
 
     if _EMAIL_RE.search(text) or _URL_OR_DOMAIN_RE.search(text):
         return "raw contact or URL leaked"
-    if _PHONE_RE.search(text):
+    has_blocklist_fact = any(
+        hit.rule_id == "shared.link.blocklisted" for hit in rule_hits
+    )
+    # R6's sourced fact includes an ISO listed-since date. The broad phone
+    # detector also matches YYYY-MM-DD, so remove only that exact shape and only
+    # when the authoritative blocklist fact is present. All other digit runs
+    # remain subject to the normal phone/account guards.
+    phone_scan_text = _ISO_DATE_RE.sub("[DATE]", text) if has_blocklist_fact else text
+    if _PHONE_RE.search(phone_scan_text):
         return "raw phone number leaked"
     if _CARD_RE.search(text):
         return "raw card/account number leaked"
@@ -196,16 +223,31 @@ def _first_rejection_reason(
     for pattern in _CASE_PROOF_PATTERNS:
         if re.search(pattern, text):
             return "reviewed case represented as proof"
-    if not authoritative_lookup:
-        for pattern in _UNSUPPORTED_LOOKUP_PATTERNS:
-            if re.search(pattern, text):
-                return "unsupported external lookup claim"
+    # The legacy boolean cannot waive person/account/database prohibitions. R6's
+    # only authoritative exception is the separately grounded URL blocklist fact.
+    _ = authoritative_lookup
+    for pattern in _UNSUPPORTED_LOOKUP_PATTERNS:
+        if re.search(pattern, text):
+            return "unsupported external lookup claim"
+    if _BLOCKLIST_CLAIM_RE.search(text) and not has_blocklist_fact:
+        return "unsupported URL blocklist claim"
     if not draft.verify:
         return "verify block is empty"
     if not draft.ask:
         return "ask block is empty"
     if requires_red_flag and not draft.red_flags:
         return "red_flags block is empty despite detected signals"
+    known_rule_ids = {hit.rule_id for hit in rule_hits}
+    declared_rule_ids = set(draft.addressed_rule_ids)
+    invented_rule_ids = sorted(declared_rule_ids - known_rule_ids)
+    if invented_rule_ids:
+        return f"unknown addressed rule ids: {', '.join(invented_rule_ids)}"
+    required_rule_ids = {
+        hit.rule_id for hit in rule_hits if hit.severity >= _RED_FLAG_MIN_SEVERITY
+    }
+    missing_rule_ids = sorted(required_rule_ids - declared_rule_ids)
+    if missing_rule_ids:
+        return f"missing addressed rule ids: {', '.join(missing_rule_ids)}"
     return None
 
 

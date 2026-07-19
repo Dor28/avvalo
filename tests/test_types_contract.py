@@ -50,7 +50,13 @@ def test_check_input_fields_and_ephemeral_defaults() -> None:
 
 
 def test_draft_output_contract() -> None:
-    assert set(DraftOutput.model_fields) == {"red_flags", "pattern", "verify", "ask"}
+    assert set(DraftOutput.model_fields) == {
+        "red_flags",
+        "pattern",
+        "verify",
+        "ask",
+        "addressed_rule_ids",
+    }
     empty = DraftOutput()
     assert empty.red_flags == [] and empty.verify == [] and empty.ask == []
     assert empty.pattern is None

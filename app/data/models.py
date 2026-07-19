@@ -19,6 +19,7 @@ from sqlalchemy import (
     Float,
     Integer,
     Numeric,
+    String,
     Text,
     Uuid,
     false,
@@ -66,6 +67,7 @@ class CheckEvent(Base):
     )
     retrieval_mode: Mapped[str | None] = mapped_column(Text, nullable=True)
     retrieval_status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    router_status: Mapped[str | None] = mapped_column(Text, nullable=True)
     kb_version: Mapped[str | None] = mapped_column(Text, nullable=True)
     no_signal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
@@ -137,3 +139,14 @@ class StorySubmission(Base):
     status: Mapped[str] = mapped_column(Text, nullable=False, default="submitted")
     created_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     reviewed_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class URLBlocklist(Base):
+    """Hash-only local reputation entry sourced from a public feed."""
+
+    __tablename__ = "url_blocklist"
+
+    domain_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    source: Mapped[str] = mapped_column(String(40), primary_key=True)
+    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

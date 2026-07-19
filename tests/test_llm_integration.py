@@ -19,6 +19,7 @@ from app.engine.minimize import minimize
 from app.engine.rules import run_rules
 from app.engine.types import DraftOutput
 from app.obs.cost import estimate_llm_cost_usd
+from tests.support import addressed_rule_ids
 
 
 class CapturingLLMProvider:
@@ -33,6 +34,7 @@ class CapturingLLMProvider:
                 pattern="Authority and urgency pressure.",
                 verify=["Open the official bank app yourself."],
                 ask=["Ask why an official channel cannot be used."],
+                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
             ),
             input_tokens=1000,
             output_tokens=500,

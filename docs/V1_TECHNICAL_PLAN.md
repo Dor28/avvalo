@@ -210,7 +210,7 @@ avvalo/
 │  │  ├─ ocr/{base.py,gcv.py,tesseract.py,local_stub.py}   # gcv=prod · tesseract=offline dev · local_stub=on-prem roadmap
 │  │  ├─ minimize.py
 │  │  ├─ rules/{engine.py,loader.py}
-│  │  ├─ knowledge/{types.py,loader.py,retrieve.py,router.py}   # target T14 retrieval layer
+│  │  ├─ knowledge/{types.py,loader.py,retrieve.py,router.py}   # T14 retrieval layer
 │  │  ├─ llm/{base.py,openai_compat.py,prompt.py}   # openai_compat = Qwen via neutral host (host-agnostic)
 │  │  ├─ validate.py
 │  │  └─ format.py

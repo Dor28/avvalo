@@ -9,6 +9,7 @@ from app.engine.knowledge.types import (
     KnowledgeRouter,
     KnowledgeStore,
     RetrievalResult,
+    RouterResponse,
 )
 
 __all__ = [
@@ -19,6 +20,7 @@ __all__ = [
     "KnowledgeRouter",
     "KnowledgeStore",
     "RetrievalResult",
+    "RouterResponse",
     "clear_knowledge_cache",
     "retrieve_knowledge",
 ]

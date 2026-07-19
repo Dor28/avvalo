@@ -19,6 +19,7 @@ CONTENT THE MERCHANT RECEIVED (identifiers tokenized):
 
 FACTS ALREADY DETECTED (treat as true; explain them and build on them; do not erase any):
 {rule_hits}
+Return every severity 2+ fact ID you addressed in "addressed_rule_ids".
 
 STRUCTURED SIGNALS (extra grounded hints; may be empty):
 {signals}

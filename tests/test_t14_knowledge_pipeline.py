@@ -152,6 +152,11 @@ async def test_r0_criterion_03_mandatory_cards_and_rule_facts_survive() -> None:
             pattern="Authority and time pressure are used together.",
             verify=["Open the bank app independently and check for a real notice."],
             ask=["Why must a code be shared outside the bank app?"],
+            addressed_rule_ids=[
+                "fs.authority.impersonation",
+                "fs.credential.otp",
+                "fs.urgency.deadline",
+            ],
         )
     )
     raw_text = (
@@ -218,7 +223,8 @@ async def test_r0_criterion_05_router_cannot_inject_a_disallowed_card_id() -> No
     assert retrieval.cards == ()
     assert retrieval.knowledge_card_ids == []
     assert retrieval.invalid_router_ids == ("family.router_invention",)
-    assert retrieval.status == "invalid_router_ids"
+    assert retrieval.status == "empty"
+    assert retrieval.router_status == "invalid_ids"
 
 
 async def test_r0_criterion_06_lookup_failure_degrades_without_fabrication() -> None:
@@ -288,6 +294,14 @@ async def test_r0_criterion_07_provider_failure_uses_fallback_not_no_signal() ->
             "The same reviewed case proves this person did it.",
             "reviewed case represented as proof",
         ),
+        (
+            "Use internal card family.authority_impersonation.",
+            "internal knowledge id leaked",
+        ),
+        (
+            "I checked the external database.",
+            "unsupported external lookup claim",
+        ),
     ],
 )
 def test_r0_criterion_08_retrieved_cases_cannot_create_verdicts_or_proof(
@@ -320,9 +334,10 @@ async def test_r0_criterion_09_logs_and_db_keep_only_allowlisted_metadata(
         "Мне позвонили и сказали, что из прокуратуры. "
         "Просили перезвонить на +998 90 123 45 67."
     )
+    model_output = "The official role is claimed only inside this private call."
     provider = RecordingLLMProvider(
         DraftOutput(
-            red_flags=["The official role is claimed only inside the call."],
+            red_flags=[model_output],
             pattern="The caller invokes authority.",
             verify=["End the call and find the official channel independently."],
             ask=["What reference can be checked through that official channel?"],
@@ -354,6 +369,8 @@ async def test_r0_criterion_09_logs_and_db_keep_only_allowlisted_metadata(
     assert raw_text not in messages
     assert "+998 90 123 45 67" not in stored_values
     assert "+998 90 123 45 67" not in messages
+    assert model_output not in stored_values
+    assert model_output not in messages
     assert "family.authority_impersonation" in messages
     assert "2026-07-15-v1" in messages
 

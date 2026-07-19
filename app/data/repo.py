@@ -44,9 +44,8 @@ RETRIEVAL_STATUSES = {
     "ok",
     "empty",
     "unavailable",
-    "router_unavailable",
-    "invalid_router_ids",
 }
+ROUTER_STATUSES = {"not_used", "ok", "unavailable", "invalid_ids"}
 
 
 def _utcnow() -> datetime:
@@ -100,6 +99,7 @@ async def record_check_event(
     reviewed_case_ids: list[str] | None = None,
     retrieval_mode: str | None = None,
     retrieval_status: str | None = None,
+    router_status: str | None = None,
     kb_version: str | None = None,
     no_signal: bool = False,
     error_class: str | None = None,
@@ -124,6 +124,7 @@ async def record_check_event(
         reviewed_case_ids=reviewed_case_ids or [],
         retrieval_mode=retrieval_mode,
         retrieval_status=retrieval_status,
+        router_status=router_status,
         kb_version=kb_version,
         error_class=error_class,
     )
@@ -139,6 +140,7 @@ async def record_check_event(
         reviewed_case_ids=list(reviewed_case_ids or []),
         retrieval_mode=retrieval_mode,
         retrieval_status=retrieval_status,
+        router_status=router_status,
         kb_version=kb_version,
         no_signal=no_signal,
         status=status,
@@ -174,6 +176,7 @@ def _validate_check_event_metadata(
     reviewed_case_ids: list[str],
     retrieval_mode: str | None,
     retrieval_status: str | None,
+    router_status: str | None,
     kb_version: str | None,
     error_class: str | None,
 ) -> None:
@@ -195,6 +198,8 @@ def _validate_check_event_metadata(
         raise ValueError(f"Unsupported retrieval_mode: {retrieval_mode}")
     if retrieval_status is not None and retrieval_status not in RETRIEVAL_STATUSES:
         raise ValueError(f"Unsupported retrieval_status: {retrieval_status}")
+    if router_status is not None and router_status not in ROUTER_STATUSES:
+        raise ValueError(f"Unsupported router_status: {router_status}")
     if kb_version is not None and not VERSION_RE.fullmatch(kb_version):
         raise ValueError(f"Unsupported kb_version: {kb_version}")
     if error_class is not None and not ERROR_CLASS_RE.fullmatch(error_class):

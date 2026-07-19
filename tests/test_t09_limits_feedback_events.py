@@ -16,19 +16,21 @@ from app.engine.faces import FACES
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput
 from app.obs.events import log_error
+from tests.support import addressed_rule_ids
 
 
 class FakeLLMProvider:
     def __init__(self) -> None:
         self.calls = 0
 
-    async def analyze(self, **_kwargs) -> LLMResponse:
+    async def analyze(self, **kwargs) -> LLMResponse:
         self.calls += 1
         return LLMResponse(
             draft=DraftOutput(
                 red_flags=["The message asks for a one-time code."],
                 verify=["Open the official app yourself."],
                 ask=["Ask which official channel shows this request."],
+                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
             ),
             input_tokens=10,
             output_tokens=5,

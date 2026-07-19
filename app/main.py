@@ -16,7 +16,12 @@ from app.data.db import (
 )
 from app.data.retention import RetentionPolicy, start_retention_scheduler
 from app.engine.faces import FACES
-from app.obs.alerts import install_operator_alerts
+from app.engine.url_reputation import install_url_reputation_job
+from app.obs.alerts import (
+    install_knowledge_availability_alert_job,
+    install_operator_alerts,
+)
+from app.obs.metrics import log_knowledge_inventory
 from app.obs.sentry import init_sentry
 from app.web.app import create_app
 
@@ -40,6 +45,7 @@ async def run(*, check_only: bool = False) -> None:
     try:
         await check_database_connection(engine)
         LOGGER.info("Avvalo booted and connected to PostgreSQL")
+        log_knowledge_inventory()
         if check_only:
             return
 
@@ -50,6 +56,8 @@ async def run(*, check_only: bool = False) -> None:
                 story_rejected_days=settings.story_rejected_retention_days
             ),
         )
+        install_url_reputation_job(scheduler, session_factory, settings)
+        install_knowledge_availability_alert_job(scheduler, session_factory, settings)
         try:
             runners = []
             if settings.web_enabled:

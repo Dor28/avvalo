@@ -11,10 +11,19 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 from aiogram import Bot
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-_ALERT_STAGES = {"ocr", "llm", "web", "bot"}
+from app.config import Settings
+from app.data.models import CheckEvent
+from app.obs.events import log_error
+
+_ALERT_STAGES = {"ocr", "llm", "web", "bot", "knowledge", "url_reputation"}
 
 
 class OperatorAlertHandler(logging.Handler):
@@ -69,4 +78,97 @@ def install_operator_alerts(bot: Bot, chat_id: int, *, debounce_s: float = 900.0
 
     logging.getLogger("app.obs.events").addHandler(
         OperatorAlertHandler(bot, chat_id, debounce_s=debounce_s)
+    )
+
+
+@dataclass(frozen=True)
+class KnowledgeAvailability:
+    """Aggregate retrieval availability over one sustained window."""
+
+    checks: int
+    unavailable: int
+    rate: float
+    alert: bool
+
+
+async def evaluate_knowledge_availability(
+    session: AsyncSession,
+    *,
+    since: datetime,
+    threshold: float,
+) -> KnowledgeAvailability:
+    """Evaluate a metadata-only unavailable-rate threshold."""
+
+    total = int(
+        (
+            await session.execute(
+                select(func.count())
+                .select_from(CheckEvent)
+                .where(
+                    CheckEvent.ts >= since,
+                    CheckEvent.retrieval_status.is_not(None),
+                )
+            )
+        ).scalar_one()
+    )
+    unavailable = int(
+        (
+            await session.execute(
+                select(func.count())
+                .select_from(CheckEvent)
+                .where(
+                    CheckEvent.ts >= since,
+                    CheckEvent.retrieval_status == "unavailable",
+                )
+            )
+        ).scalar_one()
+    )
+    rate = 0.0 if total == 0 else unavailable / total
+    return KnowledgeAvailability(
+        checks=total,
+        unavailable=unavailable,
+        rate=rate,
+        alert=unavailable > 0 and rate >= threshold,
+    )
+
+
+async def run_knowledge_availability_alert_job(
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> KnowledgeAvailability:
+    """Evaluate and emit through the existing privacy-safe alert stream."""
+
+    window = settings.knowledge_unavailable_alert_window_minutes
+    since = datetime.now(UTC) - timedelta(minutes=window)
+    async with session_factory() as session:
+        availability = await evaluate_knowledge_availability(
+            session,
+            since=since,
+            threshold=settings.knowledge_unavailable_alert_threshold,
+        )
+    if availability.alert:
+        log_error(
+            "knowledge",
+            "KnowledgeUnavailableSpike",
+            rate=round(availability.rate, 4),
+            checks=availability.checks,
+            window_minutes=window,
+        )
+    return availability
+
+
+def install_knowledge_availability_alert_job(
+    scheduler: AsyncIOScheduler,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> None:
+    """Install the sustained knowledge outage check on the shared scheduler."""
+
+    scheduler.add_job(
+        run_knowledge_availability_alert_job,
+        "interval",
+        args=[session_factory, settings],
+        minutes=settings.knowledge_unavailable_alert_window_minutes,
+        id="knowledge_availability_alert",
+        replace_existing=True,
     )

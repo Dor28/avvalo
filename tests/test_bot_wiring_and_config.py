@@ -22,6 +22,7 @@ from app.engine.faces import FACES
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput
 from app.web.session import WebSession, set_web_session_cookie
+from tests.support import addressed_rule_ids
 
 
 def _settings(**overrides) -> Settings:
@@ -39,12 +40,13 @@ def _settings(**overrides) -> Settings:
 
 
 class _OkLLM:
-    async def analyze(self, **_kwargs) -> LLMResponse:
+    async def analyze(self, **kwargs) -> LLMResponse:
         return LLMResponse(
             draft=DraftOutput(
                 red_flags=["The message asks for a one-time code."],
                 verify=["Open the official app yourself."],
                 ask=["Which official channel shows this request?"],
+                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
             ),
             input_tokens=10,
             output_tokens=5,

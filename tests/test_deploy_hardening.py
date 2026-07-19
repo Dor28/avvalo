@@ -5,6 +5,9 @@ from pathlib import Path
 
 import yaml
 
+from app.engine.faces import FACES
+from app.engine.knowledge import FileKnowledgeStore
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -119,3 +122,33 @@ def test_runtime_dependency_lock_contains_hashes() -> None:
 
     assert "--hash=sha256:" in runtime_lock
     assert "--hash=sha256:" in dev_lock
+
+
+def test_every_engine_runtime_asset_directory_is_copied_into_image() -> None:
+    """A newly configured fourth disk asset fails until Docker copies it."""
+
+    engine_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (REPO_ROOT / "app" / "engine").rglob("*.py")
+    )
+    configured_assets = {
+        Path(face.prompt_template).parts[0]
+        for face in FACES.values()
+    } | {
+        Path(face.rule_pack_dir).parts[0]
+        for face in FACES.values()
+    }
+    configured_assets.update(
+        re.findall(r'_REPO_ROOT\s*/\s*["\']([^/"\']+)["\']', engine_source)
+    )
+    configured_assets.add(
+        FileKnowledgeStore().root.relative_to(REPO_ROOT).parts[0]
+    )
+
+    dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
+    copied_roots = {
+        Path(match).parts[0]
+        for match in re.findall(r"^COPY\s+([^\s]+)\s+", dockerfile, re.MULTILINE)
+    }
+    assert configured_assets == {"prompts", "rules", "knowledge"}
+    assert configured_assets <= copied_roots

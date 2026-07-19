@@ -47,7 +47,12 @@ def build_prompt(
 def draft_output_schema() -> dict:
     """Return the JSON schema supplied to providers that support it."""
 
-    return DraftOutput.model_json_schema()
+    schema = DraftOutput.model_json_schema()
+    required = list(schema.get("required", []))
+    if "addressed_rule_ids" not in required:
+        required.append("addressed_rule_ids")
+    schema["required"] = required
+    return schema
 
 
 @cache
