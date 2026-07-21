@@ -377,7 +377,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
 
     language = _normalize_language(language)
     copy = WEB_COPY[language]
-    return templates.TemplateResponse(
+    return _no_store(templates.TemplateResponse(
         request,
         "landing.html",
         {
@@ -392,7 +392,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
             "privacy_text": t("privacy_notice", language),
             "turnstile_site_key": _turnstile_site_key(_settings_or_none(request)),
         },
-    )
+    ))
 
 
 @router.get("/check", response_class=HTMLResponse)
@@ -509,7 +509,7 @@ def _face_page(request: Request, *, face: str, language: str) -> HTMLResponse:
         },
     )
     set_web_session_cookie(response, web_session, secure=_cookie_secure(request, settings))
-    return response
+    return _no_store(response)
 
 
 def _turnstile_site_key(settings: Settings | None) -> str | None:
@@ -524,7 +524,7 @@ async def privacy(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRes
 
     language = _normalize_language(language)
     copy = WEB_COPY[language]
-    return templates.TemplateResponse(
+    return _no_store(templates.TemplateResponse(
         request,
         "privacy.html",
         {
@@ -536,7 +536,7 @@ async def privacy(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRes
             "language_path": "/privacy",
             "privacy_text": t("privacy", language),
         },
-    )
+    ))
 
 
 @router.post("/check", response_class=HTMLResponse)
@@ -776,6 +776,24 @@ def _normalize_language(language: str) -> str:
 
 def _content_debug(request: Request) -> bool:
     return bool(getattr(request.app, "debug", False))
+
+
+def _no_store(response: HTMLResponse) -> HTMLResponse:
+    """Keep an app page out of every cache.
+
+    Without this these responses carry no ``Cache-Control`` and no validator, so
+    browsers fall back to heuristic caching and happily reuse a stored copy —
+    a returning visitor keeps seeing the previous deploy, and the stale HTML
+    also pins them to the previous ``?v=`` asset URLs. ``no-store`` (rather than
+    ``no-cache``) additionally stops shared proxies retaining a body that may
+    carry a session ``Set-Cookie``.
+
+    Static assets are unaffected: nginx caches ``/static/`` for a day and the
+    fingerprinted query busts it on each deploy.
+    """
+
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def _cache_content_response(response: HTMLResponse | Response, *, debug: bool = False) -> HTMLResponse | Response:
