@@ -149,7 +149,16 @@ async def test_signal_only_retrieval_selects_mandatory_card() -> None:
     assert result.status == "ok"
 
 
-async def test_real_router_class_closes_inflected_russian_recall_gap_and_counts_cost() -> None:
+async def test_real_router_class_routes_inflected_russian_end_to_end_and_counts_cost() -> None:
+    """Prove the router's wiring on an inflected phrase no alias matches.
+
+    The provider is a fake returning a fixed ID, so this covers the plumbing —
+    minimized text and the allowlist reach the model, the response is parsed and
+    validated, and router tokens land in the cost. Whether a live model actually
+    picks the right card for this phrasing is a model-quality question that only
+    an eval against a real provider can answer.
+    """
+
     json_provider = _JSONProvider(["family.authority_impersonation"])
     router = OpenAICompatibleKnowledgeRouter(json_provider)  # type: ignore[arg-type]
     result = await run_check(

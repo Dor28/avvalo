@@ -32,6 +32,7 @@ def create_app(
     web_app.state.settings = settings
     web_app.state.session_factory = session_factory
     web_app.router.routes.extend(router.routes)
+    web_app.middleware("http")(_prevent_post_caching)
     web_app.add_exception_handler(Exception, _handle_unexpected_error)
 
     static_dir = Path(__file__).with_name("static")
@@ -39,6 +40,16 @@ def create_app(
         web_app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
     return web_app
+
+
+async def _prevent_post_caching(request: Request, call_next):
+    """Keep submitted content and check responses out of shared/browser caches."""
+
+    response = await call_next(request)
+    if request.method not in {"GET", "HEAD", "OPTIONS"}:
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
+    return response
 
 
 async def _handle_unexpected_error(request: Request, exc: Exception) -> PlainTextResponse:
