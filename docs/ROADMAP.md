@@ -25,6 +25,15 @@ Read, in order: this doc → [PRODUCT_VISION.md](PRODUCT_VISION.md) → [PRODUCT
 
 Deployment happened; verification hasn't. Nothing in Phase B starts until every box below is checked against **production**.
 
+> **Gate waived once, deliberately — 2026-07-21.** The founder chose to merge and deploy the
+> `codex/improvement-backlog` work (R0/T14 knowledge layer, T-01–T-07, migrations 0004+0005,
+> R6 URL reputation) to `main` **without** recording Phase A evidence first. The boxes below
+> are still unchecked and still owed: this waiver covers one deploy, not the requirement.
+> Consequence to be aware of: production now runs code whose predecessor was never verified,
+> so if something is broken, Phase A can no longer tell you whether this deploy caused it.
+> The router and URL-reputation feeds remain disabled by default and still need founder
+> verification on the VM before being switched on.
+
 - [ ] **A1. Health:** `curl https://<domain>/healthz` returns ok; bot answers `/start` in Telegram.
 - [ ] **A2. Full bot flow, three languages:** for `uz_latn`, `uz_cyrl`, `ru` — /start → consent → text check → result → feedback buttons work. Use the golden-example inputs from [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md) §7.
 - [ ] **A3. Image path live:** one real screenshot per script through the bot; OCR confidence logged; low-quality image returns the `low_ocr` path, not a crash.
@@ -41,7 +50,7 @@ Deliverable: a short `docs/ops/SMOKE_2026-07.md` (or session report) recording p
 ## Phase B — Launch features (build in this order)
 
 ### R0. Knowledge-grounded semantic analysis — ~3–5 days · blocks wider alpha
-**Status:** [x] Code and acceptance suite complete on `codex/improvement-backlog` (2026-07-19); production enablement/merge remains gated by Phase A evidence.
+**Status:** [x] Code and acceptance suite complete (2026-07-19); merged to `main` and deployed 2026-07-21 under the Phase A waiver above. Live behaviour unverified; the semantic router ships disabled by default.
 
 Implement [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md): versioned approved pattern cards; deterministic `face + rule_ids + signals + retrieval cues` lookup; allowlisted semantic routing only when deterministic retrieval is empty/ambiguous; at most three cards/cases in the answer prompt; grounding validation; privacy-safe card/version metadata; and provider/degraded failure behavior.
 
