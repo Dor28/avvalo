@@ -10,6 +10,7 @@
 |---|---|
 | [ROADMAP.md](ROADMAP.md) | 🚀 **START HERE for the next work session.** Post-deployment launch roadmap: live-verification checklist (Phase A), numbered launch features R0–R6 with acceptance criteria, launch ops, and evidence gates. Written for handoff to agents; founder-only tasks marked. |
 | [LAUNCH_EXECUTOR_PROMPT.md](LAUNCH_EXECUTOR_PROMPT.md) | 🛠️ **Executor handoff for the launch build (R0–R4 + R6)** — code-verified task specs, branch/deploy discipline (build on `launch-features`; merging to `main` deploys), and corrections to stale facts. Give this to the implementing session. |
+| [tasks/](tasks/README.md) | 📋 **The task queue — one executor-ready prompt per file.** Hand an agent a path (`docs/tasks/T-NN-*.md`) and it has everything it needs; frontmatter carries status and dependencies. Format, rules, and index in [tasks/README.md](tasks/README.md); supersedes [IMPROVEMENT_BACKLOG.md](IMPROVEMENT_BACKLOG.md) for new work. |
 | [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) | 🧠 **Authoritative R0 execution contract:** local rules and minimization, validated retrieval of reviewed cards/cases, zero-rule semantic analysis, grounding validation, privacy-safe versions, and failure degradation. |
 | [PRODUCT_VISION.md](PRODUCT_VISION.md) | 🧭 **Product vision (2026-07-04): "Check · Learn · Share."** Reconciles the original design, the pivot, and the built v1; adds the content/community layer (scam library, curated stories, Scam Pulse) and the legal data-asset story. |
 | [PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md) | 🔭 **3-year option map + ranked feature shortlist.** Tiered future bets — pattern-similarity evidence, voice checks, agentic verification, awareness training, payment-context API, Group Guard, JobPass, sovereign model, escrow — with scoring, hard pull-forward criteria, and the build order (§7). Options, not a to-do list. |
@@ -32,6 +33,6 @@
 
 Removed from the repo entirely (retrieve via git history if ever needed): `USER_STORIES.md`, `FUNDABILITY_AND_GTM.md`, `V1_MVP_PRODUCT_REVIEW.md`, `prompts/fraud_intelligence_startup_prompt.md`.
 
-## Status (2026-07-15)
+## Status (2026-07-19)
 
-The v1 baseline (one engine, two faces — Avvalo + Avvalo Merchants — over Telegram + anonymous web) is built and deployed. The 2026-07-15 target adds R0/T14 knowledge-grounded semantic analysis; documentation alone does not mean that retrieval layer is implemented. The active queue in [ROADMAP.md](ROADMAP.md) starts with production verification and R0 compliance, then continues the launch features and evidence gates.
+The deployed v1 baseline remains one engine and two faces — Avvalo + Avvalo Merchants — over Telegram + anonymous web. R0/T14 knowledge-grounded semantic analysis and R6 URL reputation are code-complete with acceptance coverage on `codex/improvement-backlog`, but are not claimed live: production merge still waits for the founder-owned Phase A smoke evidence in [ROADMAP.md](ROADMAP.md).

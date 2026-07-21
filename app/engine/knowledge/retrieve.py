@@ -8,6 +8,7 @@ from app.engine.knowledge.types import (
     KnowledgeRouter,
     KnowledgeStore,
     RetrievalResult,
+    RouterResponse,
 )
 from app.engine.rules import normalize_text
 from app.engine.types import RuleHit, Signal
@@ -64,27 +65,42 @@ async def retrieve_knowledge(
 
     invalid_router_ids: tuple[str, ...] = ()
     status = "ok" if deterministic_ids else "empty"
+    router_status = "not_used"
     router_ids: list[str] = []
-    if router is not None and (not deterministic_ids or len(deterministic_ids) > _MAX_CARDS):
+    router_input_tokens = 0
+    router_output_tokens = 0
+    # Deterministic matches are already ranked from authoritative rules/signals and
+    # reviewed aliases. Calling a paid router here would add cost without changing
+    # the first three selected cards, so the router is reserved for empty recall.
+    if router is not None and not deterministic_ids:
         try:
-            proposed = await router.route(
+            routed = await router.route(
                 face_id=face_id,
                 minimized_text=minimized_text,
                 allowed_ids=tuple(sorted(cards_by_id)),
                 max_results=_MAX_CARDS,
             )
         except Exception:
-            status = "router_unavailable"
+            router_status = "unavailable"
         else:
+            # Keep older injected fakes source-compatible while the production
+            # protocol returns RouterResponse with cost metadata.
+            response = (
+                routed
+                if isinstance(routed, RouterResponse)
+                else RouterResponse(card_ids=list(routed))
+            )
+            proposed = response.card_ids
+            router_input_tokens = response.input_tokens
+            router_output_tokens = response.output_tokens
             invalid_router_ids = tuple(
                 dict.fromkeys(card_id for card_id in proposed if card_id not in cards_by_id)
             )
             router_ids = list(
                 dict.fromkeys(card_id for card_id in proposed if card_id in cards_by_id)
             )[:_MAX_CARDS]
-            if invalid_router_ids:
-                status = "invalid_router_ids"
-            elif router_ids:
+            router_status = "invalid_ids" if invalid_router_ids else "ok"
+            if router_ids:
                 status = "ok"
             if not deterministic_ids and router_ids:
                 mode = "router"
@@ -105,6 +121,9 @@ async def retrieve_knowledge(
         cards=cards,
         mode=mode,
         status=status,
+        router_status=router_status,
         kb_version=knowledge_base.version,
         invalid_router_ids=invalid_router_ids,
+        router_input_tokens=router_input_tokens,
+        router_output_tokens=router_output_tokens,
     )

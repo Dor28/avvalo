@@ -25,6 +25,15 @@ Read, in order: this doc → [PRODUCT_VISION.md](PRODUCT_VISION.md) → [PRODUCT
 
 Deployment happened; verification hasn't. Nothing in Phase B starts until every box below is checked against **production**.
 
+> **Gate waived once, deliberately — 2026-07-21.** The founder chose to merge and deploy the
+> `codex/improvement-backlog` work (R0/T14 knowledge layer, T-01–T-07, migrations 0004+0005,
+> R6 URL reputation) to `main` **without** recording Phase A evidence first. The boxes below
+> are still unchecked and still owed: this waiver covers one deploy, not the requirement.
+> Consequence to be aware of: production now runs code whose predecessor was never verified,
+> so if something is broken, Phase A can no longer tell you whether this deploy caused it.
+> The router and URL-reputation feeds remain disabled by default and still need founder
+> verification on the VM before being switched on.
+
 - [ ] **A1. Health:** `curl https://<domain>/healthz` returns ok; bot answers `/start` in Telegram.
 - [ ] **A2. Full bot flow, three languages:** for `uz_latn`, `uz_cyrl`, `ru` — /start → consent → text check → result → feedback buttons work. Use the golden-example inputs from [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md) §7.
 - [ ] **A3. Image path live:** one real screenshot per script through the bot; OCR confidence logged; low-quality image returns the `low_ocr` path, not a crash.
@@ -41,7 +50,7 @@ Deliverable: a short `docs/ops/SMOKE_2026-07.md` (or session report) recording p
 ## Phase B — Launch features (build in this order)
 
 ### R0. Knowledge-grounded semantic analysis — ~3–5 days · blocks wider alpha
-**Status:** [ ] Contract locked on 2026-07-15; implementation and code audit required.
+**Status:** [x] Code and acceptance suite complete (2026-07-19); merged to `main` and deployed 2026-07-21 under the Phase A waiver above. Live behaviour unverified; the semantic router ships disabled by default.
 
 Implement [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md): versioned approved pattern cards; deterministic `face + rule_ids + signals + retrieval cues` lookup; allowlisted semantic routing only when deterministic retrieval is empty/ambiguous; at most three cards/cases in the answer prompt; grounding validation; privacy-safe card/version metadata; and provider/degraded failure behavior.
 
@@ -87,9 +96,11 @@ Mirror `tools/eval_models.py`: `tools/eval_stt.py` testing 2–3 STT providers (
 **Acceptance:** a decision memo `docs/ops/STT_EVAL.md` with WER-style notes and a go/no-go. **Only a "go" unlocks building voice intake** (spec in [PRODUCT_HORIZONS.md](PRODUCT_HORIZONS.md) §3.1) — do not implement voice checks in the same session as the eval.
 
 ### R6. URL reputation stage — ~2–3 days (from [ML_RESEARCH.md](ML_RESEARCH.md) §4)
-A lookup stage after signal extraction: check extracted URLs against **Google Safe Browsing** (use the hash-prefix Update API so raw URLs never leave the server), cached **URLhaus** and **OpenPhish** feeds (TTL-refreshed), and a new `uz_phishing_domain` table (domains only — privacy-safe) seeded from checks users later confirm as scams.
+**Status:** [x] Code and acceptance suite complete on `codex/improvement-backlog` (2026-07-19); disabled by default pending founder verification of feed refreshes on the production VM.
+
+A lookup stage after signal extraction checks normalized domain hashes against cached **URLhaus** and **OpenPhish** feeds plus the founder-curated, git-versioned `rules/shared/uz_phishing_domains.yaml`. Feeds refresh out of band; there is no per-check external API call. Google Safe Browsing Lookup is rejected because it would disclose submitted URLs, and its hash-prefix Update API is deferred as unnecessary v1 complexity.
 A hit becomes a rule-grade authoritative signal → output line: *"this link appears in a phishing blacklist [source]"* (factual, sourced — allowed by the safety contract; a *miss* must never be reported as "link is clean").
-**Files:** new `app/engine/reputation.py` stage wired into the pipeline after signal extraction; config keys for the GSB key + feed URLs + cache TTLs.
+**Files:** `app/engine/url_reputation/`, the `url_blocklist` hash-only table, shared scheduler job, feed/config settings, and the shared pipeline stage after signal extraction.
 **Acceptance:** mocked-feed tests for hit/miss/feed-down paths; feed outage degrades gracefully (no crash, no "clean" claim, no latency blowup — budget ≤ +2 s); no full URL sent to any third party; the blacklist line renders in all three languages.
 *Scope note:* this deliberately supersedes the v1 build's exclusion of "external reputation calls" ([V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) §16) — that list governed the grant build, not this phase. Do not stop-and-flag on that ground.
 

@@ -20,6 +20,7 @@ from app.engine.rules import run_rules
 from app.engine.rules.engine import extract_structural_signals
 from app.engine.types import DraftOutput, RuleHit
 from app.engine.validate import validate
+from tests.support import addressed_rule_ids
 
 # --- Fix #1: phone redaction across all Uzbek operator prefixes -------------
 
@@ -88,13 +89,14 @@ def test_high_severity_hit_still_requires_red_flags() -> None:
 class _EmptyRedFlagsLLM:
     """Well-behaved model: returns no red flags for benign input."""
 
-    async def analyze(self, **_kwargs) -> LLMResponse:
+    async def analyze(self, **kwargs) -> LLMResponse:
         return LLMResponse(
             draft=DraftOutput(
                 red_flags=[],
                 pattern=None,
                 verify=["Open your bank app and confirm the transfer before shipping."],
                 ask=["Which payment record matches this order?"],
+                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
             ),
             input_tokens=20,
             output_tokens=10,
@@ -120,12 +122,13 @@ async def test_benign_merchants_check_is_ok_not_safety_fallback(session) -> None
 # --- Fix #3: failed / empty checks must not burn the daily quota ------------
 
 class _OkLLM:
-    async def analyze(self, **_kwargs) -> LLMResponse:
+    async def analyze(self, **kwargs) -> LLMResponse:
         return LLMResponse(
             draft=DraftOutput(
                 red_flags=["The message asks for a one-time code."],
                 verify=["Open the official app yourself."],
                 ask=["Which official channel shows this request?"],
+                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
             ),
             input_tokens=10,
             output_tokens=5,

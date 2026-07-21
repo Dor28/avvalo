@@ -35,6 +35,7 @@ EXPECTED_TABLES = {
     "rate_limit",
     "deletion_log",
     "story_submission",
+    "url_blocklist",
 }
 # R3 reviewed exception: opt-in, minimized, founder-reviewed story corpus.
 ALLOWED_CONTENT_COLUMNS = {"story_submission.minimized_text"}

@@ -169,6 +169,7 @@ def test_web_rejects_cross_site_post_before_engine_or_database(monkeypatch) -> N
     )
 
     assert response.status_code == 403
+    assert response.headers["cache-control"] == "no-store"
 
 
 def test_web_accepts_matching_origin(monkeypatch) -> None:

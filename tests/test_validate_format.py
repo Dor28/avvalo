@@ -12,6 +12,7 @@ from app.engine.format import format_fallback, format_result, format_status_mess
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput, RuleHit
 from app.engine.validate import validate
+from tests.support import addressed_rule_ids
 
 
 class SequenceLLMProvider:
@@ -22,6 +23,9 @@ class SequenceLLMProvider:
     async def analyze(self, **kwargs) -> LLMResponse:
         self.calls.append(kwargs)
         draft = self.drafts[min(len(self.calls) - 1, len(self.drafts) - 1)]
+        draft = draft.model_copy(
+            update={"addressed_rule_ids": addressed_rule_ids(kwargs["user"])}
+        )
         return LLMResponse(draft=draft, input_tokens=100, output_tokens=40)
 
 

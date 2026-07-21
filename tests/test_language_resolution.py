@@ -7,6 +7,7 @@ from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.language import resolve_content_language
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput
+from tests.support import addressed_rule_ids
 
 
 class CapturingLLM:
@@ -20,6 +21,7 @@ class CapturingLLM:
                 red_flags=["The message asks for a one-time code."],
                 verify=["Open the official app yourself."],
                 ask=["Which official channel shows this request?"],
+                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
             ),
             input_tokens=10,
             output_tokens=5,
