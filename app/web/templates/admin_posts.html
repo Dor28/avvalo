@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b6e75">
+    <title>{{ editorial.admin_title }} — Avvalo</title>
+    <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
+  </head>
+  <body class="admin-page">
+    {% set show_logout = true %}
+    {% include "_admin_header.html" %}
+    <main class="admin-shell">
+      <header class="admin-page-heading">
+        <div>
+          <p class="eyebrow">Avvalo Editorial</p>
+          <h1>{{ editorial.admin_title }}</h1>
+          <p>{{ editorial.admin_subtitle }}</p>
+        </div>
+        <a class="admin-primary-action" href="/admin/posts/new?language={{ language }}">
+          <span aria-hidden="true">＋</span>{{ editorial.admin_new }}
+        </a>
+      </header>
+
+      {% if posts %}
+        <section class="admin-post-list" aria-label="{{ editorial.admin_title }}">
+          {% for post in posts %}
+            <article class="admin-post-row">
+              <div class="admin-post-main">
+                <div class="admin-post-meta">
+                  <span class="status-pill {{ post.state }}">
+                    {% if post.state == 'published' %}{{ editorial.admin_published }}{% else %}{{ editorial.admin_draft }}{% endif %}
+                  </span>
+                  <span>{{ editorial.categories[post.category] }}</span>
+                </div>
+                <h2>
+                  {% if language == 'uz_latn' %}{{ post.title_uz_latn }}
+                  {% elif language == 'uz_cyrl' %}{{ post.title_uz_cyrl }}
+                  {% else %}{{ post.title_ru }}{% endif %}
+                </h2>
+                <p>{{ editorial.admin_updated }} {{ post.updated_ts.strftime('%d.%m.%Y · %H:%M') }}</p>
+              </div>
+              <div class="admin-post-actions">
+                {% if post.state == 'published' %}
+                  <a href="/cases/{{ post.slug }}?language={{ language }}" target="_blank" rel="noopener">
+                    {{ editorial.admin_open }} ↗
+                  </a>
+                {% endif %}
+                <a class="admin-edit-link" href="/admin/posts/{{ post.id }}/edit?language={{ language }}">
+                  {{ editorial.admin_edit }}
+                </a>
+              </div>
+            </article>
+          {% endfor %}
+        </section>
+      {% else %}
+        <section class="admin-empty">
+          <span aria-hidden="true">＋</span>
+          <p>{{ editorial.admin_empty }}</p>
+        </section>
+      {% endif %}
+    </main>
+  </body>
+</html>

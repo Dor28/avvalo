@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     ocr_min_confidence: float = Field(default=0.5, ge=0, le=1)
     ocr_timeout_s: float = Field(default=30.0, gt=0)
 
-    notice_version: str = "2026-07-07-v2"
+    notice_version: str = "2026-07-22-v3"
     daily_limit_family: int = Field(default=5, ge=1)
     operator_alert_chat_id: int | None = None
     operator_alert_debounce_s: float = Field(default=900.0, gt=0)
@@ -68,9 +68,18 @@ class Settings(BaseSettings):
     turnstile_secret: SecretStr | None = None
     web_session_secret: SecretStr
     web_daily_limit: int = Field(default=5, ge=1)
+    # Unset disables every /admin route. Configure a long random value in production.
+    admin_access_key: SecretStr | None = None
     # Set WEB_COOKIE_SECURE=true behind HTTPS in production so the session
     # cookie is never sent over plaintext. Defaults off for local http dev.
     web_cookie_secure: bool = False
+
+    @field_validator("admin_access_key", mode="before")
+    @classmethod
+    def blank_admin_key_disables_admin(cls, value):
+        """Treat an empty env value as disabled instead of as a valid empty key."""
+
+        return None if value is None or not str(value).strip() else value
 
     def daily_limit_for(self, face_id: str) -> int | None:
         """Return the configured daily check limit for *face_id*, or None.

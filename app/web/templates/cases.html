@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b6e75">
+    <meta name="description" content="{{ editorial.cases_lead }}">
+    <title>{{ editorial.cases_title }} — Avvalo</title>
+    <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{ static_version }}">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
+  </head>
+  <body class="cases-page">
+    {% set active_section = 'cases' %}
+    {% include "_header.html" %}
+
+    <main class="cases-shell">
+      <header class="cases-hero">
+        <p class="eyebrow">{{ editorial.cases_kicker }}</p>
+        <h1>{{ editorial.cases_title }}</h1>
+        <p class="lead">{{ editorial.cases_lead }}</p>
+      </header>
+
+      {% if posts %}
+        <section class="case-card-grid" aria-label="{{ editorial.cases_title }}">
+          {% for post in posts %}
+            {% include "_case_card.html" %}
+          {% endfor %}
+        </section>
+      {% else %}
+        <section class="cases-empty">
+          <span aria-hidden="true">⌁</span>
+          <p>{{ editorial.cases_empty }}</p>
+        </section>
+      {% endif %}
+    </main>
+
+    {% include "_footer.html" %}
+  </body>
+</html>

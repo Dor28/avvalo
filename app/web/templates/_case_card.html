@@ -1,0 +1,10 @@
+<article class="case-card">
+  <div class="case-card-meta">
+    <span class="category-pill">{{ editorial.categories[post.category] }}</span>
+    <span>{{ editorial.read_time.format(minutes=post.reading_minutes) }}</span>
+  </div>
+  <h3><a href="/cases/{{ post.slug }}?language={{ language }}">{{ post.title }}</a></h3>
+  <p>{{ post.summary }}</p>
+  <a class="case-card-link" href="/cases/{{ post.slug }}?language={{ language }}"
+     aria-label="{{ editorial.read_case }}: {{ post.title }}">{{ editorial.read_case }} <span>→</span></a>
+</article>

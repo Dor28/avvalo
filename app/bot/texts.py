@@ -20,27 +20,39 @@ TEXTS: dict[str, dict[str, str]] = {
     "start_intro": {
         "uz_latn": (
             "\U0001f1fa\U0001f1ff O'zbekcha\n"
-            "Avvalo — shubhali vaziyatlarni tekshirishga yordam beradigan bot.\n"
-            "Xabar, rasm yoki vaziyatni yuboring. Bot xavf belgilarini va nimani tekshirish kerakligini ko'rsatadi.\n\n"
+            "Avvalo — harakatdan oldin shubhali vaziyatni tekshirishga yordam beradi.\n"
+            "Xabar, rasm yoki vaziyatni yuboring: havola, QR-kod, to'lov so'rovi, "
+            "taklif yoki hujjat ham bo'lishi mumkin. Avvalo nimaga e'tibor berish va "
+            "nimani mustaqil tekshirishni ko'rsatadi.\n\n"
             "\U0001f1f7\U0001f1fa Русский\n"
-            "Avvalo — бот-помощник для проверки сомнительных ситуаций.\n"
-            "Пришлите сообщение, изображение или опишите ситуацию. Бот покажет возможные риски и что нужно проверить."
+            "Avvalo помогает разобраться в сомнительной ситуации до того, как вы начнёте действовать.\n"
+            "Пришлите сообщение, изображение или опишите ситуацию: это может быть ссылка, "
+            "QR-код, запрос на оплату, предложение или документ. Avvalo покажет, на что "
+            "обратить внимание и что проверить самостоятельно."
         ),
         "uz_cyrl": (
             "\U0001f1fa\U0001f1ff O'zbekcha\n"
-            "Avvalo — shubhali vaziyatlarni tekshirishga yordam beradigan bot.\n"
-            "Xabar, rasm yoki vaziyatni yuboring. Bot xavf belgilarini va nimani tekshirish kerakligini ko'rsatadi.\n\n"
+            "Avvalo — harakatdan oldin shubhali vaziyatni tekshirishga yordam beradi.\n"
+            "Xabar, rasm yoki vaziyatni yuboring: havola, QR-kod, to'lov so'rovi, "
+            "taklif yoki hujjat ham bo'lishi mumkin. Avvalo nimaga e'tibor berish va "
+            "nimani mustaqil tekshirishni ko'rsatadi.\n\n"
             "\U0001f1f7\U0001f1fa Русский\n"
-            "Avvalo — бот-помощник для проверки сомнительных ситуаций.\n"
-            "Пришлите сообщение, изображение или опишите ситуацию. Бот покажет возможные риски и что нужно проверить."
+            "Avvalo помогает разобраться в сомнительной ситуации до того, как вы начнёте действовать.\n"
+            "Пришлите сообщение, изображение или опишите ситуацию: это может быть ссылка, "
+            "QR-код, запрос на оплату, предложение или документ. Avvalo покажет, на что "
+            "обратить внимание и что проверить самостоятельно."
         ),
         "ru": (
             "\U0001f1fa\U0001f1ff O'zbekcha\n"
-            "Avvalo — shubhali vaziyatlarni tekshirishga yordam beradigan bot.\n"
-            "Xabar, rasm yoki vaziyatni yuboring. Bot xavf belgilarini va nimani tekshirish kerakligini ko'rsatadi.\n\n"
+            "Avvalo — harakatdan oldin shubhali vaziyatni tekshirishga yordam beradi.\n"
+            "Xabar, rasm yoki vaziyatni yuboring: havola, QR-kod, to'lov so'rovi, "
+            "taklif yoki hujjat ham bo'lishi mumkin. Avvalo nimaga e'tibor berish va "
+            "nimani mustaqil tekshirishni ko'rsatadi.\n\n"
             "\U0001f1f7\U0001f1fa Русский\n"
-            "Avvalo — бот-помощник для проверки сомнительных ситуаций.\n"
-            "Пришлите сообщение, изображение или опишите ситуацию. Бот покажет возможные риски и что нужно проверить."
+            "Avvalo помогает разобраться в сомнительной ситуации до того, как вы начнёте действовать.\n"
+            "Пришлите сообщение, изображение или опишите ситуацию: это может быть ссылка, "
+            "QR-код, запрос на оплату, предложение или документ. Avvalo покажет, на что "
+            "обратить внимание и что проверить самостоятельно."
         ),
     },
     "choose_language": {
@@ -50,50 +62,49 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "privacy_notice": {
         "uz_latn": (
-            "👋 Assalomu alaykum. Avvalo shubhali xabar, skrinshot yoki vaziyatni "
-            "javob berish, pul yuborish yoki kod/hujjat ulashishdan oldin "
-            "tekshirib ko'rishga yordam beradi.\n\n"
+            "👋 Assalomu alaykum. Avvalo shubhali vaziyatni javob berish, pul to'lash, "
+            "ilova o'rnatish yoki hujjat imzolash yoxud shaxsiy ma'lumot yuborishdan "
+            "oldin tekshirishga yordam beradi.\n\n"
             "Qisqasi:\n"
-            "• Men odamni emas, siz yuborgan vaziyatni tahlil qilaman. «Xavfsiz» yoki "
-            "«firibgar» degan tamg'a qo'ymayman.\n"
-            "• Javobim maslahat va tekshiruv ro'yxati. Bu yuridik, moliyaviy yoki "
-            "rasmiy xulosa emas.\n"
-            "• Yuborgan matn/rasm faqat tekshiruv uchun ishlatiladi va 1 soat ichida "
-            "o'chiriladi.\n"
-            "• Tahlilga faqat minimallashtirilgan matn ketadi: telefon, karta va "
-            "havolalar token bilan almashtiriladi.\n"
+            "• Avvalo siz yuborgan vaziyat, material yoki jarayonni tahlil qiladi — odamning "
+            "obro'sini emas. «Xavfsiz», «firibgar» yoki yakuniy hukm bermaydi.\n"
+            "• Javob e'tibor talab qiladigan belgilar, mustaqil tekshiruv qadamlari va "
+            "beriladigan savollardan iborat. Bu yuridik, moliyaviy yoki rasmiy xulosa emas.\n"
+            "• Yuborgan matn, rasm, havola va tayyorlangan javob saqlanmaydi hamda logga yozilmaydi.\n"
+            "• Rasm faqat matnni aniqlash uchun qayta ishlanadi. Tashqi tahlil xizmatiga "
+            "telefon, karta va havolalar token bilan almashtirilgan matn yuboriladi.\n"
             "• Xohlagan payt /delete_my_data yozib ma'lumotlaringizni o'chira olasiz. "
             "Batafsil: /privacy.\n\n"
             "Boshlash uchun «Roziman» ni bosing."
         ),
         "uz_cyrl": (
-            "👋 Ассалому алайкум. Avvalo шубҳали хабар, скриншот ёки вазиятни "
-            "жавоб бериш, пул юбориш ёки код/ҳужжат улашишдан олдин "
-            "текшириб кўришга ёрдам беради.\n\n"
+            "👋 Ассалому алайкум. Avvalo шубҳали вазиятни жавоб бериш, пул тўлаш, "
+            "илова ўрнатиш ёки ҳужжат имзолаш ёхуд шахсий маълумот юборишдан "
+            "олдин текширишга ёрдам беради.\n\n"
             "Қисқаси:\n"
-            "• Мен одамни эмас, сиз юборган вазиятни таҳлил қиламан. «Хавфсиз» ёки "
-            "«фирибгар» деган тамға қўймайман.\n"
-            "• Жавобим маслаҳат ва текширув рўйхати. Бу юридик, молиявий ёки "
-            "расмий хулоса эмас.\n"
-            "• Юборган матн/расм фақат текширув учун ишлатилади ва 1 соат ичида "
-            "ўчирилади.\n"
-            "• Таҳлилга фақат минималлаштирилган матн юборилади: телефон, карта ва "
-            "ҳаволалар токен билан алмаштирилади.\n"
+            "• Avvalo сиз юборган вазият, материал ёки жараённи таҳлил қилади — одамнинг "
+            "обрўсини эмас. «Хавфсиз», «фирибгар» ёки якуний ҳукм бермайди.\n"
+            "• Жавоб эътибор талаб қиладиган белгилар, мустақил текширув қадамлари ва "
+            "бериладиган саволлардан иборат. Бу юридик, молиявий ёки расмий хулоса эмас.\n"
+            "• Юборган матн, расм, ҳавола ва тайёрланган жавоб сақланмайди ҳамда логга ёзилмайди.\n"
+            "• Расм фақат матнни аниқлаш учун қайта ишланади. Ташқи таҳлил хизматига "
+            "телефон, карта ва ҳаволалар токен билан алмаштирилган матн юборилади.\n"
             "• Хоҳлаган пайт /delete_my_data ёзиб маълумотларингизни ўчира оласиз. "
             "Батафсил: /privacy.\n\n"
             "Бошлаш учун «Розиман» ни босинг."
         ),
         "ru": (
-            "👋 Avvalo помогает проверить сомнительное сообщение, скриншот или ситуацию "
-            "до ответа, оплаты, отправки кода или документов.\n\n"
+            "👋 Avvalo помогает проверить сомнительную ситуацию до ответа, оплаты, "
+            "установки приложения, подписания документа или передачи личных данных.\n\n"
             "Коротко:\n"
-            "• Я разбираю ситуацию, которую вы прислали, а не человека. Я не ставлю "
-            "ярлыки «безопасно» или «мошенник».\n"
-            "• Ответ — это подсказка и список проверок, а не юридическое, финансовое "
-            "или официальное заключение.\n"
-            "• Текст и изображения используются только для анализа и удаляются в течение 1 часа.\n"
-            "• На анализ уходит только минимизированный текст: телефоны, карты и ссылки "
-            "заменяются токенами.\n"
+            "• Avvalo разбирает присланную ситуацию, материал или процесс, а не репутацию "
+            "человека. Мы не ставим ярлыки «безопасно» или «мошенник» и не выносим вердикт.\n"
+            "• В ответе будут признаки, требующие внимания, шаги независимой проверки и "
+            "вопросы. Это не юридическое, финансовое или официальное заключение.\n"
+            "• Присланные текст, изображение, ссылка и подготовленный ответ не сохраняются "
+            "и не записываются в журналы.\n"
+            "• Изображение используется только для распознавания текста. Сервис анализа "
+            "получает текст, в котором телефоны, карты и ссылки заменены токенами.\n"
             "• Удалить свои данные можно в любой момент командой /delete_my_data. Подробнее: /privacy.\n\n"
             "Нажмите «Согласен», чтобы начать."
         ),
@@ -105,46 +116,49 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "ready": {
         "uz_latn": (
-            "✅ Tayyor. Xabar yoki skrinshotni yuboring. Avvalo xavf belgilarini, "
-            "nimani tekshirishni va nima deb so'rashni chiqarib beradi."
+            "✅ Tayyor. Shubhali vaziyatga oid matn, havola yoki rasmni yuboring — bu "
+            "xabar, QR-kod, to'lov so'rovi, taklif yoki hujjat bo'lishi mumkin. Avvalo "
+            "nimaga e'tibor berish va nimani mustaqil tekshirishni ko'rsatadi."
         ),
         "uz_cyrl": (
-            "✅ Тайёр. Хабар ёки скриншотни юборинг. Avvalo хавф белгиларини, "
-            "нимани текширишни ва нима деб сўрашни чиқариб беради."
+            "✅ Тайёр. Шубҳали вазиятга оид матн, ҳавола ёки расмни юборинг — бу "
+            "хабар, QR-код, тўлов сўрови, таклиф ёки ҳужжат бўлиши мумкин. Avvalo "
+            "нимага эътибор бериш ва нимани мустақил текширишни кўрсатади."
         ),
         "ru": (
-            "✅ Готово. Пришлите сообщение или скриншот. Avvalo покажет возможные "
-            "риски, что проверить и что спросить."
+            "✅ Готово. Пришлите текст, ссылку или изображение сомнительной ситуации — "
+            "это может быть сообщение, QR-код, запрос на оплату, предложение или документ. "
+            "Avvalo покажет, на что обратить внимание и что проверить самостоятельно."
         ),
     },
     "ready_family": {
-        "uz_latn": "Tayyor. Shubhali xabar yoki skrinshotni yuboring — javob berishdan yoki to'lashdan oldin ko'rib chiqamiz.",
-        "uz_cyrl": "Тайёр. Шубҳали хабар ёки скриншотни юборинг — жавоб беришдан ёки тўлашдан олдин кўриб чиқамиз.",
-        "ru": "Готово. Пришлите сомнительное сообщение или скриншот — разберём до ответа или оплаты.",
+        "uz_latn": "Tayyor. Shubhali vaziyatga oid matn, havola yoki rasmni yuboring — harakat qilishdan oldin ko'rib chiqamiz.",
+        "uz_cyrl": "Тайёр. Шубҳали вазиятга оид матн, ҳавола ёки расмни юборинг — ҳаракат қилишдан олдин кўриб чиқамиз.",
+        "ru": "Готово. Пришлите текст, ссылку или изображение сомнительной ситуации — разберём до того, как вы начнёте действовать.",
     },
     "privacy": {
         "uz_latn": (
             "🔒 Maxfiylik\n\n"
-            "• Avvalo siz yuborgan xabar, rasm yoki vaziyatni tahlil qiladi; odamlar haqida hukm chiqarmaydi.\n"
-            "• Matn va rasmlar faqat tekshiruv uchun ishlatiladi va 1 soat ichida o'chiriladi.\n"
-            "• Tahlilga telefon, karta va havolalari token bilan almashtirilgan minimallashtirilgan matn ketadi.\n"
-            "• Avvalo tekshiruv ro'yxati beradi, lekin yuridik yoki moliyaviy xulosa bermaydi.\n"
+            "• Avvalo vaziyat, material yoki jarayonni tahlil qiladi; odamning obro'siga baho bermaydi.\n"
+            "• Yuborgan matn, rasm, havola va tayyorlangan javob saqlanmaydi hamda logga yozilmaydi.\n"
+            "• Tashqi tahlil xizmatiga telefon, karta va havolalar token bilan almashtirilgan matn yuboriladi.\n"
+            "• Avvalo mustaqil tekshiruv qadamlarini beradi, lekin yuridik, moliyaviy yoki rasmiy xulosa bermaydi.\n"
             "• Ma'lumotlaringizni o'chirish uchun /delete_my_data yuboring."
         ),
         "uz_cyrl": (
             "🔒 Махфийлик\n\n"
-            "• Avvalo сиз юборган хабар, расм ёки вазиятни таҳлил қилади; одамлар ҳақида ҳукм чиқармайди.\n"
-            "• Матн ва расмлар фақат текширув учун ишлатилади ва 1 соат ичида ўчирилади.\n"
-            "• Таҳлилга телефон, карта ва ҳаволалари токен билан алмаштирилган минималлаштирилган матн юборилади.\n"
-            "• Avvalo текширув рўйхати беради, лекин юридик ёки молиявий хулоса бермайди.\n"
+            "• Avvalo вазият, материал ёки жараённи таҳлил қилади; одамнинг обрўсига баҳо бермайди.\n"
+            "• Юборган матн, расм, ҳавола ва тайёрланган жавоб сақланмайди ҳамда логга ёзилмайди.\n"
+            "• Ташқи таҳлил хизматига телефон, карта ва ҳаволалар токен билан алмаштирилган матн юборилади.\n"
+            "• Avvalo мустақил текширув қадамларини беради, лекин юридик, молиявий ёки расмий хулоса бермайди.\n"
             "• Маълумотларингизни ўчириш учун /delete_my_data юборинг."
         ),
         "ru": (
             "🔒 Конфиденциальность\n\n"
-            "• Avvalo анализирует сообщение, изображение или ситуацию, которую вы прислали; людей мы не оцениваем.\n"
-            "• Текст и изображения используются только для проверки и удаляются в течение 1 часа.\n"
-            "• На анализ уходит минимизированный текст: телефоны, карты и ссылки заменяются токенами.\n"
-            "• Avvalo даёт список проверок, но не юридическое или финансовое заключение.\n"
+            "• Avvalo разбирает ситуацию, материал или процесс, а не репутацию человека.\n"
+            "• Присланные текст, изображение, ссылка и подготовленный ответ не сохраняются и не записываются в журналы.\n"
+            "• Сервис анализа получает текст, в котором телефоны, карты и ссылки заменены токенами.\n"
+            "• Avvalo даёт шаги независимой проверки, но не юридическое, финансовое или официальное заключение.\n"
             "• Чтобы удалить свои данные, отправьте /delete_my_data."
         ),
     },
@@ -155,13 +169,13 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "need_consent": {
         "uz_latn": (
-            "Avval /start ni bosing va «Roziman» tugmasini tasdiqlang. Shundan keyin xabarni tekshiraman."
+            "Avval /start ni bosing va «Roziman» tugmasini tasdiqlang. Shundan keyin vaziyatni ko'rib chiqaman."
         ),
         "uz_cyrl": (
-            "Аввал /start ни босинг ва «Розиман» тугмасини тасдиқланг. Шундан кейин хабарни текшираман."
+            "Аввал /start ни босинг ва «Розиман» тугмасини тасдиқланг. Шундан кейин вазиятни кўриб чиқаман."
         ),
         "ru": (
-            "Сначала отправьте /start и нажмите «Согласен». После этого я смогу проверить сообщение."
+            "Сначала отправьте /start и нажмите «Согласен». После этого я смогу разобрать ситуацию."
         ),
     },
     "consent_updated": {
@@ -170,9 +184,9 @@ TEXTS: dict[str, dict[str, str]] = {
         "ru": "Условия конфиденциальности обновились. Прочитайте новый текст и подтвердите согласие ещё раз.",
     },
     "unsupported_input": {
-        "uz_latn": "Tekshirish uchun xabar matni yoki skrinshot yuboring.",
-        "uz_cyrl": "Текшириш учун хабар матни ёки скриншот юборинг.",
-        "ru": "Пришлите текст сообщения или скриншот для проверки.",
+        "uz_latn": "Tekshirish uchun matn, havola yoki o'qilishi mumkin bo'lgan rasm yuboring.",
+        "uz_cyrl": "Текшириш учун матн, ҳавола ёки ўқилиши мумкин бўлган расм юборинг.",
+        "ru": "Пришлите текст, ссылку или читаемое изображение ситуации.",
     },
     "fb_saved": {
         "uz_latn": "Saqlandi",
@@ -231,15 +245,15 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "share_expired": {
         "uz_latn": (
-            "Bu javobni ulashib bo'lmadi. "
+            "Ulashish uchun qisqa ogohlantirish tayyorlanmadi. "
             "Yangi tekshiruvdan keyin qayta urinib ko'ring."
         ),
         "uz_cyrl": (
-            "Бу жавобни улашиб бўлмади. "
+            "Улашиш учун қисқа огоҳлантириш тайёрланмади. "
             "Янги текширувдан кейин қайта уриниб кўринг."
         ),
         "ru": (
-            "Не удалось подготовить этот ответ для пересылки. "
+            "Не удалось подготовить краткое предупреждение для пересылки. "
             "Попробуйте после новой проверки."
         ),
     },
