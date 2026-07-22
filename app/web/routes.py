@@ -63,13 +63,11 @@ def _static_version() -> str:
 templates.env.globals["static_version"] = _static_version()
 DEV_WEB_SESSION_SECRET = "development-web-session-secret"
 WEB_MAX_TEXT_CHARS = 6000
-WEB_MAX_CAPTION_CHARS = 500
 WEB_IP_SCOPE = "web_ip"
 
 # The form's own maxlength attributes come from the same constants the POST
 # handler validates against, so the browser can never invite an oversized body.
 templates.env.globals["max_text_chars"] = WEB_MAX_TEXT_CHARS
-templates.env.globals["max_caption_chars"] = WEB_MAX_CAPTION_CHARS
 templates.env.globals["short_language_labels"] = {
     "uz_latn": "O‘z",
     "uz_cyrl": "Ўз",
@@ -134,7 +132,6 @@ WEB_COPY = {
         "title": "Avvalo",
         "privacy_title": "Maxfiylik",
         "consent_label": "Maxfiylik shartlarini o'qidim va roziman",
-        "caption_label": "Qo'shimcha izoh",
         "image_label": "Skrinshot yoki rasm",
         "optional_label": "ixtiyoriy",
         "choose_file": "Rasm tanlash",
@@ -158,7 +155,6 @@ WEB_COPY = {
                 "Masalan: to‘lov skrinshotini yuborib, pul tushmasidan oldin "
                 "tovarni berishimni so‘rashyapti..."
             ),
-            "caption_placeholder": "Kerak bo'lsa: kim yubordi, nima so'rayapti?",
             "image_hint": "Yozishma, chek, QR-kod yoki hujjat aniq ko‘rinsin.",
             "use_cases": [
                 "Xabar yoki suhbat",
@@ -228,7 +224,6 @@ WEB_COPY = {
         "title": "Avvalo",
         "privacy_title": "Махфийлик",
         "consent_label": "Махфийлик шартларини ўқидим ва розиман",
-        "caption_label": "Қўшимча изоҳ",
         "image_label": "Скриншот ёки расм",
         "optional_label": "ихтиёрий",
         "choose_file": "Расм танлаш",
@@ -252,7 +247,6 @@ WEB_COPY = {
                 "Масалан: тўлов скриншотини юбориб, пул тушмасидан олдин "
                 "товарни беришимни сўрашяпти..."
             ),
-            "caption_placeholder": "Керак бўлса: ким юборди, нима сўраяпти?",
             "image_hint": "Ёзишма, чек, QR-код ёки ҳужжат аниқ кўринсин.",
             "use_cases": [
                 "Хабар ёки суҳбат",
@@ -322,7 +316,6 @@ WEB_COPY = {
         "title": "Avvalo",
         "privacy_title": "Конфиденциальность",
         "consent_label": "Я прочитал условия конфиденциальности и согласен",
-        "caption_label": "Короткий контекст",
         "image_label": "Скриншот или фото",
         "optional_label": "необязательно",
         "choose_file": "Выбрать фото",
@@ -346,7 +339,6 @@ WEB_COPY = {
                 "Например: прислали скрин оплаты и просят отдать товар до "
                 "зачисления денег..."
             ),
-            "caption_placeholder": "Если нужно: кто написал и чего просит?",
             "image_hint": "Подойдёт читаемый скриншот переписки, чека, QR-кода или документа.",
             "use_cases": [
                 "Сообщение или переписка",
@@ -495,7 +487,6 @@ async def check(
     request: Request,
     language: Annotated[str, Form()] = DEFAULT_LANGUAGE,
     text: Annotated[str, Form()] = "",
-    caption: Annotated[str, Form()] = "",
     consent: Annotated[str | None, Form()] = None,
     turnstile_token: Annotated[str | None, Form(alias="cf-turnstile-response")] = None,
     image: Annotated[UploadFile | None, File()] = None,
@@ -528,7 +519,7 @@ async def check(
                 web_session=web_session,
             )
 
-        limit_error = _form_limit_error(copy, text=text, caption=caption)
+        limit_error = _form_limit_error(copy, text=text)
         if limit_error is not None:
             return _partial(
                 request,
@@ -562,7 +553,6 @@ async def check(
             input_type=input_type,
             raw_text=text or None,
             image_bytes=image_bytes,
-            caption=caption or None,
         )
 
         ip_limit = await _reserve_web_ip_limit(
@@ -623,8 +613,8 @@ async def _ensure_web_consent(
     return True
 
 
-def _form_limit_error(copy: dict, *, text: str, caption: str) -> str | None:
-    if len(text) > WEB_MAX_TEXT_CHARS or len(caption) > WEB_MAX_CAPTION_CHARS:
+def _form_limit_error(copy: dict, *, text: str) -> str | None:
+    if len(text) > WEB_MAX_TEXT_CHARS:
         return copy["too_long_error"]
     return None
 
