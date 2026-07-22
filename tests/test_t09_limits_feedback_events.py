@@ -144,32 +144,6 @@ def test_log_error_accepts_metadata_and_refuses_content() -> None:
         log_error("llm", "LLMProviderError", raw_text="secret submitted content")
 
 
-def test_log_error_forwards_tags_to_sentry(monkeypatch) -> None:
-    calls: list[dict] = []
-    monkeypatch.setattr(
-        "app.obs.events.sentry_sdk.capture_message",
-        lambda message, **kwargs: calls.append({"message": message, **kwargs}),
-    )
-
-    log_error("llm", "LLMProviderError", attempt=1)
-
-    assert len(calls) == 1
-    call = calls[0]
-    assert call["level"] == "error"
-    assert call["fingerprint"] == ["app_error", "llm", "LLMProviderError"]
-    assert call["tags"] == {
-        "stage": "llm",
-        "error_type": "LLMProviderError",
-                "attempt": "1",
-    }
-
-
-def test_log_error_is_a_safe_no_op_without_sentry_init() -> None:
-    # No sentry_sdk.init() has run anywhere in the test process (no SENTRY_DSN),
-    # so this must not raise or attempt a network call.
-    log_error("ocr", "OCRProviderError")
-
-
 async def test_run_check_emits_privacy_safe_events(session, caplog) -> None:
     caplog.set_level(logging.INFO, logger="app.obs.events")
     await run_check(

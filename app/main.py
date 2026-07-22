@@ -21,7 +21,6 @@ from app.obs.alerts import (
     install_operator_alerts,
 )
 from app.obs.metrics import log_knowledge_inventory
-from app.obs.sentry import init_sentry
 from app.web.app import create_app
 
 LOGGER = logging.getLogger(__name__)
@@ -33,7 +32,6 @@ async def run(*, check_only: bool = False) -> None:
     """Validate config, connect to PostgreSQL, then run the bot (or just check)."""
 
     settings = get_settings()
-    init_sentry(settings)
     engine = create_database_engine(settings.database_url)
     try:
         await check_database_connection(engine)

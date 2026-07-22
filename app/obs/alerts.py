@@ -2,8 +2,8 @@
 
 Attaches as a standard logging.Handler on the "app.obs.events" logger, so it
 only ever sees the same allowlisted, content-scrubbed fields already destined
-for the local error log and Sentry — nothing new is read from the exception,
-the request, or the update.
+for the local error log — nothing new is read from the exception, the request,
+or the update.
 """
 
 from __future__ import annotations
