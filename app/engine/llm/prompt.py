@@ -30,7 +30,7 @@ def build_prompt(
     template = _read_prompt(_CHECK_PROMPT)
     user = template.format(
         language=language.value,
-        minimized_text=minimized_text,
+        minimized_text=json.dumps(minimized_text, ensure_ascii=False),
         rule_hits=_render_rule_hits(rule_hits),
         signals=_render_signals(signals),
         knowledge=_render_knowledge(knowledge_cards),

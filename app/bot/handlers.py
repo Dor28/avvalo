@@ -28,11 +28,31 @@ from app.config import Settings
 from app.data import repo
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.format import share_summary
+from app.engine.types import MAX_IMAGE_BYTES, MAX_SUBMITTED_TEXT_CHARS
 from app.obs.events import log_event
 from app.privacy.consent import grant_consent, is_consent_current
 from app.privacy.user_key import derive_user_key
 
 _FEEDBACK_STATUSES = {CheckStatus.ok, CheckStatus.no_signal}
+
+
+class _UploadTooLargeError(Exception):
+    """Stop a Telegram download before an oversized photo fills memory."""
+
+
+class _BoundedBytesIO(BytesIO):
+    """In-memory destination that enforces the shared ephemeral image cap."""
+
+    def __init__(self, *, max_bytes: int = MAX_IMAGE_BYTES) -> None:
+        super().__init__()
+        self._max_bytes = max_bytes
+        self._written = 0
+
+    def write(self, data: bytes) -> int:
+        self._written += len(data)
+        if self._written > self._max_bytes:
+            raise _UploadTooLargeError
+        return super().write(data)
 
 router = Router()
 
@@ -359,6 +379,8 @@ async def _build_check_input(
 
     text = message.text or message.caption
     if text and text.strip():
+        if len(text) > MAX_SUBMITTED_TEXT_CHARS:
+            return None
         return CheckInput(
             user_key=user_key,
             language=lang,
@@ -369,10 +391,18 @@ async def _build_check_input(
 
 
 async def _download_photo(message: Message) -> bytes | None:
-    """Download the largest available photo size into memory."""
+    """Download the largest photo into bounded ephemeral memory."""
 
     if message.bot is None or not message.photo:
         return None
-    buffer = BytesIO()
-    await message.bot.download(message.photo[-1], destination=buffer)
+    photo = message.photo[-1]
+    declared_size = getattr(photo, "file_size", None)
+    if isinstance(declared_size, int) and declared_size > MAX_IMAGE_BYTES:
+        return None
+
+    buffer = _BoundedBytesIO()
+    try:
+        await message.bot.download(photo, destination=buffer)
+    except _UploadTooLargeError:
+        return None
     return buffer.getvalue() or None
