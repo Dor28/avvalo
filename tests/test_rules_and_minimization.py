@@ -1,8 +1,8 @@
-"""T5 — rule engine, family rules & minimization (V1_TECHNICAL_PLAN §10, §11, §13 T5).
+"""Extended deterministic-rule and minimization contract tests.
 
-Acceptance criteria covered:
-- each family golden input fires its expected rule families (and yields >=1 hit);
-- minimization tokenizes PII while preserving the link signal (§10 unit test);
+Current behavior covered:
+- each golden input fires its expected rule families (and yields at least one hit);
+- minimization tokenizes PII while preserving the link signal;
 - structural extractors classify links and transfer-to-card phrasing into signals.
 """
 
@@ -34,7 +34,7 @@ def test_goldens_fire_expected_families(golden) -> None:
 
 
 def test_minimize_tokenizes_pii_and_keeps_link_signal() -> None:
-    # §10 unit test: phone + lookalike URL + card -> tokens, no raw values.
+    # Phone + lookalike URL + card become tokens; no raw values survive.
     raw = (
         "Karta: 8600 1234 1234 5678, tel +998 90 123 45 67, "
         "to'lov havolasi https://click-uz.example/pay"

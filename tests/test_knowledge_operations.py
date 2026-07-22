@@ -1,4 +1,4 @@
-"""T-03/T-04 acceptance: metadata-only gaps, coverage, inventory, and alerts."""
+"""Knowledge-gap reporting, coverage, inventory, and alerting tests."""
 
 from __future__ import annotations
 

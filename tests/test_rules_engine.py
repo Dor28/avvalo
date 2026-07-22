@@ -1,4 +1,4 @@
-"""T5 deterministic rule-engine and minimization tests."""
+"""Deterministic rule-engine and minimization tests."""
 
 import json
 from pathlib import Path

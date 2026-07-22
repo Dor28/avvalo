@@ -1,4 +1,4 @@
-"""T13 - web channel parity and abuse gates."""
+"""Web-channel parity, privacy boundaries, and abuse-gate tests."""
 
 import logging
 

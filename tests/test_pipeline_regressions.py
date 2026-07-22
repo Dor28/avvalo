@@ -1,6 +1,6 @@
-"""Regression tests for code-review fixes.
+"""Pipeline privacy, validation, and quota regression tests.
 
-Covers privacy and quota bugs found during review that the existing suite did not exercise:
+Covers privacy and quota bugs that must remain fixed:
 
 1. ``minimize`` left raw phone numbers with operator codes 50/55/88/20 in the
    text sent to the model (privacy leak).

@@ -1,4 +1,4 @@
-"""R1 share-warning tests for the content-free Telegram share loop."""
+"""Content-free Telegram Share behavior and ownership tests."""
 
 import re
 from types import SimpleNamespace

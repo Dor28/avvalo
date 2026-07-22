@@ -88,8 +88,8 @@ The legal posture depends on these; several are enforced by tests that will fail
   [docs/V1_TECHNICAL_PLAN.md](docs/V1_TECHNICAL_PLAN.md) describes the retained core and clearly
   marks removed legacy surfaces as history. Module docstrings cite technical-plan sections
   (§5.1, §9, …) — keep those references in sync.
-- Tests named `test_tNN_*.py` map to the numbered build history in V1_TECHNICAL_PLAN §13; the
-  active golden end-to-end fixtures live in `tests/fixtures/golden/checks.json`.
+- Test modules are named for current behavior and product boundaries, not historical milestones;
+  the active golden end-to-end fixtures live in `tests/fixtures/golden/checks.json`.
 - **Every user-facing string exists in both languages** (`uz_latn`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. Uzbek replies are Latin-script only. Cyrillic-Uzbek *input* is still supported: `app/engine/language.py` detects it and resolves it to `uz_latn`, the `uz_cyrl` keyword groups in `rules/` and `knowledge/` still match it, and `app/engine/validate.py` still bans Cyrillic verdict words. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
 - Async end-to-end; pytest runs with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed).
 - Style follows ruff config in [pyproject.toml](pyproject.toml): 100-char lines, import sorting (I), modern syntax (UP). Module docstrings state purpose and spec section; internal helpers use frozen dataclasses, boundary types use Pydantic.

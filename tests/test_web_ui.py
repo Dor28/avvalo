@@ -1,4 +1,4 @@
-"""Regression checks for the public web redesign shell."""
+"""Unified public web shell, behavior, and cache-policy tests."""
 
 import re
 

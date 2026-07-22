@@ -1,4 +1,4 @@
-"""T4 — engine type contracts and pipeline skeleton tests."""
+"""Shared checker pipeline behavior and ephemeral-input tests."""
 
 from sqlalchemy import select
 

@@ -1,4 +1,4 @@
-"""T7 safety validator and formatter tests."""
+"""Safety validator, retry, fallback, and formatter tests."""
 
 import logging
 from decimal import Decimal

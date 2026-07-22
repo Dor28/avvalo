@@ -1,4 +1,4 @@
-"""T1 configuration contract tests."""
+"""Runtime configuration contract tests."""
 
 import pytest
 from pydantic import ValidationError

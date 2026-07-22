@@ -1,8 +1,7 @@
-"""T1 — skeleton, config & infra conformance (V1_TECHNICAL_PLAN §1, §13 T1).
+"""Infrastructure and dependency-boundary contract tests.
 
-config.py itself is covered by test_config.py; this pins the surrounding infra
-the plan locks down: the compose services, the documented env surface, and the
-"keep it boring — do not add" dependency rule (§1).
+``config.py`` is covered separately; this module pins the surrounding deployment
+services, documented environment surface, and deliberately small dependency stack.
 """
 
 import re

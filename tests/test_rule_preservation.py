@@ -1,4 +1,4 @@
-"""T-06 acceptance: every high-severity authoritative rule must be declared."""
+"""Detected high-severity rule preservation and retry tests."""
 
 from __future__ import annotations
 
