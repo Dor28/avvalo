@@ -109,6 +109,36 @@ def test_consumer_copy_leads_with_the_check_instead_of_family_branding() -> None
         assert broad_example in checker.text
 
 
+def test_checker_headline_is_simple_and_aligned_in_both_languages() -> None:
+    client = TestClient(create_app())
+    localized_headlines = {
+        "uz_latn": "Vaziyatni Avvalo bilan tekshiring.",
+        "ru": "Проверьте ситуацию \u0441 Avvalo.",
+    }
+
+    for language, headline in localized_headlines.items():
+        landing = client.get(f"/?language={language}")
+        checker = client.get(f"/check?language={language}")
+
+        assert headline in landing.text
+        assert headline in checker.text
+
+
+def test_checker_explains_advisory_limit_in_both_languages() -> None:
+    client = TestClient(create_app())
+    localized_limits = {
+        "uz_latn": "Tavsiya beradi, natijani kafolatlamaydi",
+        "ru": "Даёт рекомендации, но не гарантирует результат",
+    }
+
+    for language, limitation in localized_limits.items():
+        landing = client.get(f"/?language={language}")
+        checker = client.get(f"/check?language={language}")
+
+        assert limitation in landing.text
+        assert limitation in checker.text
+
+
 def test_check_page_exposes_localized_flow_and_busy_state() -> None:
     response = TestClient(create_app()).get("/check?language=ru")
 
