@@ -126,3 +126,39 @@ def test_check_page_exposes_localized_flow_and_busy_state() -> None:
     assert 'aria-current="page"' in response.text
     assert 'data-busy-label="Проверяем..."' in response.text
     assert 'class="skip-link"' in response.text
+
+
+def test_app_pages_are_never_cached_so_a_deploy_is_visible_immediately() -> None:
+    """A returning visitor must not be served the previous deploy.
+
+    These responses used to carry no Cache-Control and no validator at all,
+    which lets a browser reuse a stored copy heuristically — the page looks
+    unchanged after a deploy, and its stale ?v= URLs pin the old CSS and JS
+    too. The retired merchant compatibility redirect must not be cached either.
+    """
+
+    client = TestClient(create_app())
+
+    for path in ("/", "/check", "/privacy"):
+        response = client.get(f"{path}?language=uz_latn")
+
+        assert response.status_code == 200, path
+        assert response.headers["cache-control"] == "no-store", path
+
+    merchant = client.get("/merchants?language=uz_latn", follow_redirects=False)
+    assert merchant.status_code == 308
+    assert merchant.headers["cache-control"] == "no-store"
+
+
+def test_static_assets_stay_cacheable_and_fingerprinted() -> None:
+    """no-store applies to pages only; assets rely on the ?v= fingerprint."""
+
+    client = TestClient(create_app())
+    home = client.get("/?language=uz_latn")
+
+    match = re.search(r'/static/(check\.js|styles\.css)\?v=([0-9a-f]{12})', home.text)
+    assert match is not None
+
+    asset = client.get(f"/static/{match.group(1)}?v={match.group(2)}")
+    assert asset.status_code == 200
+    assert asset.headers.get("cache-control") != "no-store"
