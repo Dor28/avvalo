@@ -15,10 +15,7 @@ from app.content.models import EditorialPost
 
 CATEGORIES = ("payments", "phishing", "marketplace", "jobs", "accounts", "documents")
 STATES = {"draft", "published"}
-# Languages an editorial post is authored and served in. The ``*_uz_cyrl``
-# columns are retained but dormant: Uzbek Cyrillic is no longer a reply
-# language, so editors are not asked to write it and readers are never served
-# it. Dropping those columns needs its own migration.
+# Languages an editorial post is authored and served in.
 LANGUAGES = {"uz_latn", "ru"}
 SLUG_MAX_CHARS = 100
 TITLE_MAX_CHARS = 160
@@ -38,11 +35,6 @@ class EditorialPostDraft(BaseModel):
     title_uz_latn: str
     summary_uz_latn: str
     article_uz_latn: str
-    # Dormant: retained so the existing NOT NULL columns stay satisfiable, but
-    # no longer authored, validated, or served. See LANGUAGES above.
-    title_uz_cyrl: str = ""
-    summary_uz_cyrl: str = ""
-    article_uz_cyrl: str = ""
     title_ru: str
     summary_ru: str
     article_ru: str
