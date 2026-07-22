@@ -44,6 +44,7 @@ Important modules:
 | Engine | `app/engine/pipeline.py` | Orchestrates every check |
 | Types | `app/engine/types.py` | Boundary enums and Pydantic models |
 | Rules | `app/engine/rules/`, `rules/checker/` | Deterministic local signals |
+| Rule overrides | `app/rules_store/` | Operator-authored patterns merged onto the baseline |
 | Minimization | `app/engine/minimize.py` | Removes PII before model calls |
 | Knowledge | `app/engine/knowledge/`, `knowledge/checker/` | Reviewed explanatory guidance |
 | LLM | `app/engine/llm/` | OpenAI-compatible provider boundary and fallback |
@@ -106,7 +107,7 @@ Error classes are categorical identifiers, never exception messages.
 
 ## 5. Rules and payment protection
 
-`rules/checker/families.yaml` is the sole active rule pack. Stable `fs.*` rule IDs must not be
+`rules/checker/families.yaml` is the shipped baseline rule pack. Stable `fs.*` rule IDs must not be
 renamed because events, knowledge cards, tests, and sanitized Share summaries reference them.
 
 The pack covers credential theft, urgency/secrecy, authority impersonation, upfront payment,
@@ -116,6 +117,29 @@ inconsistency, screenshot claims, overpayment/refund requests, and pressure to r
 A screenshot, receipt, or message never proves that an incoming payment arrived. Relevant output
 must tell the user to verify the matching transfer independently in the receiving bank/payment
 account before refunding money or releasing goods.
+
+### 5.1 Operator rule overrides
+
+The repository is public, so its keyword lists are readable by the people they detect. New pattern
+work therefore lives in the `rule_override` table (`app/rules_store/`) rather than in git, on its
+own declarative base beside `EditorialBase` — patterns are operator-authored reference data, never
+user content, and must stay outside the zero-content contract enforced over `app.data.models.Base`.
+
+Overrides merge onto the baseline **by rule ID**: a matching ID replaces that rule, a new ID adds
+one, and a `disabled` row suppresses a baseline rule. Wholesale replacement was rejected because it
+would force an operator to re-enter the entire pack before adding one keyword.
+
+`load_rule_pack()` stays synchronous and is served from a process-level snapshot, because the pack
+is read several times per check and from inside the formatter and prompt builder.
+`app.rules_store.apply` refreshes that snapshot every `RULE_PACK_REFRESH_MINUTES` on the existing
+scheduler. Both failure paths are deliberately fail-safe: an unreachable database leaves the
+previously published pack in force and ultimately falls back to the shipped YAML baseline, and a
+single malformed row is skipped rather than taking the whole pack down. Patterns are validated on
+write — regexes must compile and literals must clear a minimum length — because a bad pattern
+degrades detection silently for every user.
+
+Moving patterns out of git does not retract what is already published; it only keeps future work
+unpublished.
 
 ## 6. Knowledge and model boundary
 

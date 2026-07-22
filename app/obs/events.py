@@ -33,9 +33,12 @@ ALLOWED_EVENT_NAMES = {
     "share_tapped",
     "deletion_requested",
     "deletion_completed",
+    "rule_pack_refreshed",
 }
 
 ALLOWED_FIELDS = {
+    "active_rules",
+    "baseline_rules",
     "cost_usd",
     "error_class",
     "face",
@@ -49,10 +52,12 @@ ALLOWED_FIELDS = {
     "limit",
     "llm_ms",
     "next_action",
+    "disabled_rules",
     "no_signal",
     "ocr_confidence",
     "ocr_ms",
     "output_tokens",
+    "override_rules",
     "retrieval_mode",
     "retrieval_status",
     "router_status",
@@ -116,6 +121,7 @@ ALLOWED_ERROR_STAGES = {
     "web",
     "bot",
     "knowledge",
+    "rule_pack",
     "url_reputation",
 }
 

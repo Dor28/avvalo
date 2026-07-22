@@ -24,6 +24,7 @@ from app.obs.alerts import (
 )
 from app.obs.metrics import log_knowledge_inventory
 from app.obs.sentry import init_sentry
+from app.rules_store import install_rule_pack_refresh_job
 from app.web.app import create_app
 
 LOGGER = logging.getLogger(__name__)
@@ -59,6 +60,7 @@ async def run(*, check_only: bool = False) -> None:
         )
         install_url_reputation_job(scheduler, session_factory, settings)
         install_knowledge_availability_alert_job(scheduler, session_factory, settings)
+        install_rule_pack_refresh_job(scheduler, session_factory, settings)
         try:
             runners = []
             if settings.web_enabled:

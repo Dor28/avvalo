@@ -13,6 +13,10 @@ from app.engine.faces import FACES
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
+# Merged YAML+database packs currently in force, keyed by face ID. Empty until
+# the first refresh succeeds; see ``load_rule_pack``.
+_ACTIVE_PACKS: dict[str, RulePack] = {}
+
 
 @dataclass(frozen=True)
 class RuleDefinition:
@@ -36,8 +40,35 @@ class RulePack:
     descriptions: dict[str, str]
 
 
-@cache
 def load_rule_pack(face_id: str) -> RulePack:
+    """Return the pack in force for ``face_id``.
+
+    Synchronous by design: the pack is read several times per check and from
+    inside the formatter and prompt builder, so it is served from a process-level
+    snapshot rather than queried. ``app.rules_store.apply`` swaps that snapshot
+    in on a schedule and after an operator edit. Before the first successful
+    refresh — and whenever the database is unreachable — this falls back to the
+    YAML pack shipped in the image, so detection degrades to the baseline
+    instead of to nothing.
+    """
+
+    return _ACTIVE_PACKS.get(face_id) or load_yaml_rule_pack(face_id)
+
+
+def set_active_rule_pack(face_id: str, pack: RulePack) -> None:
+    """Publish a merged pack as the one in force for ``face_id``."""
+
+    _ACTIVE_PACKS[face_id] = pack
+
+
+def clear_active_rule_packs() -> None:
+    """Drop every merged pack, reverting to the shipped YAML baseline."""
+
+    _ACTIVE_PACKS.clear()
+
+
+@cache
+def load_yaml_rule_pack(face_id: str) -> RulePack:
     """Load and validate all YAML rule files for ``face_id``."""
 
     try:
