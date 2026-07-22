@@ -140,6 +140,23 @@ def test_remote_update_waits_for_service_health() -> None:
     assert "http://localhost:8000/readyz" in compose
 
 
+def test_deploy_reclaims_unused_images_and_requires_disk_headroom() -> None:
+    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(
+        encoding="utf-8"
+    )
+    preflight_prune = workflow.index("docker image prune -a -f")
+
+    assert preflight_prune < workflow.index("rsync -az --delete")
+    assert "minimum_free_kb=$((3 * 1024 * 1024))" in workflow
+    assert "df -Pk /" in workflow
+    assert "docker volume prune" not in workflow
+
+    script = (REPO_ROOT / "deploy" / "remote-update.sh").read_text(encoding="utf-8")
+    assert "docker image prune -a -f" in script
+    assert script.index("$COMPOSE ps") < script.index("docker image prune -a -f")
+    assert "docker volume prune" not in script
+
+
 def test_restore_stops_writers_and_fails_atomically() -> None:
     script = (REPO_ROOT / "deploy" / "restore.sh").read_text(encoding="utf-8")
 

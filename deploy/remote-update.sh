@@ -41,5 +41,7 @@ for attempt in 1 2 3; do
 done
 
 $COMPOSE ps
-docker image prune -f                   # reclaim space from the previous image
+# Immutable sha-* tags are not dangling, so include every image unused by a
+# container. Rollbacks remain pullable from GHCR by their immutable tag.
+docker image prune -a -f
 echo ">> Deploy complete."
