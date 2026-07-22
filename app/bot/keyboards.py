@@ -30,7 +30,7 @@ def language_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-_CONSENT_LANGUAGE_CODES = {"uz_latn": "l", "uz_cyrl": "c", "ru": "r"}
+_CONSENT_LANGUAGE_CODES = {"uz_latn": "l", "ru": "r"}
 _CONSENT_LANGUAGES = {code: language for language, code in _CONSENT_LANGUAGE_CODES.items()}
 
 

@@ -7,10 +7,14 @@ from pydantic import BaseModel, Field
 
 
 class Language(StrEnum):
-    """Supported output languages/scripts."""
+    """Supported reply languages.
+
+    Uzbek is answered in Latin script only. Cyrillic-Uzbek input is still read
+    and matched (see ``app.engine.language`` and the ``uz_cyrl`` keyword groups
+    in the rule packs), but it resolves to :attr:`uz_latn` for the reply.
+    """
 
     uz_latn = "uz_latn"
-    uz_cyrl = "uz_cyrl"
     ru = "ru"
 
 

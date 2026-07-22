@@ -59,7 +59,7 @@ Every accepted request follows this order:
 
 1. Confirm current consent and reserve the applicable daily limit.
 2. Read text, or preprocess the image and run OCR.
-3. Resolve the response language: `uz_latn`, `uz_cyrl`, or `ru`.
+3. Resolve the response language: `uz_latn` or `ru` (Cyrillic-Uzbek resolves to `uz_latn`).
 4. Run local rules and structural signal extraction on local text.
 5. Optionally check URL hashes against the local reputation table.
 6. Minimize PII and identifiers.

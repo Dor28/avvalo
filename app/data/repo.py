@@ -27,7 +27,7 @@ USEFULNESS_VALUES = {"yes", "partly", "no"}
 NEXT_ACTION_VALUES = {"verify", "delay_stop", "continue", "not_sure"}
 CHECK_EVENT_FACES = {"family"}
 CHECK_EVENT_INPUT_TYPES = {"text", "image"}
-CHECK_EVENT_LANGUAGES = {"uz_latn", "uz_cyrl", "ru"}
+CHECK_EVENT_LANGUAGES = {"uz_latn", "ru"}
 CHECK_EVENT_STATUSES = {
     "ok",
     "no_signal",

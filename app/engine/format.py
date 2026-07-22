@@ -10,62 +10,50 @@ BOT_LINK = "https://t.me/Avvalo_official_bot"
 _FAMILY_LABELS = {
     "credential_theft": {
         Language.uz_latn: "kod yoki maxfiy ma'lumot so'rash",
-        Language.uz_cyrl: "код ёки махфий маълумот сўраш",
         Language.ru: "запрос кодов или секретных данных",
     },
     "urgency_secrecy": {
         Language.uz_latn: "shoshirish yoki sir tutishni so'rash",
-        Language.uz_cyrl: "шошириш ёки сир тутишни сўраш",
         Language.ru: "срочность или просьба держать в тайне",
     },
     "authority_impersonation": {
         Language.uz_latn: "rasmiy tashkilot yoki yaqin odam nomidan yozish",
-        Language.uz_cyrl: "расмий ташкилот ёки яқин одам номидан ёзиш",
         Language.ru: "сообщение от имени организации или близкого",
     },
     "upfront_payment": {
         Language.uz_latn: "oldindan to'lov yoki depozit so'rash",
-        Language.uz_cyrl: "олдиндан тўлов ёки депозит сўраш",
         Language.ru: "предоплата или депозит до проверки",
     },
     "verification_avoidance": {
         Language.uz_latn: "mustaqil tekshiruvdan qochish",
-        Language.uz_cyrl: "мустақил текширувдан қочиш",
         Language.ru: "уход от независимой проверки",
     },
     "implausible_promise": {
         Language.uz_latn: "juda yaxshi ko'rinadigan va'da",
-        Language.uz_cyrl: "жуда яхши кўринадиган ваъда",
         Language.ru: "слишком выгодное обещание",
     },
     "suspicious_link_qr": {
         Language.uz_latn: "havola yoki QR orqali bosim",
-        Language.uz_cyrl: "ҳавола ёки QR орқали босим",
         Language.ru: "давление через ссылку или QR",
     },
     "receipt_inconsistency": {
         Language.uz_latn: "to'lov hikoyasidagi nomuvofiqlik",
-        Language.uz_cyrl: "тўлов ҳикоясидаги номувофиқлик",
         Language.ru: "несостыковка в истории оплаты",
     },
     "amount_mismatch": {
         Language.uz_latn: "summa yoki qaytarim talabi mos kelmasligi",
-        Language.uz_cyrl: "сумма ёки қайтарим талаби мос келмаслиги",
         Language.ru: "несовпадение суммы или просьба о возврате",
     },
     "edited_screenshot_hint": {
         Language.uz_latn: "skrinshotni to'lov isboti sifatida ko'rsatish",
-        Language.uz_cyrl: "скриншотни тўлов исботи сифатида кўрсатиш",
         Language.ru: "скриншот как доказательство оплаты",
     },
     "fake_courier_refund": {
         Language.uz_latn: "pul tasdiqlanmasdan jo'natishga bosim",
-        Language.uz_cyrl: "пул тасдиқланмасдан жўнатишга босим",
         Language.ru: "давление отправить товар до подтверждения",
     },
     "verify_in_bank_app": {
         Language.uz_latn: "bank ilovasida tasdiqlash zarurati",
-        Language.uz_cyrl: "банк иловасида тасдиқлаш зарурати",
         Language.ru: "нужно проверить в банковском приложении",
     },
 }
@@ -77,13 +65,6 @@ _SHARE_COPY = {
         "generic": "Men Avvalo bilan shubhali xabarni tekshirdim.",
         "caution": "Javob berish yoki to'lov qilishdan oldin mustaqil tekshiring.",
         "cta": f"O'zingiznikini tekshiring: {BOT_LINK}",
-    },
-    Language.uz_cyrl: {
-        "lead": "Мен Avvalo билан шубҳали хабарни текширдим.",
-        "families": "Топилган белгилар: {families}.",
-        "generic": "Мен Avvalo билан шубҳали хабарни текширдим.",
-        "caution": "Жавоб бериш ёки тўлов қилишдан олдин мустақил текширинг.",
-        "cta": f"Ўзингизникини текширинг: {BOT_LINK}",
     },
     Language.ru: {
         "lead": "Я проверил(а) подозрительное сообщение в Avvalo.",
@@ -112,25 +93,6 @@ _HEADINGS = {
             "Hozir javobni xavfsiz shaklda tayyorlay olmadim. Kodlarni aytmang, "
             "pul yubormang. Avval rasmiy ilova yoki o'zingiz topgan aloqa kanali "
             "orqali tekshiring."
-        ),
-    },
-    Language.uz_cyrl: {
-        "red_flags": "🚩 **Хавф белгилари**",
-        "pattern": "**Қандай босим ишлатяпти:**",
-        "verify": "✅ **Нимани текширинг**",
-        "ask": "❓ **Қандай савол беринг**",
-        "no_signal": (
-            "Аниқ хавф белгиси кўринмади. Лекин бу кафолат эмас: пул, код ёки "
-            "ҳужжат юборишдан олдин манбани ўзингиз текширинг."
-        ),
-        "limitation": (
-            "ℹ️ Avvalo вазиятдаги белгиларни кўриб чиқди. Бу одамни текшириш "
-            "ёки якуний кафолат эмас."
-        ),
-        "fallback": (
-            "Ҳозир жавобни хавфсиз шаклда тайёрлай олмадим. Кодларни айтманг, "
-            "пул юборманг. Аввал расмий илова ёки ўзингиз топган алоқа канали "
-            "орқали текширинг."
         ),
     },
     Language.ru: {
@@ -176,17 +138,14 @@ def share_summary(rule_ids: list[str], language: Language | str, face: str) -> s
 _STATUS_MESSAGES = {
     CheckStatus.rate_limited: {
         Language.uz_latn: "Bugungi tekshiruvlar limiti tugadi. Ertaga yana urinib ko'ring.",
-        Language.uz_cyrl: "Бугунги текширувлар лимити тугади. Эртага яна уриниб кўринг.",
         Language.ru: "На сегодня лимит проверок закончился. Попробуйте завтра.",
     },
     CheckStatus.empty_input: {
         Language.uz_latn: "Tekshirish uchun xabar matnini yuboring.",
-        Language.uz_cyrl: "Текшириш учун хабар матнини юборинг.",
         Language.ru: "Пришлите текст сообщения для проверки.",
     },
     CheckStatus.low_ocr: {
         Language.uz_latn: "Rasm matnini aniq o'qiy olmadim. Muhim joyini xabar qilib yuboring.",
-        Language.uz_cyrl: "Расм матнини аниқ ўқий олмадим. Муҳим жойини хабар қилиб юборинг.",
         Language.ru: (
             "Не получилось чётко прочитать текст на изображении. "
             "Пришлите важный фрагмент сообщением."
@@ -194,12 +153,10 @@ _STATUS_MESSAGES = {
     },
     CheckStatus.timeout: {
         Language.uz_latn: "Tekshiruv cho'zilib ketdi. Qayta urinib ko'ring.",
-        Language.uz_cyrl: "Текширув чўзилиб кетди. Қайта уриниб кўринг.",
         Language.ru: "Проверка затянулась. Попробуйте ещё раз.",
     },
     CheckStatus.llm_error: {
         Language.uz_latn: "Hozir bu xabarni tahlil qila olmadim. Qayta urinib ko'ring.",
-        Language.uz_cyrl: "Ҳозир бу хабарни таҳлил қила олмадим. Қайта уриниб кўринг.",
         Language.ru: (
             "Сейчас не получилось разобрать это сообщение. "
             "Попробуйте ещё раз."
@@ -207,7 +164,6 @@ _STATUS_MESSAGES = {
     },
     CheckStatus.ocr_error: {
         Language.uz_latn: "Hozir bu rasmni qayta ishlay olmadim. Qayta urinib ko'ring.",
-        Language.uz_cyrl: "Ҳозир бу расмни қайта ишлай олмадим. Қайта уриниб кўринг.",
         Language.ru: (
             "Сейчас не получилось обработать изображение. "
             "Попробуйте ещё раз."
@@ -215,7 +171,6 @@ _STATUS_MESSAGES = {
     },
     CheckStatus.unsupported_media: {
         Language.uz_latn: "Matn yoki o'qilishi mumkin bo'lgan skrinshot yuboring.",
-        Language.uz_cyrl: "Матн ёки ўқилиши мумкин бўлган скриншот юборинг.",
         Language.ru: "Пришлите текст или читаемый скриншот.",
     },
 }

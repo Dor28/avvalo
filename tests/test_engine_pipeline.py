@@ -219,7 +219,7 @@ async def test_run_check_empty_text_returns_empty_input(session) -> None:
         CheckInput(
             face="family",
             user_key="u3",
-            language=Language.uz_cyrl,
+            language=Language.uz_latn,
             input_type=InputType.text,
             raw_text="   ",
         ),

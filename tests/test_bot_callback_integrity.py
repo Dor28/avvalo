@@ -137,7 +137,7 @@ async def test_feedback_callback_rejects_a_check_owned_by_another_user(session) 
     assert callback.answers == [(t("feedback_expired", "ru"), {"show_alert": True})]
 
 
-@pytest.mark.parametrize("language", ["uz_latn", "uz_cyrl", "ru"])
+@pytest.mark.parametrize("language", ["uz_latn", "ru"])
 async def test_stale_consent_callback_reissues_current_notice_without_granting(
     session, language: str
 ) -> None:

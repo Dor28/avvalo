@@ -1,6 +1,14 @@
 """T3 — consent gate and UI-text completeness tests."""
 
-from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES, TEXTS, entry_text, t
+from app.bot.texts import (
+    DEFAULT_LANGUAGE,
+    LANGUAGE_LABELS,
+    LANGUAGES,
+    TEXTS,
+    entry_text,
+    normalize_language,
+    t,
+)
 from app.config import Settings
 from app.data import repo
 from app.privacy.consent import grant_consent, is_consent_current
@@ -23,9 +31,25 @@ def _settings(**overrides) -> Settings:
     return Settings(_env_file=None, **values)
 
 
-def test_languages_are_the_three_supported() -> None:
-    assert LANGUAGES == ("uz_latn", "uz_cyrl", "ru")
+def test_languages_are_the_two_supported() -> None:
+    assert LANGUAGES == ("uz_latn", "ru")
     assert DEFAULT_LANGUAGE in LANGUAGES
+
+
+def test_retired_uzbek_cyrillic_is_no_longer_a_reply_language() -> None:
+    assert "uz_cyrl" not in LANGUAGES
+    assert "uz_cyrl" not in LANGUAGE_LABELS
+    for key, table in TEXTS.items():
+        assert "uz_cyrl" not in table, f"text '{key}' still carries a uz_cyrl translation"
+
+
+def test_legacy_stored_language_falls_back_instead_of_stranding_the_user() -> None:
+    # Consent rows written before Uzbek Cyrillic was retired still say uz_cyrl.
+    # Those users must keep working, answered in Latin-script Uzbek.
+    assert normalize_language("uz_cyrl") == DEFAULT_LANGUAGE
+    assert normalize_language(None) == DEFAULT_LANGUAGE
+    assert normalize_language("ru") == "ru"
+    assert normalize_language("uz_latn") == "uz_latn"
 
 
 def test_every_text_is_translated_in_every_language() -> None:

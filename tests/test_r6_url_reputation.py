@@ -89,11 +89,6 @@ def test_domain_normalization_handles_scheme_www_case_and_idna(
             "sanasidan ko'rsatilgan.",
         ),
         (
-            Language.uz_cyrl,
-            "Ҳавола OpenPhish очиқ фишинг блоклистида 2026-07-01 "
-            "санасидан кўрсатилган.",
-        ),
-        (
             Language.ru,
             "Ссылка указана в публичном фишинговом блоклисте OpenPhish "
             "с 2026-07-01.",  # noqa: RUF001 - intentional Russian preposition

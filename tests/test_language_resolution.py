@@ -43,12 +43,23 @@ def test_resolve_content_language_prefers_dominant_content_script() -> None:
         )
         is Language.ru
     )
+
+def test_cyrillic_uzbek_is_read_as_uzbek_but_answered_in_latin() -> None:
+    # Cyrillic-Uzbek must not be mistaken for Russian, and Uzbek is only ever
+    # answered in Latin script.
     assert (
         resolve_content_language(
             "Ҳозир SMS кодни юборинг, акс ҳолда ҳисоб ёпилади.",
             fallback=Language.ru,
         )
-        is Language.uz_cyrl
+        is Language.uz_latn
+    )
+    assert (
+        resolve_content_language(
+            "Тўловни қилдим, чек мана. Тезроқ жўнатинг.",
+            fallback=Language.ru,
+        )
+        is Language.uz_latn
     )
 
 

@@ -46,7 +46,7 @@ product behavior belongs in the engine, not in a channel handler.
 4. Deterministic rules (`app/engine/rules/`): keyword packs in `rules/<face>/*.yaml` (per-script keyword groups, matched on raw text) plus regex extractors → `RuleHit`s and `Signal`s.
 5. `minimize()` strips PII before anything is sent to the LLM.
 6. LLM call in JSON-schema mode via an OpenAI-compatible provider; prompt = `prompts/system_safety.txt` + `prompts/<face>.txt` with rule hits injected as grounded facts.
-7. Deterministic safety validator ([app/engine/validate.py](app/engine/validate.py)): bans verdict words in ru/uz_latn/uz_cyrl/English, strips contacts/links/card numbers/OTPs, caps list lengths; one corrective retry, then `safety_fallback`.
+7. Deterministic safety validator ([app/engine/validate.py](app/engine/validate.py)): bans verdict words in ru/uz_latn/Cyrillic-Uzbek/English, strips contacts/links/card numbers/OTPs, caps list lengths; one corrective retry, then `safety_fallback`.
 8. `format_result` renders the reply in the resolved language.
 
 Boundary contracts are Pydantic models in [app/engine/types.py](app/engine/types.py) (`CheckInput`, `CheckResult`, `CheckStatus`, `DraftOutput`); extend those instead of passing loose dicts. New statuses must also be added to the allow-set in [app/data/repo.py](app/data/repo.py).
@@ -77,7 +77,7 @@ The legal posture depends on these; several are enforced by tests that will fail
   (§5.1, §9, …) — keep those references in sync.
 - Tests named `test_tNN_*.py` map to the numbered build history in V1_TECHNICAL_PLAN §13; the
   active golden end-to-end fixtures live in `tests/fixtures/golden/family.json`.
-- **Every user-facing string exists in all three languages** (`uz_latn`, `uz_cyrl`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
+- **Every user-facing string exists in both languages** (`uz_latn`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. Uzbek replies are Latin-script only. Cyrillic-Uzbek *input* is still supported: `app/engine/language.py` detects it and resolves it to `uz_latn`, the `uz_cyrl` keyword groups in `rules/` and `knowledge/` still match it, and `app/engine/validate.py` still bans Cyrillic verdict words. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
 - Async end-to-end; pytest runs with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed).
 - Style follows ruff config in [pyproject.toml](pyproject.toml): 100-char lines, import sorting (I), modern syntax (UP). Module docstrings state purpose and spec section; internal helpers use frozen dataclasses, boundary types use Pydantic.
 - `.claude/worktrees/` can hold stale checkouts with pre-rename names (family_shield/seller_guard) — exclude it when searching the repo.

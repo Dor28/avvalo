@@ -26,7 +26,8 @@ The habit we want to create is simple:
 
 The user can submit pasted or forwarded text, a screenshot or photo, a link, a QR code, or a
 suspicious payment request, offer, document, or conversation. The channels are Telegram and the
-anonymous web checker. The supported language forms are `uz_latn`, `uz_cyrl`, and `ru`.
+anonymous web checker. The supported reply languages are `uz_latn` and `ru`. Cyrillic-Uzbek
+content is still understood and matched, but it is always answered in `uz_latn`.
 
 ### Understand
 
@@ -159,7 +160,7 @@ failure must fail closed and produce `unavailable`.
 - Avvalo never claims to have checked every database.
 - Avvalo never outputs “safe,” “scammer,” “fraud confirmed,” a trust score, or a risk score.
 - Avvalo never contacts a counterparty or institution for the user.
-- Every user-facing string exists in `uz_latn`, `uz_cyrl`, and `ru`.
+- Every user-facing string exists in `uz_latn` and `ru`.
 
 ## 8. Validation gates
 

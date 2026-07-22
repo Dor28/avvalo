@@ -26,7 +26,7 @@
   {
     "id": "fs_03_seller_prepayment",
     "face": "family",
-    "language": "uz_cyrl",
+    "language": "uz_latn",
     "input_type": "text",
     "input": "Телевизорни фақат бугун 40% арзон бераман. Бошқа харидор кутяпти, ҳозир 50% олдиндан картага ташланг. Учрашув ҳам, видеоқўнғироқ ҳам қилмайман, курьер олиб боради.",
     "expected_rule_families": ["upfront_payment", "verification_avoidance", "urgency_secrecy", "implausible_promise"],
@@ -86,7 +86,7 @@
   {
     "id": "fs_08_payment_name_mismatch",
     "face": "family",
-    "language": "uz_cyrl",
+    "language": "uz_latn",
     "input_type": "text",
     "input": "Тўловни қилдим, чек мана. Лекин банк иловамда бошқа исм чиқяпти, унчалик муҳим эмас, пул барибир тушади. Тезроқ жўнатинг, харидор кутиб турибди.",
     "expected_rule_families": ["receipt_inconsistency", "edited_screenshot_hint", "fake_courier_refund"],

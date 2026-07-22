@@ -23,7 +23,7 @@ from app.bot.keyboards import (
     telegram_share_url,
 )
 from app.bot.states import Onboarding
-from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGES, entry_text, t
+from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGES, entry_text, normalize_language, t
 from app.config import Settings
 from app.data import repo
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
@@ -44,7 +44,7 @@ def _user_key(user_id: int, settings: Settings) -> str:
 
 async def _language(state: FSMContext) -> str:
     data = await state.get_data()
-    return data.get("language", DEFAULT_LANGUAGE)
+    return normalize_language(data.get("language", DEFAULT_LANGUAGE))
 
 
 @router.message(CommandStart())
@@ -57,9 +57,10 @@ async def cmd_start(message: Message, state: FSMContext, settings, session_facto
         consent = await repo.get_consent(session, user_key=user_key, face=face.id)
 
     if is_consent_current(consent, settings.notice_version):
+        language = normalize_language(consent.language)
         await state.set_state(Onboarding.ready)
-        await state.update_data(language=consent.language)
-        await message.answer(entry_text(face.id, consent.language))
+        await state.update_data(language=language)
+        await message.answer(entry_text(face.id, language))
         return
 
     await state.set_state(Onboarding.choosing_language)
@@ -303,11 +304,15 @@ async def on_content(
     if not is_consent_current(consent, settings.notice_version):
         # Prefer the language recorded on any prior (possibly outdated) consent
         # row; FSM state is lost on restart and would wrongly default to Uzbek.
-        language = consent.language if consent is not None else await _language(state)
+        language = (
+            normalize_language(consent.language)
+            if consent is not None
+            else await _language(state)
+        )
         await message.answer(t("need_consent", language))
         return
 
-    language = consent.language
+    language = normalize_language(consent.language)
     check_input = await _build_check_input(message, face=face, user_key=user_key, language=language)
     if check_input is None:
         await message.answer(t("unsupported_input", language))

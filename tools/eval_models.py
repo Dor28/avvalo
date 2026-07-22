@@ -10,7 +10,7 @@ real production prompt, and scores the JSON output by rubric. No engine code req
 With no public Uzbek benchmark, THIS is your benchmark. The rubric auto-scores the
 mechanical safety/format properties; it CANNOT judge "is the advice actually good and
 grounded" — for that, read the saved outputs in eval_out/<provider>/<fixture>.json by eye,
-especially the Uzbek (uz_latn / uz_cyrl) ones.
+especially the Uzbek ones.
 
 Setup:
     pip install openai            # (add google-genai only if you also want to compare Gemini)
@@ -97,7 +97,7 @@ def parse_json(text):
 
 def script_of(text: str) -> str:
     if re.search(r"[ЎўҚқҒғҲҳ]", text):
-        return "uz_cyrl"
+        return "uz_latn"
     cyr = len(re.findall(r"[А-Яа-яЁё]", text))
     lat = len(re.findall(r"[A-Za-z]", text))
     if cyr > lat:

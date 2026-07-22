@@ -22,7 +22,8 @@ content plans, voice work, group monitoring, and horizon ideas are not active wo
 Record the current deployment in [ops/SMOKE_2026-07.md](ops/SMOKE_2026-07.md).
 
 - [ ] Health endpoint and Telegram `/start` work.
-- [ ] Complete one text check in `uz_latn`, `uz_cyrl`, and `ru`.
+- [ ] Complete one text check in `uz_latn` and `ru`, plus one Cyrillic-Uzbek input that must be
+      answered in `uz_latn`.
 - [ ] Complete one image/OCR check and one low-quality-image failure path.
 - [ ] Manually inspect live Uzbek and Russian answer quality.
 - [ ] Verify anonymous web paths, consent, abuse limits, and friendly failures.

@@ -19,7 +19,7 @@ from app.engine.types import (
 
 
 def test_language_enum_values() -> None:
-    assert {lang.value for lang in Language} == {"uz_latn", "uz_cyrl", "ru"}
+    assert {lang.value for lang in Language} == {"uz_latn", "ru"}
 
 
 def test_input_type_enum_values() -> None:

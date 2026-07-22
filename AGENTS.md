@@ -28,7 +28,9 @@ nit.
    caused a regression — fix the change, not the test.
 6. **Never push to `main`.** Pushing to `main` deploys to production
    (`.github/workflows/deploy.yml`). Work on a branch.
-7. **Every user-facing string exists in all three languages** — `uz_latn`, `uz_cyrl`, `ru`.
+7. **Every user-facing string exists in both languages** — `uz_latn` and `ru`. Uzbek is replied
+   to in Latin script only; Cyrillic-Uzbek input is still read and still matched by the
+   `uz_cyrl` keyword groups in the rule packs.
 
 8. **There is one active product face:** the internal compatibility ID is `family`. Merchant
    payment situations use the same checker and safety pipeline. Do not restore Avvalo Merchants,

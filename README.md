@@ -9,9 +9,10 @@ The product rule is simple:
 > Verify the situation, artifact, process, or source. Never rate the reputation
 > of a person.
 
-Avvalo is one consumer product, Telegram-first, and available in Uzbek Latin,
-Uzbek Cyrillic, and Russian. Telegram and the anonymous web checker are two
-channels over one shared engine.
+Avvalo is one consumer product, Telegram-first, and available in Uzbek (Latin
+script) and Russian. Cyrillic-Uzbek input is still read and analysed, but
+replies are always Latin-script Uzbek. Telegram and the anonymous web checker
+are two channels over one shared engine.
 
 The product loop is:
 
