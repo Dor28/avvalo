@@ -16,14 +16,14 @@
   <div class="field primary-field">
     <label class="field-head" for="check-text">
       {% if form_steps %}<span class="field-step" aria-hidden="true">1</span>{% endif %}
-      <span class="field-label">{{ face_copy.prompt }}</span>
+      <span class="field-label">{{ check_copy.prompt }}</span>
     </label>
     <textarea
       id="check-text"
       name="text"
       rows="8"
       maxlength="{{ max_text_chars }}"
-      placeholder="{{ face_copy.textarea_placeholder }}"
+      placeholder="{{ check_copy.textarea_placeholder }}"
     ></textarea>
     <p class="char-counter" data-max="{{ max_text_chars }}" hidden>
       <span class="char-counter-value">0</span> / {{ max_text_chars }}
@@ -55,10 +55,10 @@
       <label class="field">
         <span class="field-label">{{ copy.caption_label }}</span>
         <input name="caption" type="text" maxlength="{{ max_caption_chars }}"
-               placeholder="{{ face_copy.caption_placeholder }}">
+               placeholder="{{ check_copy.caption_placeholder }}">
       </label>
     </div>
-    <small>{{ face_copy.image_hint }}</small>
+    <small>{{ check_copy.image_hint }}</small>
   </div>
 
   {% if turnstile_site_key %}

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#008aa8">
-    <title>{{ copy.title }} — {{ face_copy.name }}</title>
+    <title>{{ copy.title }} — {{ check_copy.name }}</title>
     <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{ static_version }}">
     <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
@@ -19,17 +19,17 @@
     <main class="home-shell">
       <section class="home-hero" aria-labelledby="home-title">
         <p class="eyebrow">Avvalo</p>
-        <h1 id="home-title">{{ face_copy.headline }}</h1>
-        <p class="lead">{{ face_copy.subhead }}</p>
+        <h1 id="home-title">{{ check_copy.headline }}</h1>
+        <p class="lead">{{ check_copy.subhead }}</p>
         <p class="result-promise">{{ copy.landing_preview_title }}</p>
       </section>
 
-      <section class="check-panel is-primary" aria-label="{{ face_copy.name }}">
+      <section class="check-panel is-primary" aria-label="{{ check_copy.name }}">
         {% with form_steps = true %}{% include "_check_form.html" %}{% endwith %}
       </section>
 
       <ul class="trust-points" aria-label="{{ copy.trust_label }}">
-        {% for point in face_copy.trust %}
+        {% for point in check_copy.trust %}
           <li>
             <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
               <path d="m4.5 10.5 3.5 3.5 7.5-8" fill="none" stroke="currentColor"

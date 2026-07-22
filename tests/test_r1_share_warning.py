@@ -21,17 +21,17 @@ _SETTINGS = SimpleNamespace(app_hmac_secret=SecretStr("test-share-hmac-secret"))
 
 
 def test_share_summary_is_content_free_for_all_golden_fixtures(golden) -> None:
-    for case in golden("family"):
-        rule_hits, _signals = run_rules(case["input"], case["face"])
+    for case in golden():
+        rule_hits, _signals = run_rules(case["input"])
         rule_ids = [hit.rule_id for hit in rule_hits]
         for language in Language:
-            summary = share_summary(rule_ids, language, case["face"])
+            summary = share_summary(rule_ids, language)
             _assert_content_free(summary, submitted_text=case["input"])
             assert BOT_LINK in summary
 
 
 def test_share_summary_has_generic_copy_when_no_rules_fire() -> None:
-    summary = share_summary([], Language.ru, "family")
+    summary = share_summary([], Language.ru)
 
     _assert_content_free(summary, submitted_text="")
     assert "Найденные признаки" not in summary
@@ -43,7 +43,6 @@ async def test_share_callback_rebuilds_summary_and_logs_click(session, monkeypat
     check_id = await repo.record_check_event(
         session,
         user_key=_share_user_key(callback.from_user.id),
-        face="family",
         input_type="text",
         language="ru",
         status="ok",
@@ -62,12 +61,12 @@ async def test_share_callback_rebuilds_summary_and_logs_click(session, monkeypat
     await on_share(callback, _FakeState(language="ru"), _SETTINGS, _SessionFactory(session))
 
     assert callback.answers == [(None,)]
-    assert events == [("share_clicked", {"face": "family", "language": "ru"})]
+    assert events == [("share_clicked", {"language": "ru"})]
     assert len(bot.messages) == 1
     sent = bot.messages[0]
     assert sent["chat_id"] == 123
     assert sent["text"] == share_summary(
-        ["fs.credential.otp", "fs.urgency.deadline"], Language.ru, "family"
+        ["fs.credential.otp", "fs.urgency.deadline"], Language.ru
     )
     button = sent["reply_markup"].inline_keyboard[0][0]
     query = parse_qs(urlparse(button.url).query)
@@ -79,7 +78,6 @@ async def test_share_callback_rejects_check_owned_by_another_user(session, monke
     check_id = await repo.record_check_event(
         session,
         user_key=_share_user_key(999),
-        face="family",
         input_type="text",
         language="ru",
         status="ok",

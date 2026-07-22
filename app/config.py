@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Runtime settings shared by every face and channel."""
+    """Runtime settings shared by every channel."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     ocr_timeout_s: float = Field(default=30.0, gt=0)
 
     notice_version: str = "2026-07-07-v2"
-    daily_limit_family: int = Field(default=5, ge=1)
+    daily_check_limit: int = Field(default=5, ge=1)
     operator_alert_chat_id: int | None = None
     operator_alert_debounce_s: float = Field(default=900.0, gt=0)
     # Legacy rejected story rows are retained only until cleanup; new story
@@ -71,15 +71,6 @@ class Settings(BaseSettings):
     # Set WEB_COOKIE_SECURE=true behind HTTPS in production so the session
     # cookie is never sent over plaintext. Defaults off for local http dev.
     web_cookie_secure: bool = False
-
-    def daily_limit_for(self, face_id: str) -> int | None:
-        """Return the configured daily check limit for *face_id*, or None.
-
-        The sole active product face uses ``DAILY_LIMIT_FAMILY``. Unknown or
-        retired face IDs intentionally return ``None``.
-        """
-
-        return self.daily_limit_family if face_id == "family" else None
 
 
 @lru_cache

@@ -11,7 +11,6 @@ from sqlalchemy import distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models import CheckEvent, Consent, Feedback
-from app.engine.faces import FACES
 from app.engine.knowledge import FileKnowledgeStore, KnowledgeLookupError, KnowledgeStore
 
 COMPLETED_STATUSES = {"ok", "no_signal"}
@@ -26,9 +25,8 @@ async def collect_metrics(
 ) -> dict[str, Any]:
     """Return aggregate-only operational metrics.
 
-    The result includes only active product faces and intentionally contains no
-    user keys, check IDs, text, OCR text, prompts, model outputs, links, phone
-    numbers, or file identifiers.
+    The result intentionally contains no user keys, check IDs, text, OCR text,
+    prompts, model outputs, links, phone numbers, or file identifiers.
     """
 
     since = _normalize_bound(since)
@@ -109,7 +107,6 @@ async def collect_metrics(
         },
         "breakdowns": {
             "status": await _breakdown(session, CheckEvent.status, event_conditions),
-            "face": await _breakdown(session, CheckEvent.face, event_conditions),
             "language": await _breakdown(session, CheckEvent.language, event_conditions),
         },
         "feedback": {
@@ -152,8 +149,7 @@ async def export_metrics(
     ]
     inventory = summary["knowledge"]["inventory"]
     lines.append(f"kb_version={inventory['version'] or 'unavailable'}")
-    for face, count in sorted(inventory["approved_cards"].items()):
-        lines.append(f"kb_approved_cards_{face}={count}")
+    lines.append(f"kb_approved_cards={inventory['approved_cards']}")
     return "\n".join(lines)
 
 
@@ -162,20 +158,13 @@ aggregate = collect_metrics
 
 
 def collect_knowledge_inventory(store: KnowledgeStore) -> dict[str, Any]:
-    """Return deploy-visible versions and approved-card counts, never content."""
+    """Return the deploy-visible version and approved-card count, never content."""
 
-    versions: set[str] = set()
-    counts: dict[str, int] = {}
-    for face_id in sorted(FACES):
-        try:
-            knowledge = store.load(face_id)
-        except KnowledgeLookupError:
-            counts[face_id] = 0
-            continue
-        versions.add(knowledge.version)
-        counts[face_id] = len(knowledge.cards)
-    version = next(iter(versions)) if len(versions) == 1 else None
-    return {"version": version, "approved_cards": counts}
+    try:
+        knowledge = store.load()
+    except KnowledgeLookupError:
+        return {"version": None, "approved_cards": 0}
+    return {"version": knowledge.version, "approved_cards": len(knowledge.cards)}
 
 
 def log_knowledge_inventory(store: KnowledgeStore | None = None) -> dict[str, Any]:
@@ -207,7 +196,7 @@ def _event_window(
     since: datetime | None,
     until: datetime | None,
 ) -> list[Any]:
-    conditions: list[Any] = [CheckEvent.face.in_(tuple(FACES))]
+    conditions: list[Any] = []
     if since is not None:
         conditions.append(CheckEvent.ts >= since)
     if until is not None:
@@ -220,7 +209,7 @@ def _consent_window(
     since: datetime | None,
     until: datetime | None,
 ) -> list[Any]:
-    conditions: list[Any] = [Consent.face.in_(tuple(FACES))]
+    conditions: list[Any] = []
     if since is not None:
         conditions.append(Consent.ts >= since)
     if until is not None:
@@ -302,7 +291,7 @@ def _feedback_window(
     since: datetime | None,
     until: datetime | None,
 ) -> list[Any]:
-    conditions: list[Any] = [CheckEvent.face.in_(tuple(FACES))]
+    conditions: list[Any] = []
     if since is not None:
         conditions.append(Feedback.ts >= since)
     if until is not None:

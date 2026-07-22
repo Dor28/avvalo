@@ -9,14 +9,19 @@ from typing import Any
 
 import yaml
 
-from app.engine.faces import FACES
-
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+# Top-level YAML only: rules/shared/ holds feed data for the URL-reputation job,
+# not checker rules, so it must not be swept into the pack.
+RULE_PACK_DIR = _REPO_ROOT / "rules"
 
 
 @dataclass(frozen=True)
 class RuleDefinition:
-    """One validated rule flattened from a face's YAML pack."""
+    """One validated rule flattened from the YAML pack.
+
+    ``family`` is the scam-family taxonomy the rule belongs to (credential_theft,
+    urgency_secrecy, …) — it has nothing to do with any product identifier.
+    """
 
     id: str
     family: str
@@ -29,23 +34,17 @@ class RuleDefinition:
 
 @dataclass(frozen=True)
 class RulePack:
-    """A validated rule pack for one product face."""
+    """The validated deterministic rule pack."""
 
-    face_id: str
     rules: tuple[RuleDefinition, ...]
     descriptions: dict[str, str]
 
 
 @cache
-def load_rule_pack(face_id: str) -> RulePack:
-    """Load and validate all YAML rule files for ``face_id``."""
+def load_rule_pack() -> RulePack:
+    """Load and validate every YAML rule file in the rule pack."""
 
-    try:
-        face = FACES[face_id]
-    except KeyError as exc:
-        raise ValueError(f"Unknown face: {face_id}") from exc
-
-    pack_dir = _REPO_ROOT / face.rule_pack_dir
+    pack_dir = RULE_PACK_DIR
     if not pack_dir.exists() or not pack_dir.is_dir():
         raise FileNotFoundError(f"Rule pack directory does not exist: {pack_dir}")
 
@@ -55,7 +54,6 @@ def load_rule_pack(face_id: str) -> RulePack:
         rules.extend(_load_rule_file(path, rule_ids))
 
     return RulePack(
-        face_id=face_id,
         rules=tuple(rules),
         descriptions={rule.id: rule.desc for rule in rules},
     )

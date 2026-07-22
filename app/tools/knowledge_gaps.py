@@ -1,7 +1,7 @@
 """Read-only, metadata-only knowledge gap report.
 
     python -m app.tools.knowledge_gaps
-    python -m app.tools.knowledge_gaps --days 30 --face family
+    python -m app.tools.knowledge_gaps --days 30
     python -m app.tools.knowledge_gaps --since 2026-07-01 --until 2026-07-08
 
 The report can show where retrieval missed, but never what a submission said.
@@ -22,7 +22,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.config import Settings, get_settings
 from app.data.db import create_database_engine, create_session_factory
 from app.data.models import CheckEvent, Feedback
-from app.engine.faces import FACES
 from app.engine.knowledge import FileKnowledgeStore, KnowledgeLookupError, KnowledgeStore
 
 
@@ -31,20 +30,14 @@ async def collect_knowledge_gaps(
     *,
     since: datetime,
     until: datetime,
-    face: str | None = None,
     knowledge_store: KnowledgeStore | None = None,
 ) -> dict[str, Any]:
     """Aggregate only allowlisted IDs, enums, counts, and versions."""
 
     conditions = [CheckEvent.ts >= since, CheckEvent.ts < until]
-    if face is not None:
-        conditions.append(CheckEvent.face == face)
-    else:
-        conditions.append(CheckEvent.face.in_(tuple(FACES)))
     rows = (
         await session.execute(
             select(
-                CheckEvent.face,
                 CheckEvent.language,
                 CheckEvent.rule_ids,
                 CheckEvent.knowledge_card_ids,
@@ -59,12 +52,11 @@ async def collect_knowledge_gaps(
         )
     ).all()
 
-    coverage: dict[tuple[str, str], Counter[str]] = {}
-    gaps: Counter[tuple[str, str, tuple[str, ...]]] = Counter()
+    coverage: dict[str, Counter[str]] = {}
+    gaps: Counter[tuple[str, tuple[str, ...]]] = Counter()
     card_usage: Counter[str] = Counter()
     router_health: Counter[str] = Counter()
     for (
-        event_face,
         language,
         rule_ids,
         card_ids,
@@ -75,8 +67,7 @@ async def collect_knowledge_gaps(
     ) in rows:
         if retrieval_status is None:
             continue
-        key = (event_face, language)
-        bucket = coverage.setdefault(key, Counter())
+        bucket = coverage.setdefault(language, Counter())
         bucket["checks"] += 1
         if card_ids:
             bucket["found"] += 1
@@ -86,16 +77,15 @@ async def collect_knowledge_gaps(
             bucket["no_match"] += 1
         card_usage.update(card_ids or [])
         if retrieval_status == "empty" and usefulness == "no":
-            gaps[(event_face, language, tuple(sorted(rule_ids or [])))] += 1
+            gaps[(language, tuple(sorted(rule_ids or [])))] += 1
         if retrieval_mode:
             router_health[f"mode:{retrieval_mode}"] += 1
         if router_status and router_status != "not_used":
             router_health[f"status:{router_status}"] += 1
 
-    approved_ids = _approved_ids(knowledge_store or FileKnowledgeStore(), face=face)
+    approved_ids = _approved_ids(knowledge_store or FileKnowledgeStore())
     coverage_rows = [
         {
-            "face": item_face,
             "language": language,
             "checks": counts["checks"],
             "found": counts["found"],
@@ -103,16 +93,15 @@ async def collect_knowledge_gaps(
             "no_match": counts["no_match"],
             "unavailable": counts["unavailable"],
         }
-        for (item_face, language), counts in sorted(coverage.items())
+        for language, counts in sorted(coverage.items())
     ]
     gap_rows = [
         {
-            "face": item_face,
             "language": language,
             "rule_ids": list(rule_ids),
             "count": count,
         }
-        for (item_face, language, rule_ids), count in sorted(
+        for (language, rule_ids), count in sorted(
             gaps.items(), key=lambda item: (-item[1], item[0])
         )
     ]
@@ -137,12 +126,12 @@ def render_knowledge_gaps(report: dict[str, Any]) -> str:
         "Avvalo knowledge-gap report",
         f"Window: {report['window']['since']} to {report['window']['until']}",
         "",
-        "Coverage by face and language:",
+        "Coverage by language:",
     ]
     if report["coverage"]:
         for row in report["coverage"]:
             lines.append(
-                f"- {row['face']}/{row['language']}: {row['found']}/{row['checks']} "
+                f"- {row['language']}: {row['found']}/{row['checks']} "
                 f"found ({row['coverage_rate']:.1%}); no match={row['no_match']}"
             )
             lines.append(f"  unavailable={row['unavailable']} (outage, not a no-match)")
@@ -154,7 +143,7 @@ def render_knowledge_gaps(report: dict[str, Any]) -> str:
         for row in report["gaps"]:
             rules = ",".join(row["rule_ids"]) or "(no rules)"
             lines.append(
-                f"- {row['count']} x {row['face']}/{row['language']} rules={rules}"
+                f"- {row['count']} x {row['language']} rules={rules}"
             )
     else:
         lines.append("- None.")
@@ -213,7 +202,6 @@ async def run(
                 session,
                 since=since,
                 until=until,
-                face=args.face,
             )
             print(render_knowledge_gaps(report), end="")
         return 0
@@ -222,14 +210,11 @@ async def run(
             await engine.dispose()
 
 
-def _approved_ids(store: KnowledgeStore, *, face: str | None) -> set[str]:
-    ids: set[str] = set()
-    for face_id in ([face] if face else sorted(FACES)):
-        try:
-            ids.update(card.id for card in store.load(face_id).cards)
-        except KnowledgeLookupError:
-            continue
-    return ids
+def _approved_ids(store: KnowledgeStore) -> set[str]:
+    try:
+        return {card.id for card in store.load().cards}
+    except KnowledgeLookupError:
+        return set()
 
 
 def _rate(numerator: int, denominator: int) -> float:
@@ -248,7 +233,6 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--days", type=int, help="look back N days (default from settings)")
     parser.add_argument("--since", help="inclusive start date in YYYY-MM-DD")
     parser.add_argument("--until", help="inclusive end date in YYYY-MM-DD")
-    parser.add_argument("--face", choices=sorted(FACES))
     return parser
 
 

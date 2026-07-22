@@ -44,8 +44,8 @@ class RecordingLLMProvider:
 class UnavailableKnowledgeStore:
     """Simulate a missing or unreadable deploy-time knowledge pack."""
 
-    def load(self, face_id: str) -> KnowledgeBase:
-        raise KnowledgeLookupError(f"{face_id} knowledge is unavailable")
+    def load(self) -> KnowledgeBase:
+        raise KnowledgeLookupError("knowledge is unavailable")
 
 
 class InventingRouter:
@@ -58,12 +58,10 @@ class InventingRouter:
     async def route(
         self,
         *,
-        face_id: str,
         minimized_text: str,
         allowed_ids: tuple[str, ...],
         max_results: int,
     ) -> list[str]:
-        assert face_id == "family"
         assert max_results == 3
         self.allowed_ids = allowed_ids
         self.minimized_text = minimized_text
@@ -72,8 +70,7 @@ class InventingRouter:
 
 def _check_input(raw_text: str, *, user_key: str) -> CheckInput:
     return CheckInput(
-        face="family",
-        user_key=user_key,
+                user_key=user_key,
         language=Language.ru,
         input_type=InputType.text,
         raw_text=raw_text,
@@ -211,8 +208,7 @@ async def test_r0_criterion_05_router_cannot_inject_a_disallowed_card_id() -> No
     router = InventingRouter()
 
     retrieval = await retrieve_knowledge(
-        face_id="family",
-        minimized_text="A wording with no deterministic knowledge cue.",
+                minimized_text="A wording with no deterministic knowledge cue.",
         rule_hits=[],
         signals=[],
         router=router,
@@ -387,10 +383,9 @@ def test_r0_criterion_10_telegram_and_web_share_run_check() -> None:
 
 def test_t14_deployed_knowledge_packs_are_loadable_and_copied_into_image() -> None:
     store = FileKnowledgeStore()
-    family = store.load("family")
+    family = store.load()
 
     assert family.version == "2026-07-15-v1"
-    assert family.face == "family"
     assert len(family.cards) == 10
     assert all(card.status == "approved" for card in family.cards)
 

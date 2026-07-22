@@ -43,7 +43,7 @@ FAMILY_ALLOWED = FAMILY_REQUIRED | {
 
 PACKS = {
     "family": {
-        "dir": "rules/family",
+        "dir": "rules",
         "id_prefix": "fs.",
         "required_families": FAMILY_REQUIRED,
         "allowed_families": FAMILY_ALLOWED,

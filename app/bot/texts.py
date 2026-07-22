@@ -104,20 +104,6 @@ TEXTS: dict[str, dict[str, str]] = {
         "ru": "✅ Согласен",
     },
     "ready": {
-        "uz_latn": (
-            "✅ Tayyor. Xabar yoki skrinshotni yuboring. Avvalo xavf belgilarini, "
-            "nimani tekshirishni va nima deb so'rashni chiqarib beradi."
-        ),
-        "uz_cyrl": (
-            "✅ Тайёр. Хабар ёки скриншотни юборинг. Avvalo хавф белгиларини, "
-            "нимани текширишни ва нима деб сўрашни чиқариб беради."
-        ),
-        "ru": (
-            "✅ Готово. Пришлите сообщение или скриншот. Avvalo покажет возможные "
-            "риски, что проверить и что спросить."
-        ),
-    },
-    "ready_family": {
         "uz_latn": "Tayyor. Shubhali xabar yoki skrinshotni yuboring — javob berishdan yoki to'lashdan oldin ko'rib chiqamiz.",
         "uz_cyrl": "Тайёр. Шубҳали хабар ёки скриншотни юборинг — жавоб беришдан ёки тўлашдан олдин кўриб чиқамиз.",
         "ru": "Готово. Пришлите сомнительное сообщение или скриншот — разберём до ответа или оплаты.",
@@ -253,8 +239,7 @@ def t(key: str, language: str) -> str:
     return table.get(language) or table[DEFAULT_LANGUAGE]
 
 
-def entry_text(face_id: str, language: str) -> str:
-    """Return the face-specific ready message, falling back to the generic one."""
+def entry_text(language: str) -> str:
+    """Return the post-consent ready message."""
 
-    key = f"ready_{face_id}"
-    return t(key, language) if key in TEXTS else t("ready", language)
+    return t("ready", language)

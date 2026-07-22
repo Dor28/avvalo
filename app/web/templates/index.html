@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#008aa8">
-    <title>{{ copy.title }} | {{ face_copy.name }}</title>
+    <title>{{ copy.title }} | {{ check_copy.name }}</title>
     <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{ static_version }}">
     <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
@@ -18,18 +18,18 @@
 
     <main class="app-shell">
       <section class="check-intro" aria-labelledby="check-title">
-        {% if face_copy.eyebrow %}<p class="eyebrow">{{ face_copy.eyebrow }}</p>{% endif %}
-        <h1 id="check-title">{{ face_copy.headline }}</h1>
-        <p class="lead">{{ face_copy.subhead }}</p>
+        {% if check_copy.eyebrow %}<p class="eyebrow">{{ check_copy.eyebrow }}</p>{% endif %}
+        <h1 id="check-title">{{ check_copy.headline }}</h1>
+        <p class="lead">{{ check_copy.subhead }}</p>
         <ol class="check-summary" aria-label="{{ copy.workflow_label }}">
           <li><span>1</span>{{ copy.message_label }}</li>
           <li><span>2</span>{{ copy.landing_step_2_title }}</li>
           <li><span>3</span>{{ copy.submit }}</li>
         </ol>
-        <p class="privacy-proof" aria-label="{{ copy.trust_label }}">{{ face_copy.trust[2] }}</p>
+        <p class="privacy-proof" aria-label="{{ copy.trust_label }}">{{ check_copy.trust[2] }}</p>
       </section>
 
-      <section class="check-panel" aria-label="{{ face_copy.name }}">
+      <section class="check-panel" aria-label="{{ check_copy.name }}">
         {% include "_check_form.html" %}
       </section>
     </main>

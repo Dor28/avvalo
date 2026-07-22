@@ -4,7 +4,6 @@ import argparse
 import asyncio
 import logging
 from collections.abc import Awaitable
-from dataclasses import dataclass
 
 import uvicorn
 
@@ -16,7 +15,6 @@ from app.data.db import (
     create_session_factory,
 )
 from app.data.retention import RetentionPolicy, start_retention_scheduler
-from app.engine.faces import FACES
 from app.engine.url_reputation import install_url_reputation_job
 from app.obs.alerts import (
     install_knowledge_availability_alert_job,
@@ -29,12 +27,6 @@ from app.web.app import create_app
 LOGGER = logging.getLogger(__name__)
 
 PLACEHOLDER_TOKEN = "development-placeholder"
-
-
-@dataclass(frozen=True)
-class BotSpec:
-    face_id: str
-    token: str
 
 
 async def run(*, check_only: bool = False) -> None:
@@ -65,8 +57,8 @@ async def run(*, check_only: bool = False) -> None:
                 runners.append(_run_web(settings, session_factory))
                 LOGGER.info("Starting web app on %s:%s", settings.web_host, settings.web_port)
 
-            bot_specs = configured_bot_specs(settings)
-            if not bot_specs:
+            token = configured_bot_token(settings)
+            if token is None:
                 if not runners:
                     LOGGER.warning(
                         "No Telegram bot token is set; idling without a bot. "
@@ -75,24 +67,23 @@ async def run(*, check_only: bool = False) -> None:
                     await asyncio.Event().wait()
                     return
             else:
-                for spec in bot_specs:
-                    bot = build_bot(spec.token)
-                    dispatcher = build_dispatcher(settings, session_factory, FACES[spec.face_id])
-                    # Uvicorn owns SIGINT/SIGTERM when the web channel is active.
-                    # Otherwise aiogram remains the signal owner for bot-only runs.
-                    runners.append(
-                        dispatcher.start_polling(
-                            bot,
-                            handle_signals=not settings.web_enabled,
-                        )
+                bot = build_bot(token)
+                dispatcher = build_dispatcher(settings, session_factory)
+                # Uvicorn owns SIGINT/SIGTERM when the web channel is active.
+                # Otherwise aiogram remains the signal owner for bot-only runs.
+                runners.append(
+                    dispatcher.start_polling(
+                        bot,
+                        handle_signals=not settings.web_enabled,
                     )
-                    LOGGER.info("Starting %s bot (polling)", spec.face_id)
-                    if settings.operator_alert_chat_id is not None:
-                        install_operator_alerts(
-                            bot,
-                            settings.operator_alert_chat_id,
-                            debounce_s=settings.operator_alert_debounce_s,
-                        )
+                )
+                LOGGER.info("Starting Telegram bot (polling)")
+                if settings.operator_alert_chat_id is not None:
+                    install_operator_alerts(
+                        bot,
+                        settings.operator_alert_chat_id,
+                        debounce_s=settings.operator_alert_debounce_s,
+                    )
 
             await _run_service_runners(runners)
         finally:
@@ -101,13 +92,13 @@ async def run(*, check_only: bool = False) -> None:
         await engine.dispose()
 
 
-def configured_bot_specs(settings: Settings) -> list[BotSpec]:
-    """Return the configured Telegram bot spec, if the token is usable."""
+def configured_bot_token(settings: Settings) -> str | None:
+    """Return the Telegram bot token when one is usably configured."""
 
     token = settings.telegram_token.get_secret_value()
     if not token or token == PLACEHOLDER_TOKEN:
-        return []
-    return [BotSpec(face_id="family", token=token)]
+        return None
+    return token
 
 
 async def _run_web(settings: Settings, session_factory) -> None:

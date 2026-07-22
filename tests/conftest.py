@@ -40,10 +40,10 @@ async def session():
 
 @pytest.fixture
 def golden():
-    """Return a loader for a face's golden fixtures (``golden("family")``)."""
+    """Return a loader for the end-to-end golden fixtures (``golden()``)."""
 
-    def _load(face: str) -> list[dict]:
-        return json.loads((GOLDEN_DIR / f"{face}.json").read_text(encoding="utf-8"))
+    def _load(name: str = "checks") -> list[dict]:
+        return json.loads((GOLDEN_DIR / f"{name}.json").read_text(encoding="utf-8"))
 
     return _load
 

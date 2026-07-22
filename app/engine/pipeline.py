@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.data import repo
-from app.engine.faces import FACES, Face
 from app.engine.format import format_fallback, format_result, format_status_message
 from app.engine.knowledge import (
     KnowledgeCard,
@@ -68,6 +67,9 @@ class _UnavailableKnowledgeRouter:
     async def route(self, **_kwargs) -> RouterResponse:
         raise RuntimeError("knowledge router unavailable")
 
+
+_DEFAULT_DAILY_LIMIT = 5
+
 # Outcomes that consume a daily-limit slot: a real completion (ok / no_signal),
 # an OCR attempt that reached the configured provider, or a safety fallback
 # that still ran the model. Every other status is a pre-analysis or system fault
@@ -116,11 +118,7 @@ async def run_check(
         else None
     )
     if result is None:
-        reservation_committed = bool(
-            session is not None
-            and check_input.face in FACES
-            and commit_rate_limit_reservation
-        )
+        reservation_committed = bool(session is not None and commit_rate_limit_reservation)
         if reservation_committed:
             await session.commit()
         try:
@@ -137,9 +135,7 @@ async def run_check(
             )
         except Exception:
             if reservation_committed:
-                await repo.refund_usage(
-                    session, user_key=check_input.user_key, face=check_input.face
-                )
+                await repo.refund_usage(session, user_key=check_input.user_key)
                 await session.commit()
             raise
     result.latency_ms = max(0, round((perf_counter() - started) * 1000))
@@ -148,10 +144,8 @@ async def run_check(
     )
 
     if session is not None:
-        if check_input.face in FACES and result.status not in BILLABLE_STATUSES:
-            await repo.refund_usage(
-                session, user_key=check_input.user_key, face=check_input.face
-            )
+        if result.status not in BILLABLE_STATUSES:
+            await repo.refund_usage(session, user_key=check_input.user_key)
         result.check_id = await _record_event(session, check_input, result)
 
     return result
@@ -164,12 +158,8 @@ async def _rate_limit_result(
     settings: Settings | None = None,
     limit_override: int | None = None,
 ) -> CheckResult | None:
-    face = FACES.get(check_input.face)
-    if face is None:
-        return None
-
-    count = await repo.increment_usage(session, user_key=check_input.user_key, face=face.id)
-    limit = limit_override or _daily_limit(face, settings)
+    count = await repo.increment_usage(session, user_key=check_input.user_key)
+    limit = limit_override or _daily_limit(settings)
     if count <= limit:
         return None
 
@@ -184,20 +174,17 @@ async def _rate_limit_result(
 def _log_check_started(check_input: CheckInput) -> None:
     log_event(
         "check_started",
-        face=check_input.face,
         input_type=check_input.input_type,
         language=check_input.language,
     )
 
 
-def _daily_limit(face: Face, settings: Settings | None) -> int:
-    """Resolve a face's daily limit, honoring configured overrides when present."""
+def _daily_limit(settings: Settings | None) -> int:
+    """Resolve the per-user daily check limit, honoring configuration."""
 
     if settings is not None:
-        configured = settings.daily_limit_for(face.id)
-        if configured is not None:
-            return configured
-    return face.daily_limit
+        return settings.daily_check_limit
+    return _DEFAULT_DAILY_LIMIT
 
 
 def _log_check_finished(
@@ -215,14 +202,13 @@ def _log_check_finished(
     fields = {
         "cost_usd": result.cost_usd,
         "error_class": result.error_class,
-        "face": check_input.face,
         "input_tokens": result.input_tokens,
         "input_type": result.input_type,
         "kb_version": result.kb_version,
         "knowledge_card_ids": result.knowledge_card_ids,
         "language": result.language,
         "latency_ms": result.latency_ms,
-        "limit": _event_limit(check_input, limit_override, settings),
+        "limit": limit_override if limit_override is not None else _daily_limit(settings),
         "llm_ms": result.llm_ms,
         "no_signal": result.no_signal,
         "ocr_confidence": result.ocr_confidence,
@@ -239,17 +225,6 @@ def _log_check_finished(
     log_event(event_name, **{key: value for key, value in fields.items() if value is not None})
 
 
-def _event_limit(
-    check_input: CheckInput, limit_override: int | None, settings: Settings | None
-) -> int | None:
-    if limit_override is not None:
-        return limit_override
-    face = FACES.get(check_input.face)
-    if face is None:
-        return None
-    return _daily_limit(face, settings)
-
-
 async def _run_stages(
     check_input: CheckInput,
     *,
@@ -262,9 +237,6 @@ async def _run_stages(
     session: AsyncSession | None,
     settings: Settings | None,
 ) -> CheckResult:
-    if check_input.face not in FACES:
-        return _result(check_input, CheckStatus.unsupported_media, error_class="unknown_face")
-
     content = await _content_from_input(
         check_input,
         ocr_provider=ocr_provider,
@@ -284,7 +256,7 @@ async def _run_stages(
     effective_input = check_input.model_copy(
         update={"language": resolve_content_language(text, fallback=check_input.language)}
     )
-    rule_hits, signals = run_rules(text, check_input.face)
+    rule_hits, signals = run_rules(text)
     reputation_enabled = (
         url_reputation_store is not None
         if settings is None
@@ -297,11 +269,7 @@ async def _run_stages(
         try:
             reputation_hits = await lookup_url_reputation(text, store=reputation_store)
         except Exception:
-            log_error(
-                stage="url_reputation",
-                error_type="URLReputationLookupError",
-                face=check_input.face,
-            )
+            log_error(stage="url_reputation", error_type="URLReputationLookupError")
         else:
             existing_rule_ids = {hit.rule_id for hit in rule_hits}
             rule_hits.extend(
@@ -318,14 +286,9 @@ async def _run_stages(
             resolved_router = OpenAICompatibleKnowledgeRouter.from_settings(settings)
         except ValueError:
             # Recall failure must never prevent the answer model from running.
-            log_error(
-                stage="knowledge",
-                error_type="KnowledgeRouterConfigError",
-                face=check_input.face,
-            )
+            log_error(stage="knowledge", error_type="KnowledgeRouterConfigError")
             resolved_router = _UnavailableKnowledgeRouter()
     retrieval = await retrieve_knowledge(
-        face_id=check_input.face,
         minimized_text=minimized_text,
         rule_hits=rule_hits,
         signals=signals,
@@ -422,7 +385,7 @@ async def _content_from_input(
         provider = ocr_provider or get_ocr_provider(settings)
     except ValueError:
         # Misconfigured OCR_PROVIDER — an operator fault, not the user's image.
-        log_error(stage="ocr", error_type="OCRConfigError", face=check_input.face)
+        log_error(stage="ocr", error_type="OCRConfigError")
         return _ContentStageResult(
             text=None,
             status=_result(
@@ -495,7 +458,7 @@ def _ocr_failure(
     # Only content-free metadata leaves here: the underlying exception class
     # name, never the provider's message.
     error_class = getattr(exc, "error_code", None) or type(exc).__name__
-    fields: dict[str, object] = {"face": check_input.face}
+    fields: dict[str, object] = {}
     if isinstance(exc, TimeoutError):
         fields["timeout_s"] = timeout_s
     log_error(stage="ocr", error_type=error_class, **fields)
@@ -543,7 +506,6 @@ async def _call_llm(
     fallback_provider = fallback_llm_provider or _configured_fallback_provider(resolved_settings)
 
     system, user = build_prompt(
-        face_id=check_input.face,
         language=check_input.language,
         minimized_text=minimized_text,
         rule_hits=rule_hits,
@@ -645,7 +607,6 @@ async def _call_llm(
     log_error(
         stage="validate",
         error_type="SafetyValidationError",
-        face=check_input.face,
         reason=validation_reason,
     )
     return _LLMStageResult(
@@ -691,7 +652,7 @@ def _llm_failure(
 
     llm_ms = max(0, round((perf_counter() - started) * 1000))
     cost_usd = _estimate_cost(input_tokens, output_tokens, settings)
-    fields: dict[str, object] = {"face": check_input.face, "attempt": attempt}
+    fields: dict[str, object] = {"attempt": attempt}
     if isinstance(exc, TimeoutError):
         status = CheckStatus.timeout
         error_class = type(exc).__name__
@@ -730,7 +691,7 @@ def _log_llm_error(
     attempt: int,
     timeout_s: float,
 ) -> None:
-    fields: dict[str, object] = {"face": check_input.face, "attempt": attempt}
+    fields: dict[str, object] = {"attempt": attempt}
     error_class = getattr(exc, "error_code", None) or type(exc).__name__
     if isinstance(exc, TimeoutError):
         fields["timeout_s"] = timeout_s
@@ -843,7 +804,6 @@ async def _record_event(
     return await repo.record_check_event(
         session,
         user_key=check_input.user_key,
-        face=check_input.face,
         input_type=result.input_type.value,
         language=result.language.value,
         status=result.status.value,

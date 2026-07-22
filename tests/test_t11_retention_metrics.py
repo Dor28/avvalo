@@ -21,7 +21,6 @@ async def test_retention_deletes_only_expired_metadata_rows(session) -> None:
             CheckEvent(
                 id=old_check_id,
                 user_key="old",
-                face="family",
                 ts=now - timedelta(days=91),
                 input_type="text",
                 language="ru",
@@ -32,7 +31,6 @@ async def test_retention_deletes_only_expired_metadata_rows(session) -> None:
             CheckEvent(
                 id=fresh_check_id,
                 user_key="fresh",
-                face="family",
                 ts=now - timedelta(days=1),
                 input_type="text",
                 language="ru",
@@ -54,27 +52,25 @@ async def test_retention_deletes_only_expired_metadata_rows(session) -> None:
             ),
             Consent(
                 user_key="old",
-                face="family",
                 notice_version="v1",
                 language="ru",
                 ts=now - timedelta(days=366),
             ),
             Consent(
                 user_key="fresh",
-                face="family",
                 notice_version="v1",
                 language="ru",
                 ts=now - timedelta(days=1),
             ),
             RateLimit(
                 user_key="old",
-                face="family",
+                scope="user",
                 day=(now - timedelta(days=3)).date(),
                 count=5,
             ),
             RateLimit(
                 user_key="fresh",
-                face="family",
+                scope="user",
                 day=now.date(),
                 count=1,
             ),
@@ -93,7 +89,6 @@ async def test_retention_deletes_only_expired_metadata_rows(session) -> None:
             StorySubmission(
                 id=uuid4(),
                 user_key="old-story",
-                face="family",
                 language="ru",
                 minimized_text="old minimized story",
                 status="rejected",
@@ -103,7 +98,6 @@ async def test_retention_deletes_only_expired_metadata_rows(session) -> None:
             StorySubmission(
                 id=uuid4(),
                 user_key="fresh-story",
-                face="family",
                 language="ru",
                 minimized_text="fresh minimized story",
                 status="submitted",
@@ -136,21 +130,18 @@ async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> Non
     await repo.upsert_consent(
         session,
         user_key="activated-1",
-        face="family",
         notice_version="v1",
         language="ru",
     )
     await repo.upsert_consent(
         session,
         user_key="activated-2",
-        face="family",
         notice_version="v1",
         language="uz_latn",
     )
     ok_check_id = await repo.record_check_event(
         session,
         user_key="activated-1",
-        face="family",
         input_type="text",
         language="ru",
         status="ok",
@@ -160,7 +151,6 @@ async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> Non
     await repo.record_check_event(
         session,
         user_key="activated-2",
-        face="family",
         input_type="text",
         language="uz_latn",
         status="no_signal",
@@ -171,7 +161,6 @@ async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> Non
     await repo.record_check_event(
         session,
         user_key="activated-2",
-        face="family",
         input_type="text",
         language="uz_latn",
         status="llm_error",
@@ -184,28 +173,6 @@ async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> Non
         check_id=ok_check_id,
         usefulness="yes",
         next_action="verify",
-    )
-    retired_check_id = uuid4()
-    session.add(
-        CheckEvent(
-            id=retired_check_id,
-            user_key="retired-merchant",
-            face="merchants",
-            input_type="text",
-            language="ru",
-            status="ok",
-            rule_ids=["sg.amount.overpay"],
-            no_signal=False,
-            ts=datetime.now(UTC),
-        )
-    )
-    session.add(
-        Feedback(
-            check_id=retired_check_id,
-            usefulness="no",
-            next_action="continue",
-            ts=datetime.now(UTC),
-        )
     )
     await session.flush()
 
@@ -233,7 +200,6 @@ async def test_metrics_feedback_breakdowns_respect_window_and_partial_answers(se
     fresh_check_id = await repo.record_check_event(
         session,
         user_key="fresh-feedback",
-        face="family",
         input_type="text",
         language="ru",
         status="ok",
@@ -241,7 +207,6 @@ async def test_metrics_feedback_breakdowns_respect_window_and_partial_answers(se
     old_check_id = await repo.record_check_event(
         session,
         user_key="old-feedback",
-        face="family",
         input_type="text",
         language="ru",
         status="ok",

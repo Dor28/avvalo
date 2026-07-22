@@ -26,7 +26,7 @@ app, rule packs, OCR providers, an OpenAI-compatible LLM adapter, reviewed
 knowledge retrieval, a safety validator, consent/deletion flows, privacy-safe
 metrics, Docker deployment, and tests.
 
-The runtime has one active product face, internally named `family`. Seller,
+The runtime has one consumer checker and no product-face concept. Seller,
 payment-screenshot, courier, and refund situations are handled by the same
 checker and its safety rules. Avvalo Merchants, the public scam library, story
 capture, and Scam Pulse are retired surfaces, not optional product modes.
@@ -267,7 +267,7 @@ Runtime config is loaded from environment variables through
 | `OCR_PROVIDER` | `gcv`, `tesseract`, `paddleocr`, or local stub paths. |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Cloud Vision service-account path when using GCV. |
 | `NOTICE_VERSION` | Consent notice version; bump to force re-consent. |
-| `DAILY_LIMIT_FAMILY` | Daily Telegram checks for the Avvalo checker. |
+| `DAILY_CHECK_LIMIT` | Daily Telegram checks for the Avvalo checker. |
 | `OPERATOR_ALERT_CHAT_ID` | Founder chat for debounced technical alerts. |
 | `OPERATOR_ALERT_DEBOUNCE_S` | Minimum interval between duplicate technical alerts. |
 | `SENTRY_DSN` | Optional Sentry DSN; blank disables external error tracking. |
@@ -311,7 +311,7 @@ python tools/secret_scan.py --all
 - Do not store submitted content. `story_submission.minimized_text` is a legacy
   stewardship-only exception: no new writes or product reads; old rows remain
   covered by `/delete_my_data` and retention until a separately authorized purge.
-- Keep one active face (`family`). Merchant payment protections belong in the
+- Keep one checker and do not reintroduce a product/face/mode discriminator. Merchant payment protections belong in the
   main checker; do not recreate Merchants, scam-library, story-capture, or
   Scam-Pulse surfaces.
 - Do not add person, phone, card, or "reported N times" lookup features.

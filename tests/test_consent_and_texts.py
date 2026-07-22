@@ -57,9 +57,8 @@ def test_story_capture_copy_is_retired() -> None:
     assert "privacy_story_notice" not in TEXTS
 
 
-def test_face_entry_text_uses_the_unified_consumer_copy() -> None:
-    assert entry_text("family", "ru") == t("ready_family", "ru")
-    assert entry_text("unknown_face", "ru") == t("ready", "ru")
+def test_entry_text_uses_the_unified_consumer_copy() -> None:
+    assert entry_text("ru") == t("ready", "ru")
 
 
 def test_is_consent_current_rejects_missing_or_stale() -> None:
@@ -70,13 +69,12 @@ async def test_grant_consent_writes_current_version(session) -> None:
     await grant_consent(
         session,
         user_key="u1",
-        face="family",
         language="ru",
         notice_version=NOTICE,
     )
     await session.commit()
 
-    consent = await repo.get_consent(session, user_key="u1", face="family")
+    consent = await repo.get_consent(session, user_key="u1")
     assert consent is not None
     assert consent.notice_version == NOTICE
     assert consent.language == "ru"
@@ -90,11 +88,10 @@ async def test_r3_notice_bump_forces_reconsent(session) -> None:
     await grant_consent(
         session,
         user_key="u-r3",
-        face="family",
         language="ru",
         notice_version=NOTICE,
     )
     await session.commit()
 
-    consent = await repo.get_consent(session, user_key="u-r3", face="family")
+    consent = await repo.get_consent(session, user_key="u-r3")
     assert is_consent_current(consent, settings.notice_version) is False

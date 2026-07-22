@@ -36,12 +36,11 @@ class Base(DeclarativeBase):
 
 
 class Consent(Base):
-    """One row per (user, face): proof the privacy notice was accepted."""
+    """One row per user: proof the privacy notice was accepted."""
 
     __tablename__ = "consent"
 
     user_key: Mapped[str] = mapped_column(Text, primary_key=True)
-    face: Mapped[str] = mapped_column(Text, primary_key=True)
     notice_version: Mapped[str] = mapped_column(Text, nullable=False)
     language: Mapped[str] = mapped_column(Text, nullable=False)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -54,7 +53,6 @@ class CheckEvent(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     user_key: Mapped[str] = mapped_column(Text, nullable=False, index=True)
-    face: Mapped[str] = mapped_column(Text, nullable=False)
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     input_type: Mapped[str] = mapped_column(Text, nullable=False)
     language: Mapped[str] = mapped_column(Text, nullable=False)
@@ -96,12 +94,18 @@ class Feedback(Base):
 
 
 class RateLimit(Base):
-    """Per (user, face, day) check counter backing the daily limit."""
+    """Per (user, scope, day) check counter backing the daily limit.
+
+    ``scope`` separates the two independent counters that share this table: the
+    per-user daily limit (``'user'``) and the web channel's per-IP guard
+    (``'web_ip'``), whose ``user_key`` is a pseudonymous IP hash rather than a
+    user key. Without it the two key spaces would overlap.
+    """
 
     __tablename__ = "rate_limit"
 
     user_key: Mapped[str] = mapped_column(Text, primary_key=True)
-    face: Mapped[str] = mapped_column(Text, primary_key=True)
+    scope: Mapped[str] = mapped_column(Text, primary_key=True)
     day: Mapped[date] = mapped_column(Date, primary_key=True)
     count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
@@ -133,7 +137,6 @@ class StorySubmission(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     user_key: Mapped[str] = mapped_column(Text, nullable=False, index=True)
-    face: Mapped[str] = mapped_column(Text, nullable=False)
     language: Mapped[str] = mapped_column(Text, nullable=False)
     minimized_text: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="submitted")

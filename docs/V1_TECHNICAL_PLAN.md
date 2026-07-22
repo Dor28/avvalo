@@ -16,8 +16,8 @@ Avvalo is one consumer product with two thin channels:
 - anonymous web checker.
 
 Both channels accept suspicious text or an image/screenshot and call the same `run_check()` engine.
-The internal face ID remains `family` for database and rule-ID compatibility. It is the only active
-face. Payment screenshots, seller situations, courier pressure, and refund requests use this same
+There is no internal product-face ID: it was removed from the code and the schema in migration
+`0006_drop_face`. Payment screenshots, seller situations, courier pressure, and refund requests use this same
 flow.
 
 The product does not provide accounts, history, person/entity lookup, accusations, verdicts, risk
@@ -43,9 +43,9 @@ Important modules:
 |---|---|---|
 | Engine | `app/engine/pipeline.py` | Orchestrates every check |
 | Types | `app/engine/types.py` | Boundary enums and Pydantic models |
-| Rules | `app/engine/rules/`, `rules/family/` | Deterministic local signals |
+| Rules | `app/engine/rules/`, `rules/*.yaml` | Deterministic local signals |
 | Minimization | `app/engine/minimize.py` | Removes PII before model calls |
-| Knowledge | `app/engine/knowledge/`, `knowledge/family/` | Reviewed explanatory guidance |
+| Knowledge | `app/engine/knowledge/`, `knowledge/cards/` | Reviewed explanatory guidance |
 | LLM | `app/engine/llm/` | OpenAI-compatible provider boundary and fallback |
 | Safety | `app/engine/validate.py` | Deterministic output validation |
 | Telegram | `app/bot/` | Consent, intake, result, feedback, Share |
@@ -77,7 +77,6 @@ Non-billable failures refund the reserved limit. Channels do not duplicate engin
 
 `CheckInput` carries:
 
-- `face="family"`;
 - pseudonymous `user_key`;
 - `language`;
 - `input_type` (`text` or `image`);
@@ -106,7 +105,7 @@ Error classes are categorical identifiers, never exception messages.
 
 ## 5. Rules and payment protection
 
-`rules/family/families.yaml` is the sole active rule pack. Stable `fs.*` rule IDs must not be
+`rules/families.yaml` is the sole active rule pack. Stable `fs.*` rule IDs must not be
 renamed because events, knowledge cards, tests, and sanitized Share summaries reference them.
 
 The pack covers credential theft, urgency/secrecy, authority impersonation, upfront payment,
@@ -119,7 +118,7 @@ account before refunding money or releasing goods.
 
 ## 6. Knowledge and model boundary
 
-Only approved, versioned cards from `knowledge/family/cards.yaml` may be retrieved. Cards explain
+Only approved, versioned cards from `knowledge/cards/` may be retrieved. Cards explain
 patterns and verification steps; they are not official-source evidence and cannot establish
 identity, intent, or fraud.
 
@@ -158,7 +157,7 @@ available.
 ### Web
 
 `GET /` and `GET /check` render the same anonymous checker. `POST /check` always builds the active
-`family` input. Uploads are size/pixel limited, kept ephemeral, same-origin protected, and image
+check input. Uploads are size/pixel limited, kept ephemeral, same-origin protected, and image
 checks require Turnstile when configured. Session and IP-derived keys are pseudonymous.
 
 `/merchants` is only a `308` compatibility redirect to `/check`. `/scams` and `/sitemap.xml` are not
@@ -166,7 +165,7 @@ product routes. `/healthz` checks process liveness; `/readyz` also checks databa
 
 ## 9. Observability and operator tools
 
-Operational metrics and feedback-label reports read active `family` events only. They expose
+Operational metrics and feedback-label reports read `check_event` rows. They expose
 aggregate counts, statuses, languages, cost/latency, no-signal rate, safety fallback counts,
 knowledge coverage, and categorical feedback without user keys or check IDs.
 
@@ -176,7 +175,7 @@ Supported tools include:
 python -m app.tools.metrics
 python -m app.tools.metrics --days 30
 python -m app.tools.metrics labels --since 2026-07-01
-python -m app.tools.knowledge_gaps --days 7 --face family
+python -m app.tools.knowledge_gaps --days 7
 python tools/eval_models.py
 ```
 
@@ -219,5 +218,5 @@ The current baseline is acceptable only while:
 - all user-facing copy exists in all three languages;
 - no active path persists or logs submitted content;
 - outputs remain non-verdict, grounded, and independently verifiable;
-- the single active face and its deployed rules/knowledge assets load successfully;
+- the deployed rules/knowledge assets load successfully;
 - consent, deletion, retention, rate limits, Share, feedback, and readiness checks remain green.

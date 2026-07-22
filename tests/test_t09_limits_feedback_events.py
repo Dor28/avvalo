@@ -10,9 +10,9 @@ import logging
 
 import pytest
 
+from app.config import Settings
 from app.data import repo
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
-from app.engine.faces import FACES
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput
 from app.obs.events import log_error
@@ -38,20 +38,18 @@ class FakeLLMProvider:
 
 
 async def test_daily_limit_boundary_is_reachable(session) -> None:
-    face = "family"
-    limit = FACES[face].daily_limit
+    limit = Settings.model_fields["daily_check_limit"].default
     counts = [
-        await repo.increment_usage(session, user_key="capped", face=face) for _ in range(limit)
+        await repo.increment_usage(session, user_key="capped") for _ in range(limit)
     ]
     assert counts[-1] == limit
-    assert await repo.get_usage(session, user_key="capped", face=face) == limit
+    assert await repo.get_usage(session, user_key="capped") == limit
 
 
 async def test_sixth_family_check_is_rate_limited(session) -> None:
     provider = FakeLLMProvider()
     check_input = CheckInput(
-        face="family",
-        user_key="daily-limit",
+                user_key="daily-limit",
         language=Language.ru,
         input_type=InputType.text,
         raw_text="Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
@@ -59,7 +57,7 @@ async def test_sixth_family_check_is_rate_limited(session) -> None:
 
     results = [
         await run_check(check_input, session=session, llm_provider=provider)
-        for _ in range(FACES["family"].daily_limit + 1)
+        for _ in range(Settings.model_fields["daily_check_limit"].default + 1)
     ]
 
     assert [result.status for result in results[:-1]] == [CheckStatus.ok] * 5
@@ -69,7 +67,7 @@ async def test_sixth_family_check_is_rate_limited(session) -> None:
 
 async def test_feedback_is_stored_categorically(session) -> None:
     check_id = await repo.record_check_event(
-        session, user_key="fb", face="family", input_type="text", language="ru", status="ok"
+        session, user_key="fb", input_type="text", language="ru", status="ok"
     )
     await repo.record_feedback(
         session, check_id=check_id, usefulness="partly", next_action="verify"
@@ -80,7 +78,7 @@ async def test_feedback_is_stored_categorically(session) -> None:
 
 async def test_feedback_rejects_non_categorical_values(session) -> None:
     check_id = await repo.record_check_event(
-        session, user_key="fb2", face="family", input_type="text", language="ru", status="ok"
+        session, user_key="fb2", input_type="text", language="ru", status="ok"
     )
     with pytest.raises(ValueError):
         await repo.record_feedback(
@@ -98,7 +96,7 @@ def test_log_event_accepts_metadata_and_refuses_content(callable_or_skip) -> Non
         pytest.skip(f"log_event does not take **fields: {inspect.signature(log_event)}")
 
     try:
-        log_event("check_completed", language="ru", face="family", status="ok")
+        log_event("check_completed", language="ru", status="ok")
     except TypeError as exc:
         pytest.skip(f"log_event metadata signature differs from §12: {exc}")
 
@@ -106,7 +104,7 @@ def test_log_event_accepts_metadata_and_refuses_content(callable_or_skip) -> Non
     with pytest.raises((ValueError, TypeError, KeyError)):
         log_event("check_completed", raw_text="secret submitted content")
     with pytest.raises(ValueError):
-        log_event("check_failed", face="family", error_class="+998 90 123 45 67")
+        log_event("check_failed", error_class="+998 90 123 45 67")
 
 
 def test_kb_version_is_exempt_from_heuristics_but_held_to_a_strict_shape(
@@ -136,7 +134,7 @@ def test_kb_version_is_exempt_from_heuristics_but_held_to_a_strict_shape(
 
 
 def test_log_error_accepts_metadata_and_refuses_content() -> None:
-    log_error("llm", "LLMProviderError", face="family", attempt=1)
+    log_error("llm", "LLMProviderError", attempt=1)
 
     with pytest.raises(ValueError):
         log_error("bogus_stage", "LLMProviderError")
@@ -153,7 +151,7 @@ def test_log_error_forwards_tags_to_sentry(monkeypatch) -> None:
         lambda message, **kwargs: calls.append({"message": message, **kwargs}),
     )
 
-    log_error("llm", "LLMProviderError", face="family", attempt=1)
+    log_error("llm", "LLMProviderError", attempt=1)
 
     assert len(calls) == 1
     call = calls[0]
@@ -162,23 +160,21 @@ def test_log_error_forwards_tags_to_sentry(monkeypatch) -> None:
     assert call["tags"] == {
         "stage": "llm",
         "error_type": "LLMProviderError",
-        "face": "family",
-        "attempt": "1",
+                "attempt": "1",
     }
 
 
 def test_log_error_is_a_safe_no_op_without_sentry_init() -> None:
     # No sentry_sdk.init() has run anywhere in the test process (no SENTRY_DSN),
     # so this must not raise or attempt a network call.
-    log_error("ocr", "OCRProviderError", face="family")
+    log_error("ocr", "OCRProviderError")
 
 
 async def test_run_check_emits_privacy_safe_events(session, caplog) -> None:
     caplog.set_level(logging.INFO, logger="app.obs.events")
     await run_check(
         CheckInput(
-            face="family",
-            user_key="evented",
+                        user_key="evented",
             language=Language.uz_latn,
             input_type=InputType.text,
             raw_text="Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",

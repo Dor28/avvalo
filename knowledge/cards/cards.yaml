@@ -1,6 +1,5 @@
 cards:
   - id: family.credential_theft
-    face: family
     version: 1.0.0
     status: approved
     reviewer: product-contract-2026-07-15
@@ -23,7 +22,6 @@ cards:
     reviewed_case_ids: []
 
   - id: family.urgency_secrecy
-    face: family
     version: 1.0.0
     status: approved
     reviewer: product-contract-2026-07-15
@@ -46,7 +44,6 @@ cards:
     reviewed_case_ids: []
 
   - id: family.authority_impersonation
-    face: family
     version: 1.0.0
     status: approved
     reviewer: product-contract-2026-07-15
@@ -69,7 +66,6 @@ cards:
     reviewed_case_ids: []
 
   - id: family.upfront_payment
-    face: family
     version: 1.0.0
     status: approved
     reviewer: product-contract-2026-07-15
@@ -92,7 +88,6 @@ cards:
     reviewed_case_ids: []
 
   - id: family.verification_avoidance
-    face: family
     version: 1.0.0
     status: approved
     reviewer: product-contract-2026-07-15
@@ -115,7 +110,6 @@ cards:
     reviewed_case_ids: []
 
   - id: family.implausible_promise
-    face: family
     version: 1.0.0
     status: approved
     reviewer: product-contract-2026-07-15
@@ -138,7 +132,6 @@ cards:
     reviewed_case_ids: []
 
   - id: family.suspicious_link_qr
-    face: family
     version: 1.0.0
     status: approved
     reviewer: product-contract-2026-07-15
@@ -161,7 +154,6 @@ cards:
     reviewed_case_ids: []
 
   - id: family.payment_receipt_claim
-    face: family
     version: 1.0.0
     status: approved
     reviewer: product-contract-2026-07-22
@@ -184,7 +176,6 @@ cards:
     reviewed_case_ids: []
 
   - id: family.overpayment_refund
-    face: family
     version: 1.0.0
     status: approved
     reviewer: product-contract-2026-07-22
@@ -204,7 +195,6 @@ cards:
     reviewed_case_ids: []
 
   - id: family.release_before_payment
-    face: family
     version: 1.0.0
     status: approved
     reviewer: product-contract-2026-07-22

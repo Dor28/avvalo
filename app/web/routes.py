@@ -61,7 +61,7 @@ templates.env.globals["static_version"] = _static_version()
 DEV_WEB_SESSION_SECRET = "development-web-session-secret"
 WEB_MAX_TEXT_CHARS = 6000
 WEB_MAX_CAPTION_CHARS = 500
-WEB_IP_FACE_PREFIX = "web_ip:"
+WEB_IP_SCOPE = "web_ip"
 
 # The form's own maxlength attributes come from the same constants the POST
 # handler validates against, so the browser can never invite an oversized body.
@@ -111,28 +111,26 @@ WEB_COPY = {
         "empty_error": "Tekshirish uchun xabar yozing yoki matni ko'rinadigan rasm yuklang.",
         "too_long_error": "Matn biroz uzun. Qisqartirib, qayta yuboring.",
         "consent_error": "Avval maxfiylik shartlariga rozilik bering.",
-        "faces": {
-            "family": {
-                "eyebrow": "",
-                "name": "Xabar tekshiruvi",
-                "headline": (
-                    "Shubhali xabarga javob berishdan yoki pul yuborishdan "
-                    "oldin tekshiring."
-                ),
-                "subhead": (
-                    "Avvalo xabardagi xavf belgilarini ko'rsatadi, nimani tekshirish "
-                    "va qanday savol berishni aytadi."
-                ),
-                "prompt": "Shubhali xabar matnini kiriting yoki skrinshot yuklang.",
-                "textarea_placeholder": "Masalan: SMS kodni ayting, aks holda karta bloklanadi...",
-                "caption_placeholder": "Kerak bo'lsa: kim yubordi, nima so'rayapti?",
-                "image_hint": "Skrinshotdagi matn aniq o'qiladigan bo'lsin.",
-                "trust": [
-                    "Odamni emas, vaziyatni tekshiradi",
-                    "Hukm emas, aniq tekshiruv qadamlari",
-                    "Yuborgan matningiz 1 soat ichida o'chiriladi",
-                ],
-            },
+        "check": {
+            "eyebrow": "",
+            "name": "Xabar tekshiruvi",
+            "headline": (
+                "Shubhali xabarga javob berishdan yoki pul yuborishdan "
+                "oldin tekshiring."
+            ),
+            "subhead": (
+                "Avvalo xabardagi xavf belgilarini ko'rsatadi, nimani tekshirish "
+                "va qanday savol berishni aytadi."
+            ),
+            "prompt": "Shubhali xabar matnini kiriting yoki skrinshot yuklang.",
+            "textarea_placeholder": "Masalan: SMS kodni ayting, aks holda karta bloklanadi...",
+            "caption_placeholder": "Kerak bo'lsa: kim yubordi, nima so'rayapti?",
+            "image_hint": "Skrinshotdagi matn aniq o'qiladigan bo'lsin.",
+            "trust": [
+                "Odamni emas, vaziyatni tekshiradi",
+                "Hukm emas, aniq tekshiruv qadamlari",
+                "Yuborgan matningiz 1 soat ichida o'chiriladi",
+            ],
         },
     },
     "uz_cyrl": {
@@ -174,28 +172,26 @@ WEB_COPY = {
         "empty_error": "Текшириш учун хабар ёзинг ёки матни кўринадиган расм юкланг.",
         "too_long_error": "Матн бироз узун. Қисқартириб, қайта юборинг.",
         "consent_error": "Аввал махфийлик шартларига розилик беринг.",
-        "faces": {
-            "family": {
-                "eyebrow": "",
-                "name": "Хабар текшируви",
-                "headline": (
-                    "Шубҳали хабарга жавоб беришдан ёки пул юборишдан олдин "
-                    "текширинг."
-                ),
-                "subhead": (
-                    "Avvalo хабардаги хавф белгиларини кўрсатади, нимани текшириш "
-                    "ва қандай савол беришни айтади."
-                ),
-                "prompt": "Шубҳали хабар матнини киритинг ёки скриншот юкланг.",
-                "textarea_placeholder": "Масалан: SMS кодни айтинг, акс ҳолда карта блокланади...",
-                "caption_placeholder": "Керак бўлса: ким юборди, нима сўраяпти?",
-                "image_hint": "Скриншотдаги матн аниқ ўқиладиган бўлсин.",
-                "trust": [
-                    "Одамни эмас, вазиятни текширади",
-                    "Ҳукм эмас, аниқ текширув қадамлари",
-                    "Юборган матнингиз 1 соат ичида ўчирилади",
-                ],
-            },
+        "check": {
+            "eyebrow": "",
+            "name": "Хабар текшируви",
+            "headline": (
+                "Шубҳали хабарга жавоб беришдан ёки пул юборишдан олдин "
+                "текширинг."
+            ),
+            "subhead": (
+                "Avvalo хабардаги хавф белгиларини кўрсатади, нимани текшириш "
+                "ва қандай савол беришни айтади."
+            ),
+            "prompt": "Шубҳали хабар матнини киритинг ёки скриншот юкланг.",
+            "textarea_placeholder": "Масалан: SMS кодни айтинг, акс ҳолда карта блокланади...",
+            "caption_placeholder": "Керак бўлса: ким юборди, нима сўраяпти?",
+            "image_hint": "Скриншотдаги матн аниқ ўқиладиган бўлсин.",
+            "trust": [
+                "Одамни эмас, вазиятни текширади",
+                "Ҳукм эмас, аниқ текширув қадамлари",
+                "Юборган матнингиз 1 соат ичида ўчирилади",
+            ],
         },
     },
     "ru": {
@@ -237,27 +233,25 @@ WEB_COPY = {
         "empty_error": "Вставьте текст или загрузите читаемое изображение.",
         "too_long_error": "Текст получился слишком длинным. Сократите его и отправьте ещё раз.",
         "consent_error": "Сначала примите условия конфиденциальности.",
-        "faces": {
-            "family": {
-                "eyebrow": "",
-                "name": "Проверка сообщения",
-                "headline": (
-                    "Проверьте подозрительное сообщение до ответа или перевода денег."
-                ),
-                "subhead": (
-                    "Avvalo покажет признаки риска, что проверить и какие вопросы "
-                    "задать."
-                ),
-                "prompt": "Вставьте текст подозрительного сообщения или загрузите скриншот.",
-                "textarea_placeholder": "Например: скажите SMS-код, иначе карта будет заблокирована...",
-                "caption_placeholder": "Если нужно: кто написал и чего просит?",
-                "image_hint": "Текст на скриншоте должен быть читаемым.",
-                "trust": [
-                    "Проверяем ситуацию, а не человека",
-                    "Конкретные шаги проверки вместо вердикта",
-                    "Ваш текст удаляется в течение 1 часа",
-                ],
-            },
+        "check": {
+            "eyebrow": "",
+            "name": "Проверка сообщения",
+            "headline": (
+                "Проверьте подозрительное сообщение до ответа или перевода денег."
+            ),
+            "subhead": (
+                "Avvalo покажет признаки риска, что проверить и какие вопросы "
+                "задать."
+            ),
+            "prompt": "Вставьте текст подозрительного сообщения или загрузите скриншот.",
+            "textarea_placeholder": "Например: скажите SMS-код, иначе карта будет заблокирована...",
+            "caption_placeholder": "Если нужно: кто написал и чего просит?",
+            "image_hint": "Текст на скриншоте должен быть читаемым.",
+            "trust": [
+                "Проверяем ситуацию, а не человека",
+                "Конкретные шаги проверки вместо вердикта",
+                "Ваш текст удаляется в течение 1 часа",
+            ],
         },
     },
 }
@@ -301,7 +295,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
         "landing.html",
         {
             "copy": copy,
-            "face_copy": copy["faces"]["family"],
+            "check_copy": copy["check"],
             "language_path": "/",
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
@@ -313,7 +307,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
 
 
 @router.get("/check", response_class=HTMLResponse)
-async def family_check(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
+async def check_page(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
     """Render the consumer checker and its result surface."""
 
     return _check_page(request, language=language)
@@ -343,7 +337,7 @@ def _check_page(request: Request, *, language: str) -> HTMLResponse:
         "index.html",
         {
             "copy": copy,
-            "face_copy": copy["faces"]["family"],
+            "check_copy": copy["check"],
             "language_path": "/check",
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
@@ -398,7 +392,6 @@ async def check(
     settings = _settings_or_error(request)
     language = _normalize_language(language)
     copy = WEB_COPY[language]
-    face = "family"
 
     web_session = get_or_create_web_session(request, secret=_web_secret(settings))
     session_factory = _session_factory_or_none(request)
@@ -409,7 +402,6 @@ async def check(
         if not await _ensure_web_consent(
             session,
             user_key=web_session.user_key,
-            face=face,
             language=language,
             settings=settings,
             accepted=consent == "yes",
@@ -451,7 +443,6 @@ async def check(
 
         input_type = InputType.image if image_bytes else InputType.text
         check_input = CheckInput(
-            face=face,
             user_key=web_session.user_key,
             language=Language(language),
             input_type=input_type,
@@ -464,7 +455,6 @@ async def check(
             session,
             request=request,
             settings=settings,
-            face=face,
             language=Language(language),
             input_type=input_type,
         )
@@ -487,11 +477,11 @@ async def check(
             )
         except Exception:
             if isinstance(ip_limit, str):
-                await repo.refund_usage(session, user_key=ip_limit, face=_web_ip_face(face))
+                await repo.refund_usage(session, user_key=ip_limit, scope=WEB_IP_SCOPE)
                 await session.commit()
             raise
         if isinstance(ip_limit, str) and result.status not in WEB_BILLABLE_STATUSES:
-            await repo.refund_usage(session, user_key=ip_limit, face=_web_ip_face(face))
+            await repo.refund_usage(session, user_key=ip_limit, scope=WEB_IP_SCOPE)
         await session.commit()
 
     return _partial(request, result=result, copy=copy, web_session=web_session)
@@ -501,12 +491,11 @@ async def _ensure_web_consent(
     session: AsyncSession,
     *,
     user_key: str,
-    face: str,
     language: str,
     settings: Settings,
     accepted: bool,
 ) -> bool:
-    consent = await repo.get_consent(session, user_key=user_key, face=face)
+    consent = await repo.get_consent(session, user_key=user_key)
     if is_consent_current(consent, settings.notice_version):
         return True
     if not accepted:
@@ -514,7 +503,6 @@ async def _ensure_web_consent(
     await repo.upsert_consent(
         session,
         user_key=user_key,
-        face=face,
         notice_version=settings.notice_version,
         language=language,
     )
@@ -532,7 +520,6 @@ async def _reserve_web_ip_limit(
     *,
     request: Request,
     settings: Settings,
-    face: str,
     language: Language,
     input_type: InputType,
 ) -> str | CheckResult | None:
@@ -540,12 +527,11 @@ async def _reserve_web_ip_limit(
     if ip_key is None:
         return None
 
-    ip_face = _web_ip_face(face)
-    count = await repo.increment_usage(session, user_key=ip_key, face=ip_face)
+    count = await repo.increment_usage(session, user_key=ip_key, scope=WEB_IP_SCOPE)
     if count <= settings.web_daily_limit:
         return ip_key
 
-    await repo.refund_usage(session, user_key=ip_key, face=ip_face)
+    await repo.refund_usage(session, user_key=ip_key, scope=WEB_IP_SCOPE)
     return CheckResult(
         status=CheckStatus.rate_limited,
         text=format_status_message(CheckStatus.rate_limited, language),
@@ -553,10 +539,6 @@ async def _reserve_web_ip_limit(
         input_type=input_type,
         error_class="WebIpDailyLimitExceeded",
     )
-
-
-def _web_ip_face(face: str) -> str:
-    return f"{WEB_IP_FACE_PREFIX}{face}"
 
 
 def _partial(

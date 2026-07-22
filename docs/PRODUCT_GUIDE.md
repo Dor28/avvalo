@@ -71,7 +71,7 @@ The repository already contains:
 - a sanitized sharing foundation;
 - local hash-based URL-reputation support that may remain disabled until production verification.
 
-The runtime exposes one active face, internally named `family`. Seller, payment-screenshot,
+The runtime exposes one checker with no internal product-face discriminator. Seller, payment-screenshot,
 courier, and refund situations enter this same checker; the relevant payment protections are part
 of the main rule and safety path. Avvalo Merchants, the scam library, story capture, and Scam Pulse
 are not dormant modes — they are retired surfaces.

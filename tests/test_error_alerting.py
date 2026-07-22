@@ -34,7 +34,7 @@ async def test_bot_error_handler_logs_and_marks_handled(caplog) -> None:
 
 
 def test_build_dispatcher_registers_an_error_handler() -> None:
-    dispatcher = build_dispatcher(None, None, None)
+    dispatcher = build_dispatcher(None, None)
     assert len(dispatcher.errors.handlers) >= 1
 
 
@@ -44,9 +44,9 @@ async def test_operator_alert_handler_sends_and_debounces() -> None:
     logger = logging.getLogger("app.obs.events")
     logger.addHandler(handler)
     try:
-        log_error("llm", "LLMProviderError", face="family")
-        log_error("llm", "LLMProviderError", face="family")  # same key -- debounced
-        log_error("ocr", "OCRProviderError", face="family")  # different stage/type -- sent
+        log_error("llm", "LLMProviderError")
+        log_error("llm", "LLMProviderError")  # same key -- debounced
+        log_error("ocr", "OCRProviderError")  # different stage/type -- sent
 
         await asyncio.gather(*handler._pending)  # let the fire-and-forget sends finish
     finally:
@@ -65,7 +65,7 @@ async def test_operator_alert_includes_http_status_when_present() -> None:
     logger = logging.getLogger("app.obs.events")
     logger.addHandler(handler)
     try:
-        log_error("llm", "RateLimitError", face="family", status_code=429)
+        log_error("llm", "RateLimitError", status_code=429)
         await asyncio.gather(*handler._pending)
     finally:
         logger.removeHandler(handler)
@@ -86,7 +86,7 @@ async def test_operator_alert_sends_first_alert_shortly_after_boot(monkeypatch) 
     logger = logging.getLogger("app.obs.events")
     logger.addHandler(handler)
     try:
-        log_error("llm", "LLMProviderError", face="family")
+        log_error("llm", "LLMProviderError")
         await asyncio.gather(*handler._pending)
     finally:
         logger.removeHandler(handler)
@@ -101,7 +101,7 @@ async def test_operator_alert_handler_skips_safety_fallback() -> None:
     logger.addHandler(handler)
     try:
         log_error(
-            "validate", "SafetyValidationError", face="family", reason="verify block is empty"
+            "validate", "SafetyValidationError", reason="verify block is empty"
         )
         await asyncio.sleep(0)
     finally:

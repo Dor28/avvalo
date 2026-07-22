@@ -81,10 +81,10 @@ _BRAND_ALLOWED_DOMAINS: dict[str, tuple[str, ...]] = {
 }
 
 
-def run_rules(text: str, face_id: str) -> tuple[list[RuleHit], list[Signal]]:
-    """Run a face's keyword rules and structural extractors over raw local text."""
+def run_rules(text: str) -> tuple[list[RuleHit], list[Signal]]:
+    """Run the keyword rules and structural extractors over raw local text."""
 
-    pack = load_rule_pack(face_id)
+    pack = load_rule_pack()
     normalized = normalize_text(text)
     hits_by_id: dict[str, RuleHit] = {}
     signals: list[Signal] = []

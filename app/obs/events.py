@@ -38,7 +38,6 @@ ALLOWED_EVENT_NAMES = {
 ALLOWED_FIELDS = {
     "cost_usd",
     "error_class",
-    "face",
     "input_tokens",
     "input_type",
     "kb_version",
@@ -121,7 +120,6 @@ ALLOWED_ERROR_STAGES = {
 
 ALLOWED_ERROR_FIELDS = {
     "attempt",
-    "face",
     "reason",
     "status_code",
     "timeout_s",

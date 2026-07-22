@@ -155,11 +155,11 @@ _HEADINGS = {
 }
 
 
-def share_summary(rule_ids: list[str], language: Language | str, face: str) -> str:
+def share_summary(rule_ids: list[str], language: Language | str) -> str:
     """Build a deterministic, content-free share warning from stored rule IDs."""
 
     resolved_language = _coerce_language(language)
-    labels = _top_family_labels(rule_ids, resolved_language, face)
+    labels = _top_family_labels(rule_ids, resolved_language)
     copy = _SHARE_COPY[resolved_language]
     if not labels:
         return "\n".join([copy["generic"], copy["cta"]])
@@ -275,8 +275,8 @@ def _coerce_language(language: Language | str) -> Language:
         return Language.uz_latn
 
 
-def _top_family_labels(rule_ids: list[str], language: Language, face: str) -> list[str]:
-    by_rule = _rules_by_id(face)
+def _top_family_labels(rule_ids: list[str], language: Language) -> list[str]:
+    by_rule = _rules_by_id()
     ranked: dict[str, tuple[int, int]] = {}
     for index, rule_id in enumerate(rule_ids):
         rule = by_rule.get(rule_id)
@@ -291,9 +291,9 @@ def _top_family_labels(rule_ids: list[str], language: Language, face: str) -> li
 
 
 @cache
-def _rules_by_id(face: str):
+def _rules_by_id():
     try:
-        pack = load_rule_pack(face)
+        pack = load_rule_pack()
     except (FileNotFoundError, ValueError):
         return {}
     return {rule.id: rule for rule in pack.rules}

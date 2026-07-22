@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from app.engine.faces import FACES
+from app.engine.llm.prompt import _CHECK_PROMPT, _SYSTEM_PROMPT
 from app.engine.types import DraftOutput
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +28,7 @@ def _read(name: str) -> str:
 
 
 def test_required_prompt_files_exist() -> None:
-    for name in ("system_safety.txt", "family.txt"):
+    for name in ("system_safety.txt", "check.txt"):
         _read(name)
 
 
@@ -46,21 +46,19 @@ def test_system_prompt_keeps_the_core_prohibitions() -> None:
         assert token in system, f"system prompt should reference '{token}' (§8 constraints)"
 
 
-@pytest.mark.parametrize("name", ["family.txt"])
-def test_face_templates_expose_builder_placeholders(name: str) -> None:
+@pytest.mark.parametrize("name", ["check.txt"])
+def test_check_template_exposes_builder_placeholders(name: str) -> None:
     template = _read(name)
     for placeholder in FACE_TEMPLATE_PLACEHOLDERS:
         assert placeholder in template, f"{name}: missing placeholder {placeholder}"
 
 
 def test_consumer_prompt_forbids_confirming_payment_from_a_screenshot() -> None:
-    prompt = _read("family.txt").lower()
+    prompt = _read("check.txt").lower()
     assert "incoming payment arrived" in prompt
     assert "screenshot" in prompt
 
 
-def test_faces_reference_prompt_files_that_exist() -> None:
-    for face in FACES.values():
-        assert (REPO_ROOT / face.prompt_template).is_file(), (
-            f"{face.id}: prompt_template '{face.prompt_template}' does not exist"
-        )
+def test_engine_references_prompt_files_that_exist() -> None:
+    for template in (_SYSTEM_PROMPT, _CHECK_PROMPT):
+        assert template.is_file(), f"prompt template does not exist: {template}"
