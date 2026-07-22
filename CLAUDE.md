@@ -36,7 +36,7 @@ The former `merchants` face, scam library, story-capture flow, and Scam Pulse ar
 not be restored from git history.
 
 The `face` discriminator that used to select between products is **gone** — from the code and from
-the database (migration `0006_drop_face`). Do not reintroduce it, and do not add a "mode" or
+the database (migration `0007_drop_face`). Do not reintroduce it, and do not add a "mode" or
 "product" parameter in its place. Two names survive and mean something different:
 
 - `RuleHit.family` / `rules/families.yaml` — the **scam-family taxonomy** (`credential_theft`,

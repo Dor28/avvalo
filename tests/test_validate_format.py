@@ -186,6 +186,7 @@ def test_formatter_adds_structure_limitation_and_no_signal_lead() -> None:
     assert "✅ **Nimani tekshiring**" in formatted
     assert "❓ **Qanday savol bering**" in formatted
     assert "odamni tekshirish" in formatted
+    assert formatted.index("Nima noma'lum qoldi") < formatted.index("Qanday savol bering")
 
     no_signal = format_result(
         DraftOutput(

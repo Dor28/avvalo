@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES, t
 from app.config import Settings, get_settings
+from app.content import list_published_posts
 from app.data import repo
 from app.engine import (
     BILLABLE_STATUSES,
@@ -32,6 +33,7 @@ from app.web.abuse import (
     require_same_origin,
     require_turnstile_for_image,
 )
+from app.web.editorial_copy import EDITORIAL_COPY
 from app.web.session import get_or_create_web_session, set_web_session_cookie
 
 router = APIRouter()
@@ -46,6 +48,7 @@ def _static_version() -> str:
     for name in (
         "styles.css",
         "check.js",
+        "admin.js",
         "favicon.ico",
         "apple-touch-icon.png",
         "icon-192.png",
@@ -67,6 +70,11 @@ WEB_IP_SCOPE = "web_ip"
 # handler validates against, so the browser can never invite an oversized body.
 templates.env.globals["max_text_chars"] = WEB_MAX_TEXT_CHARS
 templates.env.globals["max_caption_chars"] = WEB_MAX_CAPTION_CHARS
+templates.env.globals["short_language_labels"] = {
+    "uz_latn": "O‘z",
+    "uz_cyrl": "Ўз",
+    "ru": "RU",
+}
 # The per-IP web limit refunds exactly the statuses the engine's per-user
 # limit refunds — one shared definition so the two can't drift.
 WEB_BILLABLE_STATUSES = BILLABLE_STATUSES
@@ -76,26 +84,56 @@ WEB_COPY = {
         "html_lang": "uz-Latn",
         "privacy_link": "Maxfiylik",
         "language_label": "Til",
-        "workflow_label": "Qanday ishlaydi",
+        "nav_label": "Asosiy bo‘limlar",
+        "nav_check": "Tekshiruv",
+        "nav_cases": "Holatlar",
         "trust_label": "Ishonch",
         "skip_to_check": "Tekshiruvga o'tish",
-        "landing_cta": "Xabarni tekshirish",
-        "landing_preview_title": "Xavf belgilari. Tekshirish qadamlari. Beriladigan savollar.",
-        "landing_steps_title": "Xabardan tekshiruv rejasigacha",
-        "landing_steps_lead": (
-            "Avvalo hukm chiqarmaydi — qaror qilishdan oldin nimani "
-            "tekshirishni ko'rsatadi."
+        "brand_tagline": "Avval tekshiring, keyin harakat qiling",
+        "hero_kicker": "Shubha tug‘ildimi?",
+        "use_cases_label": "Avvalo'ga nimalarni yuborish mumkin",
+        "composer_kicker": "Anonim tekshiruv",
+        "composer_title": "Vaziyatni Avvalo'ga yuboring",
+        "composer_body": (
+            "Matn yoki havolani kiriting, skrinshot yoki rasm yuklang. Bu to‘lov "
+            "so‘rovi, taklif, hujjat yoki suhbat bo‘lishi mumkin."
         ),
-        "landing_step_1_title": "Xabarni yuboring",
-        "landing_step_1_body": "Matnni kiriting yoki o'qiladigan skrinshot qo'shing.",
-        "landing_step_2_title": "Avvalo vaziyatni tahlil qiladi",
-        "landing_step_2_body": "Xavf belgilarini va yetishmayotgan ma'lumotlarni ajratadi.",
-        "landing_step_3_title": "Tekshirib, keyin harakat qiling",
-        "landing_step_3_body": "Nimani tasdiqlash va qanday savol berishni ko'ring.",
+        "input_hint": "SMS kod, parol va karta ma’lumotlarini yashiring.",
+        "outcome_title": "Javobda nima bo‘ladi",
+        "outcome_body": (
+            "Avvalo hukm chiqarmaydi va rasmiy manba tekshirilganini aytmaydi. "
+            "Javob mustaqil harakat rejasini beradi."
+        ),
+        "outcomes": [
+            {
+                "title": "Nima e’tibor talab qiladi",
+                "body": "Bosim, shoshiltirish va vaziyatdagi nomuvofiqliklar.",
+            },
+            {
+                "title": "Hozir nima qilish kerak",
+                "body": "Manbani mustaqil tekshirish uchun aniq qadamlar.",
+            },
+            {
+                "title": "Nima noma’lum qoladi",
+                "body": "Tasdiqlanmagan da’volar va bajarilmagan tashqi tekshiruvlar.",
+            },
+            {
+                "title": "Nima deb so‘rash kerak",
+                "body": "Qarshi tomonga yoki rasmiy tashkilotga beriladigan qisqa savollar.",
+            },
+        ],
+        "boundary_title": "Vaziyatni tekshiring, odamni emas",
+        "boundary_body": (
+            "Avvalo vaziyat, material, jarayon yoki manbadagi belgilarni ko‘rib chiqadi. "
+            "U odamning obro‘sini baholamaydi, qilinmagan tashqi tekshiruvni qilgandek "
+            "ko‘rsatmaydi va yakuniy hukm chiqarmaydi."
+        ),
+        "footer_note": "Shoshilmang. Avval tekshiring, keyin harakat qiling.",
+        "result_ready": "Javob tayyor",
+        "result_title": "Vaziyat bo‘yicha qadamlar",
         "title": "Avvalo",
         "privacy_title": "Maxfiylik",
         "consent_label": "Maxfiylik shartlarini o'qidim va roziman",
-        "message_label": "Xabar matni",
         "caption_label": "Qo'shimcha izoh",
         "image_label": "Skrinshot yoki rasm",
         "optional_label": "ixtiyoriy",
@@ -104,32 +142,35 @@ WEB_COPY = {
         "submit": "Tekshirish",
         "checking": "Tekshirilmoqda...",
         "result_error_title": "Hozir tekshirib bo'lmadi",
-        "result_empty": "Javob bo'sh keldi.",
-        "meta_status": "Holat",
-        "meta_latency": "Vaqt",
-        "meta_cost": "Narx",
         "empty_error": "Tekshirish uchun xabar yozing yoki matni ko'rinadigan rasm yuklang.",
         "too_long_error": "Matn biroz uzun. Qisqartirib, qayta yuboring.",
         "consent_error": "Avval maxfiylik shartlariga rozilik bering.",
         "check": {
-            "eyebrow": "",
-            "name": "Xabar tekshiruvi",
-            "headline": (
-                "Shubhali xabarga javob berishdan yoki pul yuborishdan "
-                "oldin tekshiring."
-            ),
+            "name": "Vaziyat tekshiruvi",
+            "headline": "Avval Avvalo'ga yuboring.",
             "subhead": (
-                "Avvalo xabardagi xavf belgilarini ko'rsatadi, nimani tekshirish "
-                "va qanday savol berishni aytadi."
+                "Javob berish, pul to‘lash, ilova o‘rnatish, hujjat imzolash yoki "
+                "shaxsiy ma’lumot yuborishdan oldin nimaga e’tibor berish va nimani "
+                "mustaqil tekshirishni ko‘ring."
             ),
-            "prompt": "Shubhali xabar matnini kiriting yoki skrinshot yuklang.",
-            "textarea_placeholder": "Masalan: SMS kodni ayting, aks holda karta bloklanadi...",
+            "prompt": "Matn, havola yoki vaziyat tavsifi",
+            "textarea_placeholder": (
+                "Masalan: to‘lov skrinshotini yuborib, pul tushmasidan oldin "
+                "tovarni berishimni so‘rashyapti..."
+            ),
             "caption_placeholder": "Kerak bo'lsa: kim yubordi, nima so'rayapti?",
-            "image_hint": "Skrinshotdagi matn aniq o'qiladigan bo'lsin.",
+            "image_hint": "Yozishma, chek, QR-kod yoki hujjat aniq ko‘rinsin.",
+            "use_cases": [
+                "Xabar yoki suhbat",
+                "Havola yoki QR-kod",
+                "To‘lov skrinshoti yoki so‘rovi",
+                "Ish yoki savdo taklifi",
+                "Hujjat yoki so‘rov",
+            ],
             "trust": [
                 "Odamni emas, vaziyatni tekshiradi",
                 "Hukm emas, aniq tekshiruv qadamlari",
-                "Yuborgan matningiz 1 soat ichida o'chiriladi",
+                "Matn, rasm va javob saqlanmaydi, logga yozilmaydi",
             ],
         },
     },
@@ -137,26 +178,56 @@ WEB_COPY = {
         "html_lang": "uz-Cyrl",
         "privacy_link": "Махфийлик",
         "language_label": "Тил",
-        "workflow_label": "Қандай ишлайди",
+        "nav_label": "Асосий бўлимлар",
+        "nav_check": "Текширув",
+        "nav_cases": "Ҳолатлар",
         "trust_label": "Ишонч",
         "skip_to_check": "Текширувга ўтиш",
-        "landing_cta": "Хабарни текшириш",
-        "landing_preview_title": "Хавф белгилари. Текшириш қадамлари. Бериладиган саволлар.",
-        "landing_steps_title": "Хабардан текширув режасигача",
-        "landing_steps_lead": (
-            "Avvalo ҳукм чиқармайди — қарор қилишдан олдин нимани "
-            "текширишни кўрсатади."
+        "brand_tagline": "Аввал текширинг, кейин ҳаракат қилинг",
+        "hero_kicker": "Шубҳа туғилдими?",
+        "use_cases_label": "Avvalo'га нималарни юбориш мумкин",
+        "composer_kicker": "Аноним текширув",
+        "composer_title": "Вазиятни Avvalo'га юборинг",
+        "composer_body": (
+            "Матн ёки ҳаволани киритинг, скриншот ёки расм юкланг. Бу тўлов "
+            "сўрови, таклиф, ҳужжат ёки суҳбат бўлиши мумкин."
         ),
-        "landing_step_1_title": "Хабарни юборинг",
-        "landing_step_1_body": "Матнни киритинг ёки ўқиладиган скриншот қўшинг.",
-        "landing_step_2_title": "Avvalo вазиятни таҳлил қилади",
-        "landing_step_2_body": "Хавф белгилари ва етишмаётган маълумотларни ажратади.",
-        "landing_step_3_title": "Текшириб, кейин ҳаракат қилинг",
-        "landing_step_3_body": "Нимани тасдиқлаш ва қандай савол беришни кўринг.",
+        "input_hint": "SMS-код, пароль ва карта маълумотларини яширинг.",
+        "outcome_title": "Жавобда нима бўлади",
+        "outcome_body": (
+            "Avvalo ҳукм чиқармайди ва расмий манба текширилганини айтмайди. "
+            "Жавоб мустақил ҳаракат режасини беради."
+        ),
+        "outcomes": [
+            {
+                "title": "Нима эътибор талаб қилади",
+                "body": "Босим, шошилтириш ва вазиятдаги номувофиқликлар.",
+            },
+            {
+                "title": "Ҳозир нима қилиш керак",
+                "body": "Манбани мустақил текшириш учун аниқ қадамлар.",
+            },
+            {
+                "title": "Нима номаълум қолади",
+                "body": "Тасдиқланмаган даъволар ва бажарилмаган ташқи текширувлар.",
+            },
+            {
+                "title": "Нима деб сўраш керак",
+                "body": "Қарши томонга ёки расмий ташкилотга бериладиган қисқа саволлар.",
+            },
+        ],
+        "boundary_title": "Вазиятни текширинг, одамни эмас",
+        "boundary_body": (
+            "Avvalo вазият, материал, жараён ёки манбадаги белгиларни кўриб чиқади. "
+            "У одамнинг обрўсини баҳоламайди, қилинмаган ташқи текширувни қилгандек "
+            "кўрсатмайди ва якуний ҳукм чиқармайди."
+        ),
+        "footer_note": "Шошилманг. Аввал текширинг, кейин ҳаракат қилинг.",
+        "result_ready": "Жавоб тайёр",
+        "result_title": "Вазият бўйича қадамлар",
         "title": "Avvalo",
         "privacy_title": "Махфийлик",
         "consent_label": "Махфийлик шартларини ўқидим ва розиман",
-        "message_label": "Хабар матни",
         "caption_label": "Қўшимча изоҳ",
         "image_label": "Скриншот ёки расм",
         "optional_label": "ихтиёрий",
@@ -165,32 +236,35 @@ WEB_COPY = {
         "submit": "Текшириш",
         "checking": "Текширилмоқда...",
         "result_error_title": "Ҳозир текшириб бўлмади",
-        "result_empty": "Жавоб бўш келди.",
-        "meta_status": "Ҳолат",
-        "meta_latency": "Вақт",
-        "meta_cost": "Нарх",
         "empty_error": "Текшириш учун хабар ёзинг ёки матни кўринадиган расм юкланг.",
         "too_long_error": "Матн бироз узун. Қисқартириб, қайта юборинг.",
         "consent_error": "Аввал махфийлик шартларига розилик беринг.",
         "check": {
-            "eyebrow": "",
-            "name": "Хабар текшируви",
-            "headline": (
-                "Шубҳали хабарга жавоб беришдан ёки пул юборишдан олдин "
-                "текширинг."
-            ),
+            "name": "Вазият текшируви",
+            "headline": "Аввал Avvalo'га юборинг.",
             "subhead": (
-                "Avvalo хабардаги хавф белгиларини кўрсатади, нимани текшириш "
-                "ва қандай савол беришни айтади."
+                "Жавоб бериш, пул тўлаш, илова ўрнатиш, ҳужжат имзолаш ёки "
+                "шахсий маълумот юборишдан олдин нимага эътибор бериш ва нимани "
+                "мустақил текширишни кўринг."
             ),
-            "prompt": "Шубҳали хабар матнини киритинг ёки скриншот юкланг.",
-            "textarea_placeholder": "Масалан: SMS кодни айтинг, акс ҳолда карта блокланади...",
+            "prompt": "Матн, ҳавола ёки вазият тавсифи",
+            "textarea_placeholder": (
+                "Масалан: тўлов скриншотини юбориб, пул тушмасидан олдин "
+                "товарни беришимни сўрашяпти..."
+            ),
             "caption_placeholder": "Керак бўлса: ким юборди, нима сўраяпти?",
-            "image_hint": "Скриншотдаги матн аниқ ўқиладиган бўлсин.",
+            "image_hint": "Ёзишма, чек, QR-код ёки ҳужжат аниқ кўринсин.",
+            "use_cases": [
+                "Хабар ёки суҳбат",
+                "Ҳавола ёки QR-код",
+                "Тўлов скриншоти ёки сўрови",
+                "Иш ёки савдо таклифи",
+                "Ҳужжат ёки сўров",
+            ],
             "trust": [
                 "Одамни эмас, вазиятни текширади",
                 "Ҳукм эмас, аниқ текширув қадамлари",
-                "Юборган матнингиз 1 соат ичида ўчирилади",
+                "Матн, расм ва жавоб сақланмайди, логга ёзилмайди",
             ],
         },
     },
@@ -198,26 +272,56 @@ WEB_COPY = {
         "html_lang": "ru",
         "privacy_link": "Конфиденциальность",
         "language_label": "Язык",
-        "workflow_label": "Как это работает",
+        "nav_label": "Основные разделы",
+        "nav_check": "Проверка",
+        "nav_cases": "Кейсы",
         "trust_label": "Доверие",
         "skip_to_check": "Перейти к проверке",
-        "landing_cta": "Проверить сообщение",
-        "landing_preview_title": "Признаки риска. Шаги проверки. Вопросы.",
-        "landing_steps_title": "От сообщения к плану проверки",
-        "landing_steps_lead": (
-            "Avvalo не выносит вердикт — он показывает, что проверить до "
-            "принятия решения."
+        "brand_tagline": "Сначала проверьте, потом действуйте",
+        "hero_kicker": "Возникли сомнения?",
+        "use_cases_label": "Что можно отправить в Avvalo",
+        "composer_kicker": "Анонимная проверка",
+        "composer_title": "Отправьте ситуацию в Avvalo",
+        "composer_body": (
+            "Вставьте текст или ссылку, загрузите скриншот или фото. Это может быть "
+            "запрос на оплату, предложение, документ или переписка."
         ),
-        "landing_step_1_title": "Отправьте сообщение",
-        "landing_step_1_body": "Вставьте текст или добавьте читаемый скриншот.",
-        "landing_step_2_title": "Avvalo разбирает ситуацию",
-        "landing_step_2_body": "Показывает признаки риска и недостающую информацию.",
-        "landing_step_3_title": "Проверьте и только потом действуйте",
-        "landing_step_3_body": "Узнайте, что подтвердить и какие вопросы задать.",
+        "input_hint": "Скройте SMS-коды, пароли и полные данные карты.",
+        "outcome_title": "Что будет в ответе",
+        "outcome_body": (
+            "Avvalo не выносит вердикт и не говорит, что проверил официальный источник. "
+            "В ответе будет план самостоятельных действий."
+        ),
+        "outcomes": [
+            {
+                "title": "Что требует внимания",
+                "body": "Давление, спешка и несостыковки в ситуации.",
+            },
+            {
+                "title": "Что сделать сейчас",
+                "body": "Конкретные шаги для независимой проверки источника.",
+            },
+            {
+                "title": "Что останется неизвестным",
+                "body": "Неподтверждённые заявления и внешние проверки, которые не проводились.",
+            },
+            {
+                "title": "Что спросить",
+                "body": "Короткие вопросы собеседнику или официальной организации.",
+            },
+        ],
+        "boundary_title": "Проверяйте ситуацию, а не человека",
+        "boundary_body": (
+            "Avvalo разбирает признаки в ситуации, материале, процессе или источнике. "
+            "Он не оценивает репутацию человека, не говорит, что провёл внешнюю проверку, "
+            "если её не было, и не выносит окончательный вердикт."
+        ),
+        "footer_note": "Не спешите. Сначала проверьте, потом действуйте.",
+        "result_ready": "Ответ готов",
+        "result_title": "Шаги по вашей ситуации",
         "title": "Avvalo",
         "privacy_title": "Конфиденциальность",
         "consent_label": "Я прочитал условия конфиденциальности и согласен",
-        "message_label": "Текст сообщения",
         "caption_label": "Короткий контекст",
         "image_label": "Скриншот или фото",
         "optional_label": "необязательно",
@@ -226,31 +330,35 @@ WEB_COPY = {
         "submit": "Проверить",
         "checking": "Проверяем...",
         "result_error_title": "Сейчас проверить не получилось",
-        "result_empty": "Ответ пришёл пустым.",
-        "meta_status": "Статус",
-        "meta_latency": "Время",
-        "meta_cost": "Стоимость",
         "empty_error": "Вставьте текст или загрузите читаемое изображение.",
         "too_long_error": "Текст получился слишком длинным. Сократите его и отправьте ещё раз.",
         "consent_error": "Сначала примите условия конфиденциальности.",
         "check": {
-            "eyebrow": "",
-            "name": "Проверка сообщения",
-            "headline": (
-                "Проверьте подозрительное сообщение до ответа или перевода денег."
-            ),
+            "name": "Проверка ситуации",
+            "headline": "Сначала отправьте это в Avvalo.",
             "subhead": (
-                "Avvalo покажет признаки риска, что проверить и какие вопросы "
-                "задать."
+                "До ответа, оплаты, установки приложения, подписания документа или "
+                "передачи личных данных "
+                "посмотрите, на что обратить внимание и что проверить самостоятельно."
             ),
-            "prompt": "Вставьте текст подозрительного сообщения или загрузите скриншот.",
-            "textarea_placeholder": "Например: скажите SMS-код, иначе карта будет заблокирована...",
+            "prompt": "Текст, ссылка или описание ситуации",
+            "textarea_placeholder": (
+                "Например: прислали скрин оплаты и просят отдать товар до "
+                "зачисления денег..."
+            ),
             "caption_placeholder": "Если нужно: кто написал и чего просит?",
-            "image_hint": "Текст на скриншоте должен быть читаемым.",
+            "image_hint": "Подойдёт читаемый скриншот переписки, чека, QR-кода или документа.",
+            "use_cases": [
+                "Сообщение или переписка",
+                "Ссылка или QR-код",
+                "Скрин оплаты или запрос на оплату",
+                "Работа или сделка",
+                "Документ или запрос",
+            ],
             "trust": [
                 "Проверяем ситуацию, а не человека",
                 "Конкретные шаги проверки вместо вердикта",
-                "Ваш текст удаляется в течение 1 часа",
+                "Текст, изображения и ответ не сохраняются и не записываются в журналы",
             ],
         },
     },
@@ -290,9 +398,10 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
 
     language = _normalize_language(language)
     copy = WEB_COPY[language]
+    latest_posts = await _latest_editorial_posts(request, language=language)
     return _no_store(templates.TemplateResponse(
         request,
-        "landing.html",
+            "checker.html",
         {
             "copy": copy,
             "check_copy": copy["check"],
@@ -302,6 +411,8 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
             "language": language,
             "privacy_text": t("privacy_notice", language),
             "turnstile_site_key": _turnstile_site_key(_settings_or_none(request)),
+            "editorial": EDITORIAL_COPY[language],
+            "latest_posts": latest_posts,
         },
     ))
 
@@ -310,7 +421,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
 async def check_page(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
     """Render the consumer checker and its result surface."""
 
-    return _check_page(request, language=language)
+    return await _check_page(request, language=language)
 
 
 @router.get("/merchants", include_in_schema=False)
@@ -325,16 +436,17 @@ async def retired_merchants(language: str = DEFAULT_LANGUAGE) -> RedirectRespons
     return response
 
 
-def _check_page(request: Request, *, language: str) -> HTMLResponse:
+async def _check_page(request: Request, *, language: str) -> HTMLResponse:
     """Render the unified consumer check surface."""
 
     language = _normalize_language(language)
     settings = _settings_or_none(request)
     web_session = get_or_create_web_session(request, secret=_web_secret(settings))
     copy = WEB_COPY[language]
+    latest_posts = await _latest_editorial_posts(request, language=language)
     response = templates.TemplateResponse(
         request,
-        "index.html",
+            "checker.html",
         {
             "copy": copy,
             "check_copy": copy["check"],
@@ -344,6 +456,8 @@ def _check_page(request: Request, *, language: str) -> HTMLResponse:
             "language": language,
             "privacy_text": t("privacy_notice", language),
             "turnstile_site_key": _turnstile_site_key(settings),
+            "editorial": EDITORIAL_COPY[language],
+            "latest_posts": latest_posts,
         },
     )
     set_web_session_cookie(response, web_session, secure=_cookie_secure(request, settings))
@@ -592,6 +706,16 @@ def _settings_or_error(request: Request) -> Settings:
 
 def _session_factory_or_none(request: Request) -> async_sessionmaker[AsyncSession] | None:
     return getattr(request.app.state, "session_factory", None)
+
+
+async def _latest_editorial_posts(request: Request, *, language: str) -> list:
+    """Return a small homepage preview without making content storage mandatory."""
+
+    session_factory = _session_factory_or_none(request)
+    if session_factory is None:
+        return []
+    async with session_factory() as session:
+        return await list_published_posts(session, language=language, limit=3)
 
 
 def _web_secret(settings: Settings | None) -> str:

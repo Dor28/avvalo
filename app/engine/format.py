@@ -72,25 +72,25 @@ _FAMILY_LABELS = {
 
 _SHARE_COPY = {
     Language.uz_latn: {
-        "lead": "Men Avvalo bilan shubhali xabarni tekshirdim.",
+        "lead": "Men Avvalo bilan shubhali vaziyatni ko'rib chiqdim.",
         "families": "Topilgan belgilar: {families}.",
-        "generic": "Men Avvalo bilan shubhali xabarni tekshirdim.",
-        "caution": "Javob berish yoki to'lov qilishdan oldin mustaqil tekshiring.",
-        "cta": f"O'zingiznikini tekshiring: {BOT_LINK}",
+        "generic": "Men Avvalo bilan shubhali vaziyatni ko'rib chiqdim.",
+        "caution": "Harakat qilishdan oldin muhim ma'lumotlarni mustaqil tekshiring.",
+        "cta": f"Shubhangiz bormi? Avvalo'ga yuboring: {BOT_LINK}",
     },
     Language.uz_cyrl: {
-        "lead": "Мен Avvalo билан шубҳали хабарни текширдим.",
+        "lead": "Мен Avvalo билан шубҳали вазиятни кўриб чиқдим.",
         "families": "Топилган белгилар: {families}.",
-        "generic": "Мен Avvalo билан шубҳали хабарни текширдим.",
-        "caution": "Жавоб бериш ёки тўлов қилишдан олдин мустақил текширинг.",
-        "cta": f"Ўзингизникини текширинг: {BOT_LINK}",
+        "generic": "Мен Avvalo билан шубҳали вазиятни кўриб чиқдим.",
+        "caution": "Ҳаракат қилишдан олдин муҳим маълумотларни мустақил текширинг.",
+        "cta": f"Шубҳангиз борми? Avvalo'га юборинг: {BOT_LINK}",
     },
     Language.ru: {
-        "lead": "Я проверил(а) подозрительное сообщение в Avvalo.",
+        "lead": "Я разобрал(а) сомнительную ситуацию с Avvalo.",
         "families": "Найденные признаки: {families}.",
-        "generic": "Я проверил(а) подозрительное сообщение в Avvalo.",
-        "caution": "Не отвечайте и не платите до независимой проверки.",
-        "cta": f"Проверьте свое: {BOT_LINK}",
+        "generic": "Я разобрал(а) сомнительную ситуацию с Avvalo.",
+        "caution": "Проверьте важные сведения самостоятельно до того, как действовать.",
+        "cta": f"Есть сомнения? Отправьте ситуацию в Avvalo: {BOT_LINK}",
     },
 }
 
@@ -105,8 +105,9 @@ _HEADINGS = {
             "hujjat yuborishdan oldin manbani o'zingiz tekshiring."
         ),
         "limitation": (
-            "ℹ️ Avvalo vaziyatdagi belgilarni ko'rib chiqdi. Bu odamni tekshirish "
-            "yoki yakuniy kafolat emas."
+            "ℹ️ **Nima noma'lum qoldi**\n"
+            "Avvalo faqat javobda ko'rsatilgan belgilar va manbalarga tayandi. Bu odamni "
+            "tekshirish yoki yakuniy xulosa emas."
         ),
         "fallback": (
             "Hozir javobni xavfsiz shaklda tayyorlay olmadim. Kodlarni aytmang, "
@@ -124,8 +125,9 @@ _HEADINGS = {
             "ҳужжат юборишдан олдин манбани ўзингиз текширинг."
         ),
         "limitation": (
-            "ℹ️ Avvalo вазиятдаги белгиларни кўриб чиқди. Бу одамни текшириш "
-            "ёки якуний кафолат эмас."
+            "ℹ️ **Нима номаълум қолди**\n"
+            "Avvalo фақат жавобда кўрсатилган белгилар ва манбаларга таянди. Бу одамни "
+            "текшириш ёки якуний хулоса эмас."
         ),
         "fallback": (
             "Ҳозир жавобни хавфсиз шаклда тайёрлай олмадим. Кодларни айтманг, "
@@ -143,8 +145,9 @@ _HEADINGS = {
             "кодом или документами проверьте источник самостоятельно."
         ),
         "limitation": (
-            "ℹ️ Avvalo разбирает признаки в ситуации. Это не проверка личности "
-            "и не гарантия."
+            "ℹ️ **Что осталось неизвестным**\n"
+            "Avvalo опирался только на признаки и источники, прямо указанные в ответе. "
+            "Это не проверка личности и не окончательный вывод."
         ),
         "fallback": (
             "Сейчас не получилось подготовить безопасный ответ. Не сообщайте коды "
@@ -180,9 +183,9 @@ _STATUS_MESSAGES = {
         Language.ru: "На сегодня лимит проверок закончился. Попробуйте завтра.",
     },
     CheckStatus.empty_input: {
-        Language.uz_latn: "Tekshirish uchun xabar matnini yuboring.",
-        Language.uz_cyrl: "Текшириш учун хабар матнини юборинг.",
-        Language.ru: "Пришлите текст сообщения для проверки.",
+        Language.uz_latn: "Tekshirish uchun vaziyatga oid matn yoki havolani yuboring.",
+        Language.uz_cyrl: "Текшириш учун вазиятга оид матн ёки ҳаволани юборинг.",
+        Language.ru: "Пришлите текст или ссылку, относящиеся к ситуации.",
     },
     CheckStatus.low_ocr: {
         Language.uz_latn: "Rasm matnini aniq o'qiy olmadim. Muhim joyini xabar qilib yuboring.",
@@ -198,10 +201,10 @@ _STATUS_MESSAGES = {
         Language.ru: "Проверка затянулась. Попробуйте ещё раз.",
     },
     CheckStatus.llm_error: {
-        Language.uz_latn: "Hozir bu xabarni tahlil qila olmadim. Qayta urinib ko'ring.",
-        Language.uz_cyrl: "Ҳозир бу хабарни таҳлил қила олмадим. Қайта уриниб кўринг.",
+        Language.uz_latn: "Hozir bu vaziyatni tahlil qila olmadim. Qayta urinib ko'ring.",
+        Language.uz_cyrl: "Ҳозир бу вазиятни таҳлил қила олмадим. Қайта уриниб кўринг.",
         Language.ru: (
-            "Сейчас не получилось разобрать это сообщение. "
+            "Сейчас не получилось разобрать эту ситуацию. "
             "Попробуйте ещё раз."
         ),
     },
@@ -243,9 +246,9 @@ def format_result(draft: DraftOutput, language: Language, *, no_signal: bool = F
         blocks.append(f"{labels['pattern']} {copy.pattern}")
     if copy.verify:
         blocks.append(_section(labels["verify"], copy.verify))
+    blocks.append(labels["limitation"])
     if copy.ask:
         blocks.append(_section(labels["ask"], copy.ask))
-    blocks.append(labels["limitation"])
     return "\n\n".join(blocks)
 
 

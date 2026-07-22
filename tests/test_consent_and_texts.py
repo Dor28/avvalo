@@ -7,6 +7,7 @@ from app.privacy.consent import grant_consent, is_consent_current
 
 NOTICE = "2026-06-24-v1"
 R3_NOTICE = "2026-07-07-v2"
+CURRENT_NOTICE = "2026-07-22-v3"
 
 
 def _settings(**overrides) -> Settings:
@@ -49,7 +50,22 @@ def test_start_intro_is_short_and_explains_the_flow() -> None:
     assert "Русский" in intro
     assert "Xabar, rasm yoki vaziyatni yuboring" in intro
     assert "Пришлите сообщение, изображение или опишите ситуацию" in intro
+    assert "QR-kod" in intro
+    assert "QR-код" in intro
     assert len(intro) < 700
+
+
+def test_privacy_copy_matches_ephemeral_content_contract() -> None:
+    privacy_copy = "\n".join(
+        t(key, language) for key in ("privacy_notice", "privacy") for language in LANGUAGES
+    )
+
+    assert "1 soat" not in privacy_copy
+    assert "1 соат" not in privacy_copy
+    assert "1 час" not in privacy_copy
+    assert "saqlanmaydi" in privacy_copy
+    assert "сақланмайди" in privacy_copy
+    assert "не сохраняются" in privacy_copy
 
 
 def test_story_capture_copy_is_retired() -> None:
@@ -82,14 +98,14 @@ async def test_grant_consent_writes_current_version(session) -> None:
     assert is_consent_current(consent, "2099-01-01-v9") is False
 
 
-async def test_r3_notice_bump_forces_reconsent(session) -> None:
+async def test_current_notice_bump_forces_reconsent(session) -> None:
     settings = _settings()
-    assert settings.notice_version == R3_NOTICE
+    assert settings.notice_version == CURRENT_NOTICE
     await grant_consent(
         session,
         user_key="u-r3",
         language="ru",
-        notice_version=NOTICE,
+        notice_version=R3_NOTICE,
     )
     await session.commit()
 

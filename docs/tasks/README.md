@@ -17,7 +17,7 @@ work equally for Claude Code, Codex, or a human.
 |---|---|---|---|---|---|
 | — | _no open tasks yet_ | | | | |
 
-Do not create an Avvalo Verify implementation task until Phase B in
+Do not create an Avvalo Verify implementation task until Phase A in
 [ROADMAP.md](../ROADMAP.md) records a `go` decision.
 
 Statuses: `open` · `in_progress` · `blocked` · `done` · `cancelled`.

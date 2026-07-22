@@ -11,8 +11,8 @@ keep those rows from colliding with per-user rows. That separation is preserved
 as an explicit ``scope`` column (``'user'`` / ``'web_ip'``), which is what the
 field always meant.
 
-Revision ID: 0006_drop_face
-Revises: 0005_improvement_backlog
+Revision ID: 0007_drop_face
+Revises: 0006_editorial_posts
 """
 
 from collections.abc import Sequence
@@ -21,8 +21,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0006_drop_face"
-down_revision: str | None = "0005_improvement_backlog"
+revision: str = "0007_drop_face"
+down_revision: str | None = "0006_editorial_posts"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

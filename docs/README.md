@@ -10,7 +10,7 @@ documents were removed; Git history remains the source for old decisions.
 | Order | Document | Purpose |
 |---:|---|---|
 | 1 | [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) | Canonical product, features, evidence boundary, privacy, and non-goals |
-| 2 | [ROADMAP.md](ROADMAP.md) | Current order: baseline smoke, manual Verify validation, strict MVP, measured alpha |
+| 2 | [ROADMAP.md](ROADMAP.md) | Current order: editorial cases, manual Verify validation, strict MVP, measured alpha |
 | 3 | [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md) | Manual experiment, source inventory, and go/stop gates |
 
 No other document may introduce a feature or change priority.
@@ -21,7 +21,6 @@ No other document may introduce a feature or change priority.
 |---|---|
 | [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) | Current implemented architecture and engineering constraints |
 | [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) | Rules, minimization, reviewed knowledge, LLM, and safety validation |
-| [ops/SMOKE_2026-07.md](ops/SMOKE_2026-07.md) | Founder evidence checklist for production |
 | [tasks/](tasks/README.md) | Executor-ready tasks created only when the roadmap gate permits implementation |
 
 ## Current status
@@ -32,4 +31,4 @@ situations use the same checker. There is no separate merchant product, public s
 capture, or Scam Pulse.
 
 The next proposed capability is Avvalo Verify. It is not built or live until the validation gate,
-implementation acceptance, and production smoke checks pass.
+implementation acceptance and automated checks pass.

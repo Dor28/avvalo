@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b6e75">
+    <meta name="description" content="{{ check_copy.subhead }}">
+    <title>{{ copy.title }} — {{ check_copy.name }}</title>
+    <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{ static_version }}">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
+    {% if turnstile_site_key %}
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    {% endif %}
+  </head>
+  <body class="checker-page">
+    <a class="skip-link" href="#check-text">{{ copy.skip_to_check }}</a>
+    {% set active_section = 'check' %}
+    {% include "_header.html" %}
+
+    <main class="product-shell">
+      <section class="hero-layout" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">{{ copy.hero_kicker }}</p>
+          <h1 id="hero-title">{{ check_copy.headline }}</h1>
+          <p class="lead">{{ check_copy.subhead }}</p>
+
+          <div class="use-cases" aria-label="{{ copy.use_cases_label }}">
+            {% for use_case in check_copy.use_cases %}
+              <span>
+                <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                  <path d="M4 8.2 6.7 11 12.2 5.4" fill="none" stroke="currentColor"
+                        stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+                {{ use_case }}
+              </span>
+            {% endfor %}
+          </div>
+
+        </div>
+
+        <section class="composer-card" aria-labelledby="composer-title">
+          <header class="composer-header">
+            <div class="composer-status" aria-hidden="true"><span></span></div>
+            <div>
+              <p class="composer-kicker">{{ copy.composer_kicker }}</p>
+              <h2 id="composer-title">{{ copy.composer_title }}</h2>
+              <p>{{ copy.composer_body }}</p>
+            </div>
+          </header>
+          {% include "_check_form.html" %}
+        </section>
+
+        <ul class="trust-list" aria-label="{{ copy.trust_label }}">
+          {% for point in check_copy.trust %}
+            <li>
+              <span class="trust-icon" aria-hidden="true"></span>
+              <span>{{ point }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="outcome-section" aria-labelledby="outcome-title">
+        <div class="outcome-heading">
+          <p class="eyebrow">Avvalo</p>
+          <h2 id="outcome-title">{{ copy.outcome_title }}</h2>
+          <p>{{ copy.outcome_body }}</p>
+        </div>
+        <ol class="outcome-grid">
+          {% for outcome in copy.outcomes %}
+            <li>
+              <span class="outcome-number">0{{ loop.index }}</span>
+              <strong>{{ outcome.title }}</strong>
+              <p>{{ outcome.body }}</p>
+            </li>
+          {% endfor %}
+        </ol>
+      </section>
+
+      {% if latest_posts %}
+        <section class="latest-cases" aria-labelledby="latest-cases-title">
+          <header class="section-heading-row">
+            <div>
+              <p class="eyebrow">Avvalo</p>
+              <h2 id="latest-cases-title">{{ editorial.latest_title }}</h2>
+              <p>{{ editorial.latest_body }}</p>
+            </div>
+            <a class="text-link" href="/cases?language={{ language }}">{{ editorial.all_cases }} →</a>
+          </header>
+          <div class="case-card-grid">
+            {% for post in latest_posts %}
+              {% include "_case_card.html" %}
+            {% endfor %}
+          </div>
+        </section>
+      {% endif %}
+
+      <aside class="boundary-card" aria-labelledby="boundary-title">
+        <span class="boundary-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M12 3 20 6v5.6c0 4.4-3.1 7.4-8 9.4-4.9-2-8-5-8-9.4V6l8-3Z"
+                  fill="none" stroke="currentColor" stroke-width="1.7"
+                  stroke-linejoin="round"></path>
+            <path d="M9.2 12.1 11 14l4-4.2" fill="none" stroke="currentColor"
+                  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </span>
+        <div>
+          <h2 id="boundary-title">{{ copy.boundary_title }}</h2>
+          <p>{{ copy.boundary_body }}</p>
+        </div>
+      </aside>
+    </main>
+
+    {% include "_footer.html" %}
+    <script src="/static/check.js?v={{ static_version }}" defer></script>
+  </body>
+</html>

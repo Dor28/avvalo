@@ -17,7 +17,7 @@ Avvalo is one consumer product with two thin channels:
 
 Both channels accept suspicious text or an image/screenshot and call the same `run_check()` engine.
 There is no internal product-face ID: it was removed from the code and the schema in migration
-`0006_drop_face`. Payment screenshots, seller situations, courier pressure, and refund requests use this same
+`0007_drop_face`. Payment screenshots, seller situations, courier pressure, and refund requests use this same
 flow.
 
 The product does not provide accounts, history, person/entity lookup, accusations, verdicts, risk
@@ -135,6 +135,11 @@ Active tables contain consent, check-event metadata, categorical feedback, rate 
 audit rows, and hash-only URL reputation entries. `user_key` is derived with HMAC; raw Telegram IDs
 are not stored or logged.
 
+Founder-authored public cases live in the separate `editorial_post` table and
+`app.content.models.EditorialBase`. Every record contains three deliberately authored language
+versions plus draft/publication metadata. No user key or submitted check content enters this table,
+and editorial rows are not part of `/delete_my_data` because they are operator-owned public content.
+
 `story_submission` is a legacy stewardship-only table:
 
 - no active route, handler, repository API, or tool writes or reads it as product data;
@@ -159,6 +164,11 @@ available.
 `GET /` and `GET /check` render the same anonymous checker. `POST /check` always builds the active
 check input. Uploads are size/pixel limited, kept ephemeral, same-origin protected, and image
 checks require Turnstile when configured. Session and IP-derived keys are pseudonymous.
+
+`GET /cases` and `GET /cases/{slug}` expose published editorial cases only. `/admin` is disabled
+unless `ADMIN_ACCESS_KEY` is configured. When enabled, a short-lived signed HttpOnly cookie protects
+the founder dashboard and trilingual editor; same-origin checks cover every admin write. Drafts are
+never returned by public routes. Post bodies are rendered as escaped plain text, not trusted HTML.
 
 `/merchants` is only a `308` compatibility redirect to `/check`. `/scams` and `/sitemap.xml` are not
 product routes. `/healthz` checks process liveness; `/readyz` also checks database connectivity.

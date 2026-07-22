@@ -3,13 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#008aa8">
-    <title>{{ copy.title }} | {{ copy.privacy_title }}</title>
+    <meta name="theme-color" content="#0b6e75">
+    <title>{{ copy.title }} — {{ copy.privacy_title }}</title>
     <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{ static_version }}">
     <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
   </head>
-  <body>
+  <body class="privacy-page">
+    {% set active_section = '' %}
     {% include "_header.html" %}
 
     <main class="privacy-shell">
@@ -19,5 +20,6 @@
         <pre class="privacy-text">{{ privacy_text }}</pre>
       </section>
     </main>
+    {% include "_footer.html" %}
   </body>
 </html>

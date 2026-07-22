@@ -13,14 +13,22 @@
   function resultBlock(title, message) {
     var block = document.createElement("div");
     block.className = "result-block error";
+    block.setAttribute("role", "alert");
+    var icon = document.createElement("span");
+    icon.className = "result-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "!";
+    block.appendChild(icon);
+    var copy = document.createElement("div");
     var strong = document.createElement("strong");
     strong.textContent = title;
-    block.appendChild(strong);
+    copy.appendChild(strong);
     if (message) {
       var paragraph = document.createElement("p");
       paragraph.textContent = message;
-      block.appendChild(paragraph);
+      copy.appendChild(paragraph);
     }
+    block.appendChild(copy);
     return block;
   }
 
@@ -79,6 +87,18 @@
     var label = button.querySelector(".submit-label");
     var textarea = form.querySelector("textarea[name='text']");
     var fileInput = form.querySelector("input[type='file']");
+    var consent = form.querySelector("input[name='consent']");
+
+    if (textarea) {
+      textarea.addEventListener("input", function () {
+        textarea.removeAttribute("aria-invalid");
+      });
+    }
+    if (consent) {
+      consent.addEventListener("change", function () {
+        consent.removeAttribute("aria-invalid");
+      });
+    }
 
     form.addEventListener("submit", function (event) {
       event.preventDefault();
@@ -88,8 +108,16 @@
       if (!hasText && !hasImage) {
         showBlock(result, resultBlock(form.dataset.emptyError, ""));
         if (textarea) {
+          textarea.setAttribute("aria-invalid", "true");
           textarea.focus();
         }
+        return;
+      }
+
+      if (consent && !consent.checked) {
+        showBlock(result, resultBlock(form.dataset.consentError, ""));
+        consent.setAttribute("aria-invalid", "true");
+        consent.focus();
         return;
       }
 
