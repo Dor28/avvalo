@@ -3,6 +3,12 @@
     <img src="/static/icon-192.png?v={{ static_version }}" alt="">
     <span><strong>Avvalo</strong><small>Editorial</small></span>
   </a>
+  <nav class="admin-section-nav" aria-label="{{ editorial.admin_title }}">
+    <a class="{% if request.url.path.startswith('/admin/posts') %}active{% endif %}"
+       href="/admin/posts?language={{ language }}">{{ editorial.admin_title }}</a>
+    <a class="{% if request.url.path.startswith('/admin/rules') %}active{% endif %}"
+       href="/admin/rules?language={{ language }}">{{ rules_nav_label }}</a>
+  </nav>
   <div class="admin-topbar-actions">
     <nav class="language-nav" aria-label="{{ copy.language_label }}">
       {% for option in languages %}

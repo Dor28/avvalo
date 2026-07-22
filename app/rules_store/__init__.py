@@ -3,6 +3,7 @@
 from app.rules_store.apply import (
     install_rule_pack_refresh_job,
     merge_rule_pack,
+    preview_rule,
     refresh_rule_pack,
     run_rule_pack_refresh_job,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "list_overrides",
     "load_overrides",
     "merge_rule_pack",
+    "preview_rule",
     "refresh_rule_pack",
     "run_rule_pack_refresh_job",
     "update_override",

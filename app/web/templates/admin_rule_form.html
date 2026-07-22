@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b6e75">
+    <title>{{ rules.title }} — Avvalo</title>
+    <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
+  </head>
+  <body class="admin-page">
+    {% set show_logout = true %}
+    {% include "_admin_header.html" %}
+    <main class="admin-shell">
+      <header class="admin-page-heading">
+        <div>
+          <p class="eyebrow">Avvalo Editorial</p>
+          <h1>{{ rules.title }}</h1>
+          <p>{{ rules.subtitle }}</p>
+        </div>
+        <a class="admin-edit-link" href="/admin/rules?language={{ language }}">{{ rules.back }}</a>
+      </header>
+
+      {% if error %}<p class="admin-form-error" role="alert">{{ error }}</p>{% endif %}
+
+      {% if preview_ran %}
+        <section class="admin-dry-run-result {% if matched %}matched{% endif %}" aria-live="polite">
+          <h2>{{ rules.preview_title }}</h2>
+          {% if matched %}
+            <p>{{ rules.preview_match }}</p>
+            <ul>
+              {% for pattern in matched %}<li><code>{{ pattern }}</code></li>{% endfor %}
+            </ul>
+          {% else %}
+            <p>{{ rules.preview_no_match }}</p>
+          {% endif %}
+        </section>
+      {% endif %}
+
+      <form class="admin-editor-form" action="/admin/rules" method="post">
+        <input type="hidden" name="language" value="{{ language }}">
+        <input type="hidden" name="override_id" value="{{ override_id or '' }}">
+
+        <section class="admin-settings-card">
+          <label class="admin-field wide">
+            <span>{{ rules.rule_id_label }}</span>
+            <input name="rule_id" type="text" required maxlength="120"
+                   value="{{ override.rule_id if override else '' }}"
+                   aria-describedby="rule-id-hint">
+            <small id="rule-id-hint">{{ rules.rule_id_hint }}</small>
+          </label>
+          <label class="admin-field">
+            <span>{{ rules.family_label }}</span>
+            <input name="family" type="text" required maxlength="60"
+                   value="{{ override.family if override else '' }}">
+          </label>
+          <label class="admin-field">
+            <span>{{ rules.message_key_label }}</span>
+            <input name="message_key" type="text" required maxlength="60"
+                   value="{{ override.message_key if override else '' }}">
+          </label>
+          <label class="admin-field">
+            <span>{{ rules.severity_label }}</span>
+            <input name="severity" type="number" min="1" max="3" required
+                   value="{{ override.severity if override else 2 }}">
+          </label>
+          <label class="admin-field">
+            <span>{{ rules.emits_signal_label }}</span>
+            <input name="emits_signal" type="text" maxlength="60"
+                   value="{{ (override.emits_signal or '') if override else '' }}">
+          </label>
+          <label class="admin-field wide">
+            <span>{{ rules.description_label }}</span>
+            <textarea name="description" rows="2" required maxlength="400">{{ override.description if override else '' }}</textarea>
+          </label>
+          <label class="admin-field wide admin-toggle-field">
+            <input name="disabled" type="checkbox" value="true"
+                   {% if override and override.disabled %}checked{% endif %}
+                   aria-describedby="disabled-hint">
+            <span>{{ rules.disabled_label }}</span>
+            <small id="disabled-hint">{{ rules.disabled_hint }}</small>
+          </label>
+        </section>
+
+        {% for pattern_language in pattern_languages %}
+          <section class="admin-settings-card">
+            <label class="admin-field wide">
+              <span>{{ rules.patterns_label.format(language=language_labels[pattern_language]) }}</span>
+              <textarea name="patterns_{{ pattern_language }}" rows="6"
+                        aria-describedby="patterns-hint-{{ pattern_language }}">{{ patterns[pattern_language] }}</textarea>
+              <small id="patterns-hint-{{ pattern_language }}">{{ rules.patterns_hint }}</small>
+            </label>
+          </section>
+        {% endfor %}
+
+        <section class="admin-settings-card admin-dry-run">
+          <h2>{{ rules.sample_title }}</h2>
+          <p>{{ rules.sample_hint }}</p>
+          <label class="admin-field wide">
+            <span>{{ rules.sample_label }}</span>
+            <textarea name="sample" rows="3">{{ sample }}</textarea>
+          </label>
+          <button type="submit" formaction="/admin/rules/preview" formnovalidate>
+            {{ rules.test }}
+          </button>
+        </section>
+
+        <div class="admin-form-actions">
+          <a href="/admin/rules?language={{ language }}">{{ rules.back }}</a>
+          <button class="submit-button" type="submit">{{ rules.save }}</button>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>

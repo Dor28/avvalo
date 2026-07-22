@@ -2127,3 +2127,81 @@ textarea[aria-invalid="true"],
     transition: none;
   }
 }
+
+/* Rule-override editor: dry-run affordance and its result banner. */
+.admin-dry-run {
+  border: 1px dashed rgba(11, 110, 117, 0.45);
+  background: rgba(11, 110, 117, 0.04);
+}
+
+.admin-dry-run h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.admin-dry-run > p {
+  margin: 0 0 0.75rem;
+  color: #4a5a5c;
+  font-size: 0.9rem;
+}
+
+.admin-dry-run button {
+  align-self: flex-start;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid rgba(11, 110, 117, 0.5);
+  border-radius: 8px;
+  background: #fff;
+  color: #0b6e75;
+  font: inherit;
+  cursor: pointer;
+}
+
+.admin-dry-run button:hover {
+  background: rgba(11, 110, 117, 0.08);
+}
+
+.admin-dry-run-result {
+  margin: 0 0 1.25rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 10px;
+  border-left: 4px solid #9aa5a7;
+  background: #f4f6f6;
+}
+
+.admin-dry-run-result.matched {
+  border-left-color: #0b6e75;
+  background: rgba(11, 110, 117, 0.08);
+}
+
+.admin-dry-run-result h2 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-dry-run-result ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.admin-toggle-field {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-toggle-field input {
+  width: auto;
+  margin: 0;
+}
+
+.admin-toggle-field small {
+  flex-basis: 100%;
+}
+
+.admin-hint {
+  color: #4a5a5c;
+  font-size: 0.85rem;
+}

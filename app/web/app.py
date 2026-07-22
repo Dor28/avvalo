@@ -18,6 +18,7 @@ from app.web.abuse import (
 )
 from app.web.editorial import router as editorial_router
 from app.web.routes import router
+from app.web.rules_admin import router as rules_admin_router
 
 
 def create_app(
@@ -40,6 +41,7 @@ def create_app(
     configure_ephemeral_multipart()
     web_app.router.routes.extend(router.routes)
     web_app.router.routes.extend(editorial_router.routes)
+    web_app.router.routes.extend(rules_admin_router.routes)
     web_app.add_middleware(
         EphemeralRequestBodyLimitMiddleware,
         max_body_bytes=MAX_REQUEST_BODY_BYTES,

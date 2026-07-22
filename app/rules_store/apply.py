@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.engine.faces import FACES
+from app.engine.rules import matching_patterns
 from app.engine.rules.loader import (
     RuleDefinition,
     RulePack,
@@ -22,7 +23,28 @@ from app.engine.rules.loader import (
     set_active_rule_pack,
 )
 from app.obs.events import log_error, log_event
-from app.rules_store.repo import load_overrides
+from app.rules_store.repo import RuleOverrideDraft, load_overrides
+
+
+def preview_rule(draft: RuleOverrideDraft, sample: str) -> tuple[str, ...]:
+    """Return the patterns in ``draft`` that would fire on ``sample``.
+
+    The operator dry-run: a bad pattern here degrades detection silently for
+    every user, and ``main`` deploys on merge, so an edit must be testable
+    before it is saved. Raises ``ValueError`` if the draft itself is invalid.
+    """
+
+    normalized = draft.normalized()
+    rule = RuleDefinition(
+        id=normalized.rule_id,
+        family=normalized.family,
+        desc=normalized.description,
+        message_key=normalized.message_key,
+        severity=normalized.severity,
+        match={language: tuple(values) for language, values in normalized.patterns.items()},
+        emits_signal=normalized.emits_signal,
+    )
+    return matching_patterns(rule, sample)
 
 
 def merge_rule_pack(
