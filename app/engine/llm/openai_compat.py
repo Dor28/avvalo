@@ -10,7 +10,7 @@ import json
 from typing import Any
 
 from openai import APIError, AsyncOpenAI
-from pydantic import SecretStr, ValidationError
+from pydantic import BaseModel, Field, SecretStr, ValidationError
 
 from app.config import Settings
 from app.engine.llm.base import LLMProviderError, LLMResponse, LLMResponseFormatError
@@ -61,6 +61,40 @@ class OpenAICompatibleProvider:
     ) -> LLMResponse:
         """Call the model and parse its JSON response into ``DraftOutput``."""
 
+        completion = await self.complete_json(
+            system=system,
+            user=user,
+            schema=schema,
+            max_output_tokens=max_output_tokens,
+        )
+        payload = completion.payload
+        if "addressed_rule_ids" not in payload:
+            # Preserve the validator's corrective-retry path: an omitted key is
+            # equivalent to declaring that no authoritative rules were covered.
+            payload = {**payload, "addressed_rule_ids": []}
+        try:
+            draft = DraftOutput.model_validate(payload)
+        except ValidationError as exc:
+            raise LLMResponseFormatError(
+                "Provider response did not match DraftOutput JSON"
+            ) from exc
+        return LLMResponse(
+            draft=draft,
+            input_tokens=completion.input_tokens,
+            output_tokens=completion.output_tokens,
+        )
+
+    async def complete_json(
+        self,
+        *,
+        system: str,
+        user: str,
+        schema: dict,
+        max_output_tokens: int,
+    ) -> JSONCompletion:
+        """Return generic JSON through the shared client for answer and router calls."""
+
+        _ = schema  # JSON mode is the common denominator across configured hosts.
         try:
             response = await self._client.chat.completions.create(
                 model=self.model,
@@ -81,13 +115,26 @@ class OpenAICompatibleProvider:
             ) from exc
 
         content = _response_content(response)
-        draft = _parse_draft(content)
+        try:
+            payload = json.loads(_strip_json_fence(content))
+        except json.JSONDecodeError as exc:
+            raise LLMResponseFormatError("Provider response was not valid JSON") from exc
+        if not isinstance(payload, dict):
+            raise LLMResponseFormatError("Provider response JSON was not an object")
         usage = getattr(response, "usage", None)
-        return LLMResponse(
-            draft=draft,
+        return JSONCompletion(
+            payload=payload,
             input_tokens=int(getattr(usage, "prompt_tokens", 0) or 0),
             output_tokens=int(getattr(usage, "completion_tokens", 0) or 0),
         )
+
+
+class JSONCompletion(BaseModel):
+    """Generic JSON response plus provider token usage."""
+
+    payload: dict[str, Any]
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
 
 
 def _response_content(response: Any) -> str:
@@ -102,13 +149,16 @@ def _response_content(response: Any) -> str:
 
 
 def _parse_draft(content: str) -> DraftOutput:
+    try:
+        data = json.loads(_strip_json_fence(content))
+        return DraftOutput.model_validate(data)
+    except (json.JSONDecodeError, ValidationError) as exc:
+        raise LLMResponseFormatError("Provider response did not match DraftOutput JSON") from exc
+
+
+def _strip_json_fence(content: str) -> str:
     text = content.strip()
     if text.startswith("```"):
         text = text.removeprefix("```json").removeprefix("```").strip()
         text = text.removesuffix("```").strip()
-
-    try:
-        data = json.loads(text)
-        return DraftOutput.model_validate(data)
-    except (json.JSONDecodeError, ValidationError) as exc:
-        raise LLMResponseFormatError("Provider response did not match DraftOutput JSON") from exc
+    return text

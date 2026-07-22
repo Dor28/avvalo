@@ -190,7 +190,6 @@ def main():
     system = load(PROMPTS / "system_safety.txt")
     templates = {
         "family": load(PROMPTS / "family.txt"),
-        "merchants": load(PROMPTS / "merchants.txt"),
     }
     fixtures = []
     for f in sorted(glob.glob(str(FIXTURES / "*.json"))):

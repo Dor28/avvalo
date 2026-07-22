@@ -11,6 +11,8 @@ from sqlalchemy import distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models import CheckEvent, Consent, Feedback
+from app.engine.faces import FACES
+from app.engine.knowledge import FileKnowledgeStore, KnowledgeLookupError, KnowledgeStore
 
 COMPLETED_STATUSES = {"ok", "no_signal"}
 
@@ -20,11 +22,13 @@ async def collect_metrics(
     *,
     since: datetime | None = None,
     until: datetime | None = None,
+    knowledge_store: KnowledgeStore | None = None,
 ) -> dict[str, Any]:
     """Return aggregate-only operational metrics.
 
-    The result intentionally contains no user keys, check IDs, text, OCR text,
-    prompts, model outputs, links, phone numbers, or file identifiers.
+    The result includes only active product faces and intentionally contains no
+    user keys, check IDs, text, OCR text, prompts, model outputs, links, phone
+    numbers, or file identifiers.
     """
 
     since = _normalize_bound(since)
@@ -67,6 +71,10 @@ async def collect_metrics(
         select(func.avg(CheckEvent.latency_ms)).where(*event_conditions),
     )
 
+    knowledge = await _knowledge_metrics(session, event_conditions)
+    knowledge["inventory"] = collect_knowledge_inventory(
+        knowledge_store or FileKnowledgeStore()
+    )
     return {
         "window": {
             "since": since.isoformat() if since else None,
@@ -116,6 +124,7 @@ async def collect_metrics(
                 exclude_null=True,
             ),
         },
+        "knowledge": knowledge,
     }
 
 
@@ -138,12 +147,49 @@ async def export_metrics(
         f"cost_avg_success_usd={summary['cost']['avg_success_usd']}",
         f"no_signal_rate={summary['no_signal']['rate']}",
         f"safety_blocked={summary['safety']['blocked']}",
+        f"knowledge_coverage_rate={summary['knowledge']['coverage_rate']}",
+        f"knowledge_unavailable_rate={summary['knowledge']['unavailable_rate']}",
     ]
+    inventory = summary["knowledge"]["inventory"]
+    lines.append(f"kb_version={inventory['version'] or 'unavailable'}")
+    for face, count in sorted(inventory["approved_cards"].items()):
+        lines.append(f"kb_approved_cards_{face}={count}")
     return "\n".join(lines)
 
 
 metrics_summary = collect_metrics
 aggregate = collect_metrics
+
+
+def collect_knowledge_inventory(store: KnowledgeStore) -> dict[str, Any]:
+    """Return deploy-visible versions and approved-card counts, never content."""
+
+    versions: set[str] = set()
+    counts: dict[str, int] = {}
+    for face_id in sorted(FACES):
+        try:
+            knowledge = store.load(face_id)
+        except KnowledgeLookupError:
+            counts[face_id] = 0
+            continue
+        versions.add(knowledge.version)
+        counts[face_id] = len(knowledge.cards)
+    version = next(iter(versions)) if len(versions) == 1 else None
+    return {"version": version, "approved_cards": counts}
+
+
+def log_knowledge_inventory(store: KnowledgeStore | None = None) -> dict[str, Any]:
+    """Log startup inventory as IDs, versions, and counts only."""
+
+    import logging
+
+    inventory = collect_knowledge_inventory(store or FileKnowledgeStore())
+    logging.getLogger(__name__).info(
+        "knowledge inventory version=%s approved_cards=%s",
+        inventory["version"],
+        inventory["approved_cards"],
+    )
+    return inventory
 
 
 def _normalize_bound(value: datetime | None) -> datetime | None:
@@ -161,7 +207,7 @@ def _event_window(
     since: datetime | None,
     until: datetime | None,
 ) -> list[Any]:
-    conditions: list[Any] = []
+    conditions: list[Any] = [CheckEvent.face.in_(tuple(FACES))]
     if since is not None:
         conditions.append(CheckEvent.ts >= since)
     if until is not None:
@@ -174,7 +220,7 @@ def _consent_window(
     since: datetime | None,
     until: datetime | None,
 ) -> list[Any]:
-    conditions: list[Any] = []
+    conditions: list[Any] = [Consent.face.in_(tuple(FACES))]
     if since is not None:
         conditions.append(Consent.ts >= since)
     if until is not None:
@@ -218,10 +264,37 @@ async def _feedback_breakdown(
         conditions.append(column.is_not(None))
     rows = (
         await session.execute(
-            select(column, func.count()).select_from(Feedback).where(*conditions).group_by(column)
+            select(column, func.count())
+            .select_from(Feedback)
+            .join(CheckEvent, Feedback.check_id == CheckEvent.id)
+            .where(*conditions)
+            .group_by(column)
         )
     ).all()
     return {str(key): int(count) for key, count in rows}
+
+
+async def _knowledge_metrics(
+    session: AsyncSession,
+    conditions: Iterable[Any],
+) -> dict[str, Any]:
+    rows = (
+        await session.execute(
+            select(CheckEvent.knowledge_card_ids, CheckEvent.retrieval_status)
+            .select_from(CheckEvent)
+            .where(*conditions, CheckEvent.retrieval_status.is_not(None))
+        )
+    ).all()
+    total = len(rows)
+    selected = sum(1 for card_ids, _ in rows if card_ids)
+    unavailable = sum(1 for _, status in rows if status == "unavailable")
+    return {
+        "checks": total,
+        "selected": selected,
+        "unavailable": unavailable,
+        "coverage_rate": _rate(selected, total),
+        "unavailable_rate": _rate(unavailable, total),
+    }
 
 
 def _feedback_window(
@@ -229,7 +302,7 @@ def _feedback_window(
     since: datetime | None,
     until: datetime | None,
 ) -> list[Any]:
-    conditions: list[Any] = []
+    conditions: list[Any] = [CheckEvent.face.in_(tuple(FACES))]
     if since is not None:
         conditions.append(Feedback.ts >= since)
     if until is not None:

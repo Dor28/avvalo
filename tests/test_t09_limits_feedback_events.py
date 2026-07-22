@@ -16,19 +16,21 @@ from app.engine.faces import FACES
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput
 from app.obs.events import log_error
+from tests.support import addressed_rule_ids
 
 
 class FakeLLMProvider:
     def __init__(self) -> None:
         self.calls = 0
 
-    async def analyze(self, **_kwargs) -> LLMResponse:
+    async def analyze(self, **kwargs) -> LLMResponse:
         self.calls += 1
         return LLMResponse(
             draft=DraftOutput(
                 red_flags=["The message asks for a one-time code."],
                 verify=["Open the official app yourself."],
                 ask=["Ask which official channel shows this request."],
+                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
             ),
             input_tokens=10,
             output_tokens=5,
@@ -168,7 +170,7 @@ def test_log_error_forwards_tags_to_sentry(monkeypatch) -> None:
 def test_log_error_is_a_safe_no_op_without_sentry_init() -> None:
     # No sentry_sdk.init() has run anywhere in the test process (no SENTRY_DSN),
     # so this must not raise or attempt a network call.
-    log_error("ocr", "OCRProviderError", face="merchants")
+    log_error("ocr", "OCRProviderError", face="family")
 
 
 async def test_run_check_emits_privacy_safe_events(session, caplog) -> None:

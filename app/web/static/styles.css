@@ -100,7 +100,6 @@ summary:focus-visible {
 }
 
 .brand,
-.product-nav,
 .language-nav {
   display: flex;
   align-items: center;
@@ -129,18 +128,11 @@ summary:focus-visible {
   object-fit: cover;
 }
 
-.product-nav {
-  min-width: 0;
-  justify-content: center;
-  gap: 4px;
-}
-
 .language-nav {
   justify-content: flex-end;
   gap: 2px;
 }
 
-.product-nav a,
 .language-nav a {
   min-height: 36px;
   display: inline-flex;
@@ -154,23 +146,17 @@ summary:focus-visible {
   text-align: center;
 }
 
-.product-nav a {
-  padding: 7px 12px;
-}
-
 .language-nav a {
   min-width: 42px;
   padding: 7px 8px;
   font-size: 0.8rem;
 }
 
-.product-nav a:hover,
 .language-nav a:hover {
   color: var(--ink);
   background: var(--surface);
 }
 
-.product-nav a.active,
 .language-nav a.active {
   color: var(--teal-strong);
   background: var(--teal-soft);
@@ -279,54 +265,8 @@ h2 {
   color: var(--teal);
 }
 
-.scams-callout {
-  display: grid;
-  justify-items: start;
-  gap: 13px;
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel);
-}
-
-.scams-callout p {
-  margin: 0;
-  color: var(--muted-strong);
-  font-weight: 650;
-  line-height: 1.5;
-}
-
-.secondary-cta,
-.text-link,
-.cta-link {
-  min-height: 48px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9px;
-  font-weight: 750;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-}
-
-button:hover,
-.text-link:hover,
-.cta-link:hover {
+button:hover {
   background: var(--teal-strong);
-}
-
-.secondary-cta {
-  padding: 11px 18px;
-  border: 1px solid var(--line-strong);
-  color: var(--muted-strong);
-  background: transparent;
-}
-
-.secondary-cta:hover {
-  border-color: var(--teal);
-  color: var(--teal-strong);
-  background: #ffffff;
 }
 
 .privacy-proof {
@@ -473,10 +413,7 @@ button:hover,
 }
 
 .check-panel,
-.privacy-panel,
-.article-page,
-.article-card,
-.empty-state {
+.privacy-panel {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--panel);
@@ -717,103 +654,15 @@ pre {
   padding: 48px 20px 64px;
 }
 
-.privacy-panel,
-.article-page {
+.privacy-panel {
   display: grid;
   gap: 18px;
   padding: clamp(20px, 4vw, 32px);
 }
 
-.content-head {
-  display: grid;
-  gap: 10px;
-}
-
-.content-head h1,
-.privacy-panel h1,
-.article-page h1 {
+.privacy-panel h1 {
   max-width: 18ch;
   font-size: clamp(2rem, 5vw, 3rem);
-}
-
-.article-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.article-card {
-  min-height: 180px;
-  display: grid;
-  gap: 11px;
-  align-content: start;
-  padding: 20px;
-}
-
-.article-card h2,
-.article-body h2 {
-  max-width: none;
-  font-size: 1.18rem;
-  letter-spacing: -0.015em;
-}
-
-.article-card p,
-.article-body p,
-.article-body li,
-.empty-state p,
-.fallback-note {
-  color: var(--muted);
-  line-height: 1.65;
-}
-
-.article-card p,
-.empty-state p {
-  margin: 0;
-}
-
-.text-link,
-.cta-link {
-  width: fit-content;
-  min-height: 42px;
-  padding: 9px 14px;
-  color: #ffffff;
-  background: var(--teal);
-  font-size: 0.9rem;
-}
-
-.text-link {
-  margin-top: auto;
-}
-
-.fallback-note {
-  margin: 0;
-  padding: 12px 14px;
-  border-radius: 9px;
-  background: #fff8e7;
-}
-
-.article-body {
-  display: grid;
-  gap: 16px;
-}
-
-.article-body h2 {
-  margin-top: 8px;
-}
-
-.article-body p,
-.article-body ul {
-  margin: 0;
-}
-
-.article-body ul {
-  display: grid;
-  gap: 8px;
-  padding-left: 1.2rem;
-}
-
-.empty-state {
-  padding: 20px;
 }
 
 .privacy-text {
@@ -1010,13 +859,6 @@ pre {
     justify-content: flex-end;
   }
 
-  .product-nav {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .home-shell {
     gap: 30px;
   }
@@ -1026,8 +868,7 @@ pre {
     gap: 20px;
   }
 
-  .form-grid,
-  .article-grid {
+  .form-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1049,10 +890,6 @@ pre {
     white-space: nowrap;
   }
 
-  .product-nav a {
-    font-size: 0.84rem;
-  }
-
   .home-shell,
   .app-shell,
   .privacy-shell,
@@ -1063,14 +900,6 @@ pre {
 
   .home-hero {
     gap: 11px;
-  }
-
-  .secondary-cta {
-    width: 100%;
-  }
-
-  .scams-callout {
-    justify-items: stretch;
   }
 
   .trust-points li {

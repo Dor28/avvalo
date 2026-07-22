@@ -160,7 +160,7 @@ async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> Non
     await repo.record_check_event(
         session,
         user_key="activated-2",
-        face="merchants",
+        face="family",
         input_type="text",
         language="uz_latn",
         status="no_signal",
@@ -171,7 +171,7 @@ async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> Non
     await repo.record_check_event(
         session,
         user_key="activated-2",
-        face="merchants",
+        face="family",
         input_type="text",
         language="uz_latn",
         status="llm_error",
@@ -184,6 +184,28 @@ async def test_metrics_export_returns_privacy_safe_pitch_numbers(session) -> Non
         check_id=ok_check_id,
         usefulness="yes",
         next_action="verify",
+    )
+    retired_check_id = uuid4()
+    session.add(
+        CheckEvent(
+            id=retired_check_id,
+            user_key="retired-merchant",
+            face="merchants",
+            input_type="text",
+            language="ru",
+            status="ok",
+            rule_ids=["sg.amount.overpay"],
+            no_signal=False,
+            ts=datetime.now(UTC),
+        )
+    )
+    session.add(
+        Feedback(
+            check_id=retired_check_id,
+            usefulness="no",
+            next_action="continue",
+            ts=datetime.now(UTC),
+        )
     )
     await session.flush()
 

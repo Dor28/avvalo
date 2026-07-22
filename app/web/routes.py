@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from hashlib import sha256
-from html import escape
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES, t
@@ -24,7 +24,6 @@ from app.engine import (
     Language,
     run_check,
 )
-from app.engine.faces import FACES
 from app.engine.format import format_status_message
 from app.privacy.consent import is_consent_current
 from app.web.abuse import (
@@ -33,7 +32,6 @@ from app.web.abuse import (
     require_same_origin,
     require_turnstile_for_image,
 )
-from app.web.content import available_languages, get_article, list_articles, sitemap_articles
 from app.web.session import get_or_create_web_session, set_web_session_cookie
 
 router = APIRouter()
@@ -60,7 +58,6 @@ def _static_version() -> str:
 
 
 templates.env.globals["static_version"] = _static_version()
-HREFLANGS = {"uz_latn": "uz-Latn", "uz_cyrl": "uz-Cyrl", "ru": "ru"}
 DEV_WEB_SESSION_SECRET = "development-web-session-secret"
 WEB_MAX_TEXT_CHARS = 6000
 WEB_MAX_CAPTION_CHARS = 500
@@ -77,12 +74,8 @@ WEB_BILLABLE_STATUSES = BILLABLE_STATUSES
 WEB_COPY = {
     "uz_latn": {
         "html_lang": "uz-Latn",
-        "nav_home": "Bosh sahifa",
-        "nav_check": "Tekshirish",
-        "nav_scams": "Firibgarlik turlari",
         "privacy_link": "Maxfiylik",
         "language_label": "Til",
-        "product_label": "Bo'limlar",
         "workflow_label": "Qanday ishlaydi",
         "trust_label": "Ishonch",
         "skip_to_check": "Tekshiruvga o'tish",
@@ -100,12 +93,6 @@ WEB_COPY = {
         "landing_step_3_title": "Tekshirib, keyin harakat qiling",
         "landing_step_3_body": "Nimani tasdiqlash va qanday savol berishni ko'ring.",
         "title": "Avvalo",
-        "scams_title": "Firibgarlik turlari",
-        "scams_empty": "Hozircha maqolalar ko'rib chiqilmoqda.",
-        "scams_fallback": "Bu maqola hozircha tanlangan tilda yo'q, mavjud tarjima ko'rsatildi.",
-        "scams_cta": "Shubhali xabarni Avvalo orqali tekshiring",
-        "scams_promo": "Ko'p uchraydigan firibgarlik turlari bilan tanishing.",
-        "scams_open": "O'qish",
         "privacy_title": "Maxfiylik",
         "consent_label": "Maxfiylik shartlarini o'qidim va roziman",
         "message_label": "Xabar matni",
@@ -124,7 +111,6 @@ WEB_COPY = {
         "empty_error": "Tekshirish uchun xabar yozing yoki matni ko'rinadigan rasm yuklang.",
         "too_long_error": "Matn biroz uzun. Qisqartirib, qayta yuboring.",
         "consent_error": "Avval maxfiylik shartlariga rozilik bering.",
-        "unknown_face_error": "Bunday tekshiruv turi topilmadi.",
         "faces": {
             "family": {
                 "eyebrow": "",
@@ -147,34 +133,12 @@ WEB_COPY = {
                     "Yuborgan matningiz 1 soat ichida o'chiriladi",
                 ],
             },
-            "merchants": {
-                "eyebrow": "Sotuvchilar uchun",
-                "name": "Sotuvchi himoyasi",
-                "headline": "Tovarni berishdan oldin to'lov va buyurtma xabarini tekshiring.",
-                "subhead": (
-                    "Avvalo chek, skrinshot, kuryer shoshiltirishi yoki qaytarim/refund so'rovini "
-                    "bank ilovasida tekshiriladigan aniq qadamlarga ajratadi."
-                ),
-                "prompt": "Chek, buyurtma suhbati, kuryer yoki qaytarim haqidagi xabarni shu yerga qo'ying.",
-                "textarea_placeholder": "Masalan: pul o'tdi, kuryer pastda kutyapti, tovarni bering...",
-                "caption_placeholder": "Buyurtma summasi, to'lov vaqti yoki muhim detal",
-                "image_hint": "Skrinshot to'lov dalili emas. Avvalo nimani bank ilovasida tekshirishni aytadi.",
-                "trust": [
-                    "Pul tushganini skrinshotga qarab tasdiqlamaydi",
-                    "Bank ilovasida alohida tekshirishni eslatadi",
-                    "Tovar ketishidan oldin xavf belgilarini ko'rsatadi",
-                ],
-            },
         },
     },
     "uz_cyrl": {
         "html_lang": "uz-Cyrl",
-        "nav_home": "Бош саҳифа",
-        "nav_check": "Текшириш",
-        "nav_scams": "Фирибгарлик турлари",
         "privacy_link": "Махфийлик",
         "language_label": "Тил",
-        "product_label": "Бўлимлар",
         "workflow_label": "Қандай ишлайди",
         "trust_label": "Ишонч",
         "skip_to_check": "Текширувга ўтиш",
@@ -192,12 +156,6 @@ WEB_COPY = {
         "landing_step_3_title": "Текшириб, кейин ҳаракат қилинг",
         "landing_step_3_body": "Нимани тасдиқлаш ва қандай савол беришни кўринг.",
         "title": "Avvalo",
-        "scams_title": "Фирибгарлик турлари",
-        "scams_empty": "Ҳозирча мақолалар кўриб чиқилмоқда.",
-        "scams_fallback": "Бу мақола ҳозирча танланган тилда йўқ, мавжуд таржима кўрсатилди.",
-        "scams_cta": "Шубҳали хабарни Avvalo орқали текширинг",
-        "scams_promo": "Кўп учрайдиган фирибгарлик турлари билан танишинг.",
-        "scams_open": "Ўқиш",
         "privacy_title": "Махфийлик",
         "consent_label": "Махфийлик шартларини ўқидим ва розиман",
         "message_label": "Хабар матни",
@@ -216,7 +174,6 @@ WEB_COPY = {
         "empty_error": "Текшириш учун хабар ёзинг ёки матни кўринадиган расм юкланг.",
         "too_long_error": "Матн бироз узун. Қисқартириб, қайта юборинг.",
         "consent_error": "Аввал махфийлик шартларига розилик беринг.",
-        "unknown_face_error": "Бундай текширув тури топилмади.",
         "faces": {
             "family": {
                 "eyebrow": "",
@@ -239,34 +196,12 @@ WEB_COPY = {
                     "Юборган матнингиз 1 соат ичида ўчирилади",
                 ],
             },
-            "merchants": {
-                "eyebrow": "Сотувчилар учун",
-                "name": "Сотувчи ҳимояси",
-                "headline": "Товарни беришдан олдин тўлов ва буюртма хабарини текширинг.",
-                "subhead": (
-                    "Avvalo чек, скриншот, курьер шошилтириши ёки қайтарим/refund сўровини "
-                    "банк иловасида текшириладиган аниқ қадамларга ажратади."
-                ),
-                "prompt": "Чек, буюртма суҳбати, курьер ёки қайтарим ҳақидаги хабарни шу ерга қўйинг.",
-                "textarea_placeholder": "Масалан: пул ўтди, курьер пастда кутяпти, товарни беринг...",
-                "caption_placeholder": "Буюртма суммаси, тўлов вақти ёки муҳим детал",
-                "image_hint": "Скриншот тўлов далили эмас. Avvalo нимани банк иловасида текширишни айтади.",
-                "trust": [
-                    "Пул тушганини скриншотга қараб тасдиқламайди",
-                    "Банк иловасида алоҳида текширишни эслатади",
-                    "Товар кетишидан олдин хавф белгиларини кўрсатади",
-                ],
-            },
         },
     },
     "ru": {
         "html_lang": "ru",
-        "nav_home": "Главная",
-        "nav_check": "Проверить",
-        "nav_scams": "Виды мошенничества",
         "privacy_link": "Конфиденциальность",
         "language_label": "Язык",
-        "product_label": "Разделы",
         "workflow_label": "Как это работает",
         "trust_label": "Доверие",
         "skip_to_check": "Перейти к проверке",
@@ -284,12 +219,6 @@ WEB_COPY = {
         "landing_step_3_title": "Проверьте и только потом действуйте",
         "landing_step_3_body": "Узнайте, что подтвердить и какие вопросы задать.",
         "title": "Avvalo",
-        "scams_title": "Виды мошенничества",
-        "scams_empty": "Материалы пока на проверке.",
-        "scams_fallback": "Этой статьи пока нет на выбранном языке, показан доступный перевод.",
-        "scams_cta": "Проверить сомнительное сообщение в Avvalo",
-        "scams_promo": "Познакомьтесь с самыми частыми схемами мошенничества.",
-        "scams_open": "Читать",
         "privacy_title": "Конфиденциальность",
         "consent_label": "Я прочитал условия конфиденциальности и согласен",
         "message_label": "Текст сообщения",
@@ -308,7 +237,6 @@ WEB_COPY = {
         "empty_error": "Вставьте текст или загрузите читаемое изображение.",
         "too_long_error": "Текст получился слишком длинным. Сократите его и отправьте ещё раз.",
         "consent_error": "Сначала примите условия конфиденциальности.",
-        "unknown_face_error": "Неизвестный тип проверки.",
         "faces": {
             "family": {
                 "eyebrow": "",
@@ -330,39 +258,30 @@ WEB_COPY = {
                     "Ваш текст удаляется в течение 1 часа",
                 ],
             },
-            "merchants": {
-                "eyebrow": "Для продавцов",
-                "name": "Защита продавца",
-                "headline": "Проверьте оплату и заказ до передачи товара.",
-                "subhead": (
-                    "Avvalo разбирает чек, переписку, давление курьером или запрос на возврат/refund "
-                    "и превращает это в понятные проверки."
-                ),
-                "prompt": "Вставьте чек, переписку по заказу, запрос на доставку или возврат от покупателя.",
-                "textarea_placeholder": "Например: деньги ушли, курьер уже ждёт, отдайте товар...",
-                "caption_placeholder": "Сумма заказа, время оплаты или важная деталь",
-                "image_hint": "Скриншот не доказывает оплату. Avvalo подскажет, что проверить в своём банке.",
-                "trust": [
-                    "Не подтверждает приход денег по скриншоту",
-                    "Напоминает проверить свой банк отдельно",
-                    "Показывает риски до передачи товара",
-                ],
-            },
         },
     },
 }
 
-FACE_PATHS = {
-    "family": "/check",
-    "merchants": "/merchants",
-}
-
-
 @router.get("/healthz")
 async def healthz() -> dict[str, bool]:
-    """Health check for local deploys and smoke tests."""
+    """Process liveness check for external monitoring."""
 
     return {"ok": True}
+
+
+@router.get("/readyz", response_model=None)
+async def readyz(request: Request) -> Response:
+    """Deployment readiness check that also verifies the database connection."""
+
+    session_factory = _session_factory_or_none(request)
+    if session_factory is None:
+        return Response(status_code=503)
+    try:
+        async with session_factory() as session:
+            await session.execute(sql_text("SELECT 1"))
+    except Exception:
+        return Response(status_code=503)
+    return JSONResponse({"ok": True})
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -370,7 +289,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
     """Render the home page: the consumer check form above how-it-works.
 
     The form posts to the same POST /check handler as the standalone page, so
-    landing here costs a visitor no extra click. Unlike ``_face_page`` this
+    landing here costs a visitor no extra click. Unlike ``_check_page`` this
     deliberately does *not* mint a session cookie — nothing on a GET needs one,
     and POST /check creates it on first submit anyway.
     """
@@ -382,9 +301,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
         "landing.html",
         {
             "copy": copy,
-            "face": "family",
             "face_copy": copy["faces"]["family"],
-            "current_page": "check",
             "language_path": "/",
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
@@ -399,94 +316,23 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
 async def family_check(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
     """Render the consumer checker and its result surface."""
 
-    return _face_page(request, face="family", language=language)
+    return _check_page(request, language=language)
 
 
-@router.get("/merchants", response_class=HTMLResponse)
-async def merchants(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
-    """Render the Avvalo Merchants check page."""
+@router.get("/merchants", include_in_schema=False)
+async def retired_merchants(language: str = DEFAULT_LANGUAGE) -> RedirectResponse:
+    """Preserve old bookmarks while sending users to the unified checker."""
 
-    return _face_page(request, face="merchants", language=language)
-
-
-@router.get("/scams", response_class=HTMLResponse)
-async def scams_index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
-    """Render the localized scam education index."""
-
-    language = _normalize_language(language)
-    copy = WEB_COPY[language]
-    debug = _content_debug(request)
-    response = templates.TemplateResponse(
-        request,
-        "scam_index.html",
-        {
-            "copy": copy,
-            "language": language,
-            "languages": LANGUAGES,
-            "hreflangs": HREFLANGS,
-            "language_labels": LANGUAGE_LABELS,
-            "current_page": "scams",
-            "language_path": "/scams",
-            "articles": list_articles(language, include_drafts=debug),
-        },
+    response = RedirectResponse(
+        url=f"/check?language={_normalize_language(language)}",
+        status_code=308,
     )
-    return _cache_content_response(response, debug=debug)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
-@router.get("/scams/{slug}", response_class=HTMLResponse)
-async def scam_page(
-    request: Request, slug: str, language: str = DEFAULT_LANGUAGE
-) -> HTMLResponse:
-    """Render one localized scam education page."""
-
-    language = _normalize_language(language)
-    debug = _content_debug(request)
-    article = get_article(slug, language, include_drafts=debug)
-    if article is None:
-        raise HTTPException(status_code=404, detail="Scam page not found.")
-
-    copy = WEB_COPY[language]
-    response = templates.TemplateResponse(
-        request,
-        "scam_page.html",
-        {
-            "copy": copy,
-            "language": language,
-            "languages": LANGUAGES,
-            "hreflangs": HREFLANGS,
-            "language_labels": LANGUAGE_LABELS,
-            "current_page": "scams",
-            "language_path": f"/scams/{article.slug}",
-            "article": article,
-            "article_languages": available_languages(slug),
-        },
-    )
-    return _cache_content_response(response, debug=debug)
-
-
-@router.get("/sitemap.xml")
-async def sitemap(request: Request) -> Response:
-    """Return a sitemap of founder-reviewed published content."""
-
-    base_url = str(request.base_url).rstrip("/")
-    urls = [
-        f"{base_url}/scams/{article.slug}?language={article.language}"
-        for article in sitemap_articles()
-    ]
-    body = "\n".join(
-        [
-            '<?xml version="1.0" encoding="UTF-8"?>',
-            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-            *[f"  <url><loc>{escape(url)}</loc></url>" for url in urls],
-            "</urlset>",
-            "",
-        ]
-    )
-    return _cache_content_response(Response(content=body, media_type="application/xml"))
-
-
-def _face_page(request: Request, *, face: str, language: str) -> HTMLResponse:
-    """Render one focused check surface for one face."""
+def _check_page(request: Request, *, language: str) -> HTMLResponse:
+    """Render the unified consumer check surface."""
 
     language = _normalize_language(language)
     settings = _settings_or_none(request)
@@ -497,10 +343,8 @@ def _face_page(request: Request, *, face: str, language: str) -> HTMLResponse:
         "index.html",
         {
             "copy": copy,
-            "face": face,
-            "face_copy": copy["faces"][face],
-            "current_page": "check" if face == "family" else "merchant",
-            "language_path": FACE_PATHS[face],
+            "face_copy": copy["faces"]["family"],
+            "language_path": "/check",
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
             "language": language,
@@ -532,7 +376,6 @@ async def privacy(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRes
             "language": language,
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
-            "current_page": "privacy",
             "language_path": "/privacy",
             "privacy_text": t("privacy", language),
         },
@@ -542,7 +385,6 @@ async def privacy(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRes
 @router.post("/check", response_class=HTMLResponse)
 async def check(
     request: Request,
-    face: Annotated[str, Form()] = "family",
     language: Annotated[str, Form()] = DEFAULT_LANGUAGE,
     text: Annotated[str, Form()] = "",
     caption: Annotated[str, Form()] = "",
@@ -556,8 +398,7 @@ async def check(
     settings = _settings_or_error(request)
     language = _normalize_language(language)
     copy = WEB_COPY[language]
-    if face not in FACES:
-        raise HTTPException(status_code=400, detail=copy["unknown_face_error"])
+    face = "family"
 
     web_session = get_or_create_web_session(request, secret=_web_secret(settings))
     session_factory = _session_factory_or_none(request)
@@ -614,7 +455,7 @@ async def check(
             user_key=web_session.user_key,
             language=Language(language),
             input_type=input_type,
-            raw_text=text if input_type is InputType.text else None,
+            raw_text=text or None,
             image_bytes=image_bytes,
             caption=caption or None,
         )
@@ -636,12 +477,19 @@ async def check(
                 web_session=web_session,
             )
 
-        result = await run_check(
-            check_input,
-            session=session,
-            settings=settings,
-            rate_limit_override=settings.web_daily_limit,
-        )
+        try:
+            result = await run_check(
+                check_input,
+                session=session,
+                settings=settings,
+                rate_limit_override=settings.web_daily_limit,
+                commit_rate_limit_reservation=True,
+            )
+        except Exception:
+            if isinstance(ip_limit, str):
+                await repo.refund_usage(session, user_key=ip_limit, face=_web_ip_face(face))
+                await session.commit()
+            raise
         if isinstance(ip_limit, str) and result.status not in WEB_BILLABLE_STATUSES:
             await repo.refund_usage(session, user_key=ip_limit, face=_web_ip_face(face))
         await session.commit()
@@ -774,10 +622,6 @@ def _normalize_language(language: str) -> str:
     return language if language in LANGUAGES else DEFAULT_LANGUAGE
 
 
-def _content_debug(request: Request) -> bool:
-    return bool(getattr(request.app, "debug", False))
-
-
 def _no_store(response: HTMLResponse) -> HTMLResponse:
     """Keep an app page out of every cache.
 
@@ -793,11 +637,4 @@ def _no_store(response: HTMLResponse) -> HTMLResponse:
     """
 
     response.headers["Cache-Control"] = "no-store"
-    return response
-
-
-def _cache_content_response(response: HTMLResponse | Response, *, debug: bool = False) -> HTMLResponse | Response:
-    response.headers["Cache-Control"] = (
-        "no-store" if debug else "public, max-age=86400, stale-while-revalidate=604800"
-    )
     return response

@@ -1,4 +1,4 @@
-{# Shared check form. Included by landing.html (home) and index.html (/check, /merchants).
+{# Shared check form. Included by landing.html (home) and index.html (/check).
    Set `form_steps = true` to show the inline 1/2/3 chips on surfaces that have no
    separate workflow explainer above the form. #}
 <form
@@ -11,7 +11,6 @@
   data-empty-error="{{ copy.empty_error }}"
   data-error-title="{{ copy.result_error_title }}"
 >
-  <input type="hidden" name="face" value="{{ face }}">
   <input type="hidden" name="language" value="{{ language }}">
 
   <div class="field primary-field">

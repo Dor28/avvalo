@@ -38,15 +38,12 @@ class RetrievalResult(BaseModel):
 
     cards: tuple[KnowledgeCard, ...] = ()
     mode: Literal["rule", "signal", "cue", "router", "none"] = "none"
-    status: Literal[
-        "ok",
-        "empty",
-        "unavailable",
-        "router_unavailable",
-        "invalid_router_ids",
-    ] = "empty"
+    status: Literal["ok", "empty", "unavailable"] = "empty"
+    router_status: Literal["not_used", "ok", "unavailable", "invalid_ids"] = "not_used"
     kb_version: str | None = None
     invalid_router_ids: tuple[str, ...] = ()
+    router_input_tokens: int = Field(default=0, ge=0)
+    router_output_tokens: int = Field(default=0, ge=0)
 
     @property
     def knowledge_card_ids(self) -> list[str]:
@@ -75,7 +72,15 @@ class KnowledgeRouter(Protocol):
         minimized_text: str,
         allowed_ids: tuple[str, ...],
         max_results: int,
-    ) -> list[str]: ...
+    ) -> RouterResponse: ...
+
+
+class RouterResponse(BaseModel):
+    """Allowlisted card proposals plus router token usage."""
+
+    card_ids: list[str] = Field(default_factory=list)
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
 
 
 class KnowledgeLookupError(RuntimeError):

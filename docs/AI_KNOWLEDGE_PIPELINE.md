@@ -1,8 +1,13 @@
 # Avvalo — AI + Knowledge Pipeline Contract
 
-> **Status:** Authoritative target contract for every check · 2026-07-15
+> **Status:** Authoritative contract for the built explanation pipeline · 2026-07-22
 > **Authority:** [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) remains the product and safety authority. This document defines how the shared engine must combine local rules, curated knowledge, reviewed cases, and the LLM.
 > **Scope:** Questions and submitted content about suspicious messages, calls, payments, documents, links, deals, and related situations. Avvalo is not a general-purpose assistant for unrelated topics.
+> **Evidence boundary:** A knowledge card or reviewed case is explanatory guidance, never an
+> official-source fact. Avvalo Verify requires a separate typed adapter result with source,
+> observation time, status, and limitations. Do not relabel knowledge retrieval as verification.
+> **Current runtime:** There is one active knowledge face, `family`. Merchant payment protections
+> are part of the main checker. The retired story-capture flow is not a source of new cases.
 
 ## 1. Required outcome
 
@@ -69,7 +74,8 @@ mechanism, red_flags[], verify_steps[], questions[], reviewed_case_ids[]
 
 ### Reviewed cases
 
-- Must be explicitly donated/consented, minimized, manually reviewed, and de-identified before becoming reusable knowledge.
+- New reviewed cases may be created only from synthetic/founder-authored material or a separately
+  approved one-time consented review process; there is no standing story-capture pipeline.
 - Raw user submissions, screenshots, OCR text, model prompts, and model outputs are never knowledge-base records.
 - A case illustrates a pattern; similarity to it is not proof of fraud, identity, or intent.
 
@@ -135,23 +141,23 @@ The pipeline is compliant only when automated tests prove all of the following:
 9. Logs and persistence contain only allowlisted metadata and version IDs.
 10. The same behavior is exercised through both Telegram and web because both call `run_check()`.
 
-## 8. Implementation audit snapshot — 2026-07-15
+## 8. Implementation audit snapshot — 2026-07-19
 
 This is a dated baseline, not a completion claim. Re-run the audit after T14/R0 changes.
 
 | Contract area | Current state | Evidence / gap |
 |---|---|---|
-| One engine for Telegram and web | ✅ Implemented | Both channel handlers build `CheckInput` and call `app.engine.pipeline.run_check()` |
+| One engine for Telegram and web | ✅ Implemented and tested | Both channel handlers build `CheckInput` and call `app.engine.pipeline.run_check()`; `test_r0_criterion_10_telegram_and_web_share_run_check` guards the shared call path |
 | Intake, language, and OCR | ⚠️ Partial | Text/image intake, language resolution, OCR abstraction, confidence gating, and metadata stripping exist. The configured default is Google Cloud Vision, so the separate local/on-prem OCR product promise depends on deployment configuration and is not guaranteed by this code default |
-| Rules on raw local text, then minimization | ✅ Implemented | `pipeline._run_stages()` calls `run_rules(text, face)` before `minimize(text, signals)` |
-| Zero-rule semantic analysis | ✅ Implemented in orchestration | The pipeline calls the LLM unconditionally after minimization; the prompt renders `- (none detected)` when rules are empty. A local injected-provider check returned `ok` with `rule_ids=[]` |
-| Versioned knowledge-card store | ❌ Missing | No runtime `knowledge/` assets or `app/engine/knowledge/` package |
-| Rule/signal/cue retrieval | ❌ Missing | No loader, retrieval index, retrieval cues, or selected-card type |
-| Allowlisted semantic router | ❌ Missing | No router contract/provider or invalid-ID validation |
-| Reviewed stories used as cases | ❌ Missing | `story_submission` and founder statuses exist, but approved stories are not converted to reviewed case derivatives and are never read by `run_check()` |
-| Knowledge injected into answer prompt | ❌ Missing | `build_prompt()` accepts only `face_id`, `language`, `minimized_text`, `rule_hits`, and `signals` |
-| Safety validator | ⚠️ Partial | Existing verdict/PII/unsafe-instruction checks work, but there is no knowledge grounding. Rule preservation is weak: with multiple high-severity hits, any single non-empty `red_flags` list passes; individual facts are not verified |
-| Provider fallback / degraded answer | ❌ Missing | SDK-level transient retry is configured, but a terminal provider exception returns `llm_error` immediately; there is no secondary provider or deterministic rule/card response |
-| Knowledge/version observability | ❌ Missing | `CheckResult`, `check_event`, and event allowlists have rule IDs and metrics only; no card/case IDs, retrieval status, or component versions |
-| Privacy-safe persistence | ✅ Baseline implemented | Check content stays out of `check_event`; the only content exception is consented minimized `story_submission.minimized_text` |
-| Automated verification | ⚠️ Old contract green | `pytest -q`: 204 passed; `ruff check .`: passed. There are no T14/R0 tests, so green baseline tests do not establish knowledge-pipeline compliance |
+| Rules on raw local text, then minimization | ✅ Implemented and tested | `pipeline._run_stages()` calls `run_rules(text, face)` before the local URL-artifact lookup and `minimize(text, signals)`; `tests/test_t05_rules_minimize.py` guards minimization |
+| Zero-rule semantic analysis | ✅ Implemented and tested | `test_r0_criterion_01_zero_rule_message_still_reaches_answer_llm` proves `rule_ids=[]` still reaches the answer model |
+| Versioned knowledge-card store | ✅ Implemented and tested | `FileKnowledgeStore.load()` validates the approved `family` cards and `knowledge/version.yaml`; deploy tests prove `knowledge/` is copied into the image and the active pack loads |
+| Rule/signal/cue retrieval | ✅ Implemented and tested | `retrieve_knowledge()` ranks mandatory rule/signal matches and multilingual cues, enforces the three-card ceiling, and has direct tests for all three paths |
+| Allowlisted semantic router | ⚠️ Wiring implemented and tested; recall unmeasured | `OpenAICompatibleKnowledgeRouter` sees minimized text plus a server allowlist only; backend validation rejects invented IDs. Tests cover timeout/failure degradation, default-off config, token-cost aggregation, and an end-to-end inflected-Russian path **against a fake provider**. No eval against a live model exists, so the inflected-recall gap that motivated the router is not yet proven closed |
+| Reviewed cases | ⚠️ Contract present; no intake pipeline | Cards and events carry validated `reviewed_case_ids`, but current approved cards reference no reviewed derivatives. The retired `story_submission` rows are never runtime knowledge and no new story-capture writes are allowed |
+| Knowledge injected into answer prompt | ✅ Implemented and tested | `build_prompt(..., knowledge_cards=...)` renders at most three reviewed cards; T14 tests inspect the exact provider prompt for selected IDs and empty knowledge |
+| Safety validator | ✅ Structural preservation floor implemented and tested | Knowledge-ID/case-proof/external-lookup checks are active. `DraftOutput.addressed_rule_ids` plus `validate()` now rejects every omitted severity-2+ rule ID in all three languages and exercises retry/fallback. This proves declaration coverage, not semantic quality of the wording |
+| Provider fallback / degraded answer | ✅ Implemented and tested | `_configured_fallback_provider()` and `_call_llm()` use the secondary provider after primary timeout/error; the T14 regression proves the result remains a normal successful answer |
+| Knowledge/version observability | ✅ Implemented and tested | `CheckResult`, `check_event`, logs, migrations, gap reports, and daily metrics carry card/case IDs, retrieval/router status, KB version, coverage, unavailable rate, and approved-card inventory without content |
+| Privacy-safe persistence | ✅ Implemented and tested | Active check, router, and URL-reputation paths persist only IDs, enums, hashes, versions, and metrics. `story_submission.minimized_text` is legacy stewardship only: no new writes or product reads; old rows remain covered by deletion and retention until an authorized purge |
+| Automated verification | ✅ Current contract green | `pytest -q`: 259 passed and `ruff check .` passed on 2026-07-22 after the legacy-surface removal |

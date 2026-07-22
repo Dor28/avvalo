@@ -3,10 +3,12 @@
 import logging
 
 from fastapi.testclient import TestClient
+from starlette.formparsers import MultiPartParser
 
 from app.config import Settings
 from app.engine import CheckResult, CheckStatus, InputType, Language
 from app.web import routes
+from app.web.abuse import MAX_REQUEST_BODY_BYTES, configure_ephemeral_multipart
 from app.web.app import create_app
 
 
@@ -45,16 +47,48 @@ def test_web_app_exposes_core_routes() -> None:
     paths = {getattr(route, "path", "") for route in getattr(app, "routes", [])}
 
     assert "/" in paths
+    # Kept only as a compatibility redirect for old bookmarks.
     assert "/merchants" in paths
     assert "/check" in paths
     assert "/privacy" in paths
     assert "/healthz" in paths
+    assert "/readyz" in paths
+    assert "/scams" not in paths
+    assert "/sitemap.xml" not in paths
+
+
+def test_readiness_fails_closed_without_database_wiring() -> None:
+    response = TestClient(create_app(settings=_settings())).get("/readyz")
+
+    assert response.status_code == 503
 
 
 def test_web_app_does_not_publish_an_openapi_schema() -> None:
     client = TestClient(create_app(settings=_settings()))
 
     assert client.get("/openapi.json").status_code == 404
+
+
+def test_multipart_uploads_cannot_roll_accepted_content_to_disk() -> None:
+    configure_ephemeral_multipart()
+
+    assert MultiPartParser.spool_max_size > MAX_REQUEST_BODY_BYTES
+
+
+def test_request_body_is_rejected_before_form_parsing_when_declared_too_large() -> None:
+    client = TestClient(create_app(settings=_settings()))
+
+    response = client.post(
+        "/check",
+        content=b"x",
+        headers={
+            "Content-Length": str(MAX_REQUEST_BODY_BYTES + 1),
+            "Content-Type": "application/octet-stream",
+        },
+    )
+
+    assert response.status_code == 413
+    assert response.headers["cache-control"] == "no-store"
 
 
 def test_unhandled_route_exception_logs_and_returns_500(caplog) -> None:
@@ -75,30 +109,24 @@ def test_unhandled_route_exception_logs_and_returns_500(caplog) -> None:
     assert "'error_type': 'ValueError'" in messages
 
 
-def test_product_pages_are_separate_and_localized() -> None:
+def test_unified_checker_is_localized_and_old_merchants_url_redirects() -> None:
     client = TestClient(create_app(settings=_settings()))
 
     landing = client.get("/?language=uz_latn")
     family = client.get("/check?language=uz_latn")
-    merchants = client.get("/merchants?language=ru")
-    merchants_title_ru = (
-        "\u0417\u0430\u0449\u0438\u0442\u0430 \u043f\u0440\u043e\u0434\u0430\u0432\u0446\u0430"
-    )
+    merchants = client.get("/merchants?language=ru", follow_redirects=False)
 
     assert landing.status_code == 200
     assert family.status_code == 200
-    assert merchants.status_code == 200
-    # Home and /check both post the family face to the same POST /check handler.
+    assert merchants.status_code == 308
+    assert merchants.headers["location"] == "/check?language=ru"
+    # Home and /check both post to the same fixed-face handler.
     assert 'action="/check"' in landing.text
-    assert 'value="family"' in landing.text
-    assert 'value="family"' in family.text
-    assert 'value="merchants"' in merchants.text
+    assert 'name="face"' not in landing.text
+    assert 'name="face"' not in family.text
     assert "/merchants?language=uz_latn" not in landing.text
     assert "/merchants?language=uz_latn" not in family.text
-    assert "/?language=ru" in merchants.text
     assert 'type="radio"' not in family.text
-    assert 'type="radio"' not in merchants.text
-    assert merchants_title_ru in merchants.text
 
 
 def test_web_reuses_the_shared_engine(monkeypatch) -> None:
@@ -128,7 +156,9 @@ def test_web_reuses_the_shared_engine(monkeypatch) -> None:
     response = client.post(
         "/check",
         data={
-            "face": "family",
+            # Retired clients may still send this obsolete field; the route
+            # ignores it and always builds the active consumer check.
+            "face": "merchants",
             "language": "uz_latn",
             "text": "Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
             "consent": "yes",
@@ -141,9 +171,11 @@ def test_web_reuses_the_shared_engine(monkeypatch) -> None:
     assert len(calls) == 1
     check_input, _args, kwargs = calls[0]
     assert check_input.input_type is InputType.text
+    assert check_input.face == "family"
     assert check_input.language is Language.uz_latn
     assert check_input.raw_text.startswith("Bank xavfsizlik")
     assert kwargs["rate_limit_override"] == 5
+    assert kwargs["commit_rate_limit_reservation"] is True
     assert kwargs["session"].__class__ is FakeSession
 
 
@@ -169,6 +201,7 @@ def test_web_rejects_cross_site_post_before_engine_or_database(monkeypatch) -> N
     )
 
     assert response.status_code == 403
+    assert response.headers["cache-control"] == "no-store"
 
 
 def test_web_accepts_matching_origin(monkeypatch) -> None:

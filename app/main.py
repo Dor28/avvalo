@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import logging
+from collections.abc import Awaitable
 from dataclasses import dataclass
 
 import uvicorn
@@ -16,7 +17,12 @@ from app.data.db import (
 )
 from app.data.retention import RetentionPolicy, start_retention_scheduler
 from app.engine.faces import FACES
-from app.obs.alerts import install_operator_alerts
+from app.engine.url_reputation import install_url_reputation_job
+from app.obs.alerts import (
+    install_knowledge_availability_alert_job,
+    install_operator_alerts,
+)
+from app.obs.metrics import log_knowledge_inventory
 from app.obs.sentry import init_sentry
 from app.web.app import create_app
 
@@ -40,6 +46,7 @@ async def run(*, check_only: bool = False) -> None:
     try:
         await check_database_connection(engine)
         LOGGER.info("Avvalo booted and connected to PostgreSQL")
+        log_knowledge_inventory()
         if check_only:
             return
 
@@ -50,6 +57,8 @@ async def run(*, check_only: bool = False) -> None:
                 story_rejected_days=settings.story_rejected_retention_days
             ),
         )
+        install_url_reputation_job(scheduler, session_factory, settings)
+        install_knowledge_availability_alert_job(scheduler, session_factory, settings)
         try:
             runners = []
             if settings.web_enabled:
@@ -69,7 +78,14 @@ async def run(*, check_only: bool = False) -> None:
                 for spec in bot_specs:
                     bot = build_bot(spec.token)
                     dispatcher = build_dispatcher(settings, session_factory, FACES[spec.face_id])
-                    runners.append(dispatcher.start_polling(bot))
+                    # Uvicorn owns SIGINT/SIGTERM when the web channel is active.
+                    # Otherwise aiogram remains the signal owner for bot-only runs.
+                    runners.append(
+                        dispatcher.start_polling(
+                            bot,
+                            handle_signals=not settings.web_enabled,
+                        )
+                    )
                     LOGGER.info("Starting %s bot (polling)", spec.face_id)
                     if settings.operator_alert_chat_id is not None:
                         install_operator_alerts(
@@ -78,7 +94,7 @@ async def run(*, check_only: bool = False) -> None:
                             debounce_s=settings.operator_alert_debounce_s,
                         )
 
-            await asyncio.gather(*runners)
+            await _run_service_runners(runners)
         finally:
             scheduler.shutdown(wait=False)
     finally:
@@ -106,6 +122,29 @@ async def _run_web(settings: Settings, session_factory) -> None:
     )
     server = uvicorn.Server(config)
     await server.serve()
+
+
+async def _run_service_runners(runners: list[Awaitable[None]]) -> None:
+    """Run services together and stop peers when any runner exits.
+
+    In the combined web + bot process Uvicorn is the sole OS-signal owner. Once
+    its runner returns after SIGINT/SIGTERM, cancelling the polling runner lets
+    aiogram execute its own shutdown hooks and close the bot session.
+    """
+
+    tasks = [asyncio.ensure_future(runner) for runner in runners]
+    try:
+        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        for task in pending:
+            task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
+        for task in done:
+            task.result()
+    finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def main() -> None:

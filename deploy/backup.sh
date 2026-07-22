@@ -2,7 +2,7 @@
 # Avvalo database backup — compressed, optionally encrypted, with rotation.
 #
 # Runs pg_dump inside the running `db` container, so it needs no DB password on
-# the host. Designed to be driven by cron (see docs/DEPLOYMENT.md "Backups").
+# the host. Designed to be driven by cron.
 #
 #   ./deploy/backup.sh
 #

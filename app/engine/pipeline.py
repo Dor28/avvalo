@@ -1,8 +1,7 @@
-"""Engine pipeline with deterministic local stages.
+"""Shared engine pipeline with local rules/lookups and safe semantic analysis.
 
-Final OCR and hardening stages land in later tasks. This module wires the real
-local rule/minimization/LLM/validation boundary and records only privacy-safe
-event metadata already allowed by the schema.
+Every channel uses this orchestration. Submitted content remains ephemeral;
+only allowlisted IDs, enums, component versions, and metrics are recorded.
 """
 
 import asyncio
@@ -23,8 +22,10 @@ from app.engine.knowledge import (
     KnowledgeRouter,
     KnowledgeStore,
     RetrievalResult,
+    RouterResponse,
     retrieve_knowledge,
 )
+from app.engine.knowledge.router import OpenAICompatibleKnowledgeRouter
 from app.engine.language import resolve_content_language
 from app.engine.llm import (
     LLMProvider,
@@ -46,6 +47,11 @@ from app.engine.types import (
     RuleHit,
     Signal,
 )
+from app.engine.url_reputation import (
+    DatabaseURLReputationStore,
+    URLReputationStore,
+    lookup_url_reputation,
+)
 from app.engine.validate import validate
 from app.obs.cost import estimate_llm_cost_from_settings
 from app.obs.events import log_error, log_event
@@ -55,12 +61,25 @@ _DEFAULT_MAX_OUTPUT_TOKENS = 600
 _DEFAULT_OCR_MIN_CONFIDENCE = 0.5
 _T = TypeVar("_T")
 
-# Outcomes that consume a daily-limit slot: a real completion (ok / no_signal)
-# or a safety fallback that still ran the model. Every other status is a
-# pre-analysis or system fault and is refunded so it doesn't burn the quota.
+
+class _UnavailableKnowledgeRouter:
+    """Mark an enabled-but-misconfigured router as degraded on empty recall."""
+
+    async def route(self, **_kwargs) -> RouterResponse:
+        raise RuntimeError("knowledge router unavailable")
+
+# Outcomes that consume a daily-limit slot: a real completion (ok / no_signal),
+# an OCR attempt that reached the configured provider, or a safety fallback
+# that still ran the model. Every other status is a pre-analysis or system fault
+# and is refunded so it doesn't burn the quota.
 # Public because the web channel's per-IP limit applies the same refund rule.
 BILLABLE_STATUSES = frozenset(
-    {CheckStatus.ok, CheckStatus.no_signal, CheckStatus.safety_fallback}
+    {
+        CheckStatus.ok,
+        CheckStatus.no_signal,
+        CheckStatus.low_ocr,
+        CheckStatus.safety_fallback,
+    }
 )
 
 
@@ -73,13 +92,17 @@ async def run_check(
     ocr_provider: OCRProvider | None = None,
     knowledge_store: KnowledgeStore | None = None,
     knowledge_router: KnowledgeRouter | None = None,
+    url_reputation_store: URLReputationStore | None = None,
     settings: Settings | None = None,
     rate_limit_override: int | None = None,
+    commit_rate_limit_reservation: bool = False,
 ) -> CheckResult:
     """Run one check through the current skeleton stages.
 
     Passing ``session`` records a ``check_event`` row with IDs, status, and
-    metrics only. The caller still owns the transaction.
+    metrics only. The caller still owns the transaction unless
+    ``commit_rate_limit_reservation`` is enabled to release the counter-row
+    lock before external OCR or LLM work.
     """
 
     started = perf_counter()
@@ -93,15 +116,32 @@ async def run_check(
         else None
     )
     if result is None:
-        result = await _run_stages(
-            check_input,
-            llm_provider=llm_provider,
-            fallback_llm_provider=fallback_llm_provider,
-            ocr_provider=ocr_provider,
-            knowledge_store=knowledge_store,
-            knowledge_router=knowledge_router,
-            settings=settings,
+        reservation_committed = bool(
+            session is not None
+            and check_input.face in FACES
+            and commit_rate_limit_reservation
         )
+        if reservation_committed:
+            await session.commit()
+        try:
+            result = await _run_stages(
+                check_input,
+                llm_provider=llm_provider,
+                fallback_llm_provider=fallback_llm_provider,
+                ocr_provider=ocr_provider,
+                knowledge_store=knowledge_store,
+                knowledge_router=knowledge_router,
+                url_reputation_store=url_reputation_store,
+                session=session,
+                settings=settings,
+            )
+        except Exception:
+            if reservation_committed:
+                await repo.refund_usage(
+                    session, user_key=check_input.user_key, face=check_input.face
+                )
+                await session.commit()
+            raise
     result.latency_ms = max(0, round((perf_counter() - started) * 1000))
     _log_check_finished(
         check_input, result, limit_override=rate_limit_override, settings=settings
@@ -191,6 +231,7 @@ def _log_check_finished(
         "rule_ids": result.rule_ids,
         "retrieval_mode": result.retrieval_mode,
         "retrieval_status": result.retrieval_status,
+        "router_status": result.router_status,
         "reviewed_case_ids": result.reviewed_case_ids,
         "safety_blocked": result.safety_blocked,
         "status": result.status,
@@ -217,6 +258,8 @@ async def _run_stages(
     ocr_provider: OCRProvider | None,
     knowledge_store: KnowledgeStore | None,
     knowledge_router: KnowledgeRouter | None,
+    url_reputation_store: URLReputationStore | None,
+    session: AsyncSession | None,
     settings: Settings | None,
 ) -> CheckResult:
     if check_input.face not in FACES:
@@ -242,14 +285,52 @@ async def _run_stages(
         update={"language": resolve_content_language(text, fallback=check_input.language)}
     )
     rule_hits, signals = run_rules(text, check_input.face)
+    reputation_enabled = (
+        url_reputation_store is not None
+        if settings is None
+        else settings.url_reputation_enabled
+    )
+    reputation_store = url_reputation_store
+    if reputation_enabled and reputation_store is None and session is not None:
+        reputation_store = DatabaseURLReputationStore(session)
+    if reputation_enabled and reputation_store is not None:
+        try:
+            reputation_hits = await lookup_url_reputation(text, store=reputation_store)
+        except Exception:
+            log_error(
+                stage="url_reputation",
+                error_type="URLReputationLookupError",
+                face=check_input.face,
+            )
+        else:
+            existing_rule_ids = {hit.rule_id for hit in rule_hits}
+            rule_hits.extend(
+                hit for hit in reputation_hits if hit.rule_id not in existing_rule_ids
+            )
     minimized_text = minimize(text, signals)
+    resolved_router = knowledge_router
+    if (
+        resolved_router is None
+        and settings is not None
+        and settings.knowledge_router_enabled
+    ):
+        try:
+            resolved_router = OpenAICompatibleKnowledgeRouter.from_settings(settings)
+        except ValueError:
+            # Recall failure must never prevent the answer model from running.
+            log_error(
+                stage="knowledge",
+                error_type="KnowledgeRouterConfigError",
+                face=check_input.face,
+            )
+            resolved_router = _UnavailableKnowledgeRouter()
     retrieval = await retrieve_knowledge(
         face_id=check_input.face,
         minimized_text=minimized_text,
         rule_hits=rule_hits,
         signals=signals,
         store=knowledge_store,
-        router=knowledge_router,
+        router=resolved_router,
     )
     llm_result = await _call_llm(
         effective_input,
@@ -262,6 +343,8 @@ async def _run_stages(
         settings=settings,
         ocr_ms=content.ocr_ms,
         ocr_confidence=content.ocr_confidence,
+        initial_input_tokens=retrieval.router_input_tokens,
+        initial_output_tokens=retrieval.router_output_tokens,
     )
     if llm_result.status is not None:
         return _attach_retrieval(llm_result.status, retrieval)
@@ -280,6 +363,7 @@ async def _run_stages(
         reviewed_case_ids=retrieval.reviewed_case_ids,
         retrieval_mode=retrieval.mode,
         retrieval_status=retrieval.status,
+        router_status=retrieval.router_status,
         kb_version=retrieval.kb_version,
         no_signal=no_signal,
         ocr_ms=content.ocr_ms,
@@ -375,7 +459,11 @@ async def _content_from_input(
             ),
         )
 
-    parts = [part.strip() for part in (check_input.caption, ocr_text) if part and part.strip()]
+    parts = [
+        part.strip()
+        for part in (check_input.caption, check_input.raw_text, ocr_text)
+        if part and part.strip()
+    ]
     return _ContentStageResult(
         text="\n".join(parts),
         ocr_ms=ocr_ms,
@@ -444,6 +532,8 @@ async def _call_llm(
     settings: Settings | None,
     ocr_ms: int | None,
     ocr_confidence: float | None,
+    initial_input_tokens: int = 0,
+    initial_output_tokens: int = 0,
 ) -> _LLMStageResult:
     resolved_settings = settings
     provider = llm_provider
@@ -466,8 +556,8 @@ async def _call_llm(
         if resolved_settings is not None
         else _DEFAULT_MAX_OUTPUT_TOKENS
     )
-    total_input_tokens = 0
-    total_output_tokens = 0
+    total_input_tokens = initial_input_tokens
+    total_output_tokens = initial_output_tokens
     validation_reason = "draft failed deterministic safety validation"
 
     for attempt in range(2):
@@ -711,6 +801,7 @@ def _result(
     reviewed_case_ids: list[str] | None = None,
     retrieval_mode: str | None = None,
     retrieval_status: str | None = None,
+    router_status: str | None = None,
     kb_version: str | None = None,
     no_signal: bool = False,
     safety_blocked: bool = False,
@@ -730,6 +821,7 @@ def _result(
         reviewed_case_ids=reviewed_case_ids or [],
         retrieval_mode=retrieval_mode,
         retrieval_status=retrieval_status,
+        router_status=router_status,
         kb_version=kb_version,
         no_signal=no_signal,
         safety_blocked=safety_blocked,
@@ -760,6 +852,7 @@ async def _record_event(
         reviewed_case_ids=result.reviewed_case_ids,
         retrieval_mode=result.retrieval_mode,
         retrieval_status=result.retrieval_status,
+        router_status=result.router_status,
         kb_version=result.kb_version,
         no_signal=result.no_signal,
         error_class=result.error_class,
@@ -781,6 +874,7 @@ def _attach_retrieval(result: CheckResult, retrieval: RetrievalResult) -> CheckR
             "reviewed_case_ids": retrieval.reviewed_case_ids,
             "retrieval_mode": retrieval.mode,
             "retrieval_status": retrieval.status,
+            "router_status": retrieval.router_status,
             "kb_version": retrieval.kb_version,
         }
     )

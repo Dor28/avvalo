@@ -31,7 +31,6 @@ ALLOWED_EVENT_NAMES = {
     "decision_answered",
     "share_clicked",
     "share_tapped",
-    "story_submitted",
     "deletion_requested",
     "deletion_completed",
 }
@@ -56,6 +55,7 @@ ALLOWED_FIELDS = {
     "output_tokens",
     "retrieval_mode",
     "retrieval_status",
+    "router_status",
     "reviewed_case_ids",
     "rule_ids",
     "safety_blocked",
@@ -109,7 +109,15 @@ CONTENT_VALUE_PATTERNS = (
     re.compile(r"(?i)(?<![a-z0-9])(?:[a-z]{2}\s?\d{7})(?![a-z0-9])"),
 )
 
-ALLOWED_ERROR_STAGES = {"ocr", "llm", "validate", "web", "bot"}
+ALLOWED_ERROR_STAGES = {
+    "ocr",
+    "llm",
+    "validate",
+    "web",
+    "bot",
+    "knowledge",
+    "url_reputation",
+}
 
 ALLOWED_ERROR_FIELDS = {
     "attempt",
@@ -117,6 +125,9 @@ ALLOWED_ERROR_FIELDS = {
     "reason",
     "status_code",
     "timeout_s",
+    "rate",
+    "checks",
+    "window_minutes",
 }
 
 

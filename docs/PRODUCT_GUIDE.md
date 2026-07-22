@@ -1,295 +1,220 @@
-# Avvalo — Product Guide (single source of truth)
+# Avvalo — Product Guide
 
-> **Status:** Authoritative product direction. Supersedes the accusation-graph model where they conflict.
-> **Last updated:** 2026-07-15 *(rev. 3 — knowledge-grounded AI pipeline locked in §3)*
-> **Owner:** Solo technical founder (Uzbekistan)
-> **Read first.** This is the consolidated guide. The older docs remain as background and reusable detail — see §15 for what carries over and what is retired.
+> **Status:** Canonical product direction
+> **Last updated:** 2026-07-22
+> **Rule:** If another document conflicts with this guide on product scope, this guide wins.
 
-Legend: ✅ locked · 🔶 hypothesis / recommended default (validate, don't assume) · ❌ deliberate non-goal · ⚖️ open legal question (confirm with counsel)
+## 1. Product in one sentence
 
----
+Avvalo helps people in Uzbekistan check a suspicious situation before they reply, pay,
+install something, sign, or share personal information.
 
-## 1. Vision — "Check before you commit"
+> **Verify the situation, artifact, process, or source — never the reputation of a person.**
 
-> **Avvalo helps ordinary people in Uzbekistan check a situation, message, document, payment, link, or deal — in Uzbek or Russian — before they commit money, identity, or trust.**
+Avvalo is one consumer product. Links, QR codes, payment requests, job offers, documents, and
+messages are different inputs to the same flow, not separate products.
 
-The one principle every product obeys, and the keystone of the whole direction:
+The habit we want to create is simple:
 
-> ✅ **Avvalo verifies the situation, document, or process — never the reputation of a person.**
+> **Have doubts? Send it to Avvalo before you act.**
 
-We examine *what was sent to the user* and tell them the red flags, what to verify, and what to ask. We do **not** build, store, or publish a database of accusations about identifiable people.
+## 2. The complete product loop
 
-Why this category is worth building now: Uzbekistan's e-commerce market was ~$1.2B in 2024 and is projected at $1.8–2.2B by 2027; Uzum alone reported $500M+ 2025 e-commerce GMV and $1.2B across fintech. As commerce digitizes, the need to "check before you commit" scales with it. *(Sources in [ADJACENT_PRODUCT_IDEAS.md](archive/ADJACENT_PRODUCT_IDEAS.md) §1.)*
+> **Send → Understand → Verify → Act → Share**
 
----
+### Send
 
-## 1a. What's locked vs. what's a hypothesis
+The user can submit pasted or forwarded text, a screenshot or photo, a link, a QR code, or a
+suspicious payment request, offer, document, or conversation. The channels are Telegram and the
+anonymous web checker. The supported language forms are `uz_latn`, `uz_cyrl`, and `ru`.
 
-*(Added after founder review, 2026-06-21. The guide is the authoritative direction, but several pieces are explicitly experiments — do not build as if they're proven.)*
+### Understand
 
-**🔒 Locked — build on these:**
-- The **vision** (§1) and **safety principles** (§4).
-- The **shared engine** (§3).
-- The **Avvalo micro-MVP** (§7) — one entry behaviour.
-- **Avvalo Merchants as the revenue hypothesis** (§8) — start merchant interviews now.
-- **No accusation database** (§14).
+Avvalo explains the details that deserve attention, pressure or manipulation patterns, claims that
+need independent confirmation, and questions the user should ask. This is an explanation, not a
+verdict about a person or organization.
 
-**🔬 Open — hypotheses to validate, NOT settled:**
-- **Telco/bank sponsorship** as a payer (§7, §11) — unproven; enterprise sales is slow.
-- **The product sequence after Avvalo** (§10) — let merchant demand, not this plan, decide the order.
-- **The Deal Check vertical** (§9) — choose vehicles *or* electronics only once a usable data source exists.
-- **"Pattern database = moat"** (§3) — it's a useful asset, not a moat.
-- **Database-registration & foreign-processing conclusions** (§12) — confirm with counsel / the regulator.
+### Verify
 
----
+**Avvalo Verify** is the signature capability. It checks only facts that can be established safely
+through an approved official source, curated official-contact catalog, or versioned local snapshot.
 
-## 2. Why we pivoted from the accusation-graph model
+Each displayed fact states what was established, the named source, when it was observed, and what
+it does not prove. A failed check is `unavailable`. An artifact absent from one source is only
+`not_found` in that named source; absence is never a conclusion about legitimacy.
 
-The original brief (`fraud_intelligence_startup_prompt.md`, removed from the repo — see git history) and [PRODUCT_DESIGN.md](archive/PRODUCT_DESIGN.md) described a *fraud-intelligence graph*: silently store entities (phones, handles, cards) and surface *"this person was reported N×."* A 2026-06-21 legal + monetization review concluded that model concentrates risk in one layer — the stored, queryable database of accusations about identifiable people:
+### Act
 
-1. **Criminal defamation.** In Uzbekistan defamation is a crime (Criminal Code **Art. 139** slander, **Art. 140** insult; online dissemination is an aggravating form), and "reported for fraud" imputes a crime (**Art. 168**). Civil liability (Civil Code ~Art. 100) puts the burden of proving a statement *true* on the operator.
-2. **A weak, contestable lawful basis** for processing the *non-consenting accused's* personal data. *(Note — wording corrected: the Personal Data Law (ZRU-547) has both consent **and** non-consent grounds, so processing was never **categorically** illegal. But for a commercial database that accuses identifiable people, the basis is shaky and contestable — risk enough.)*
+Avvalo gives the safest useful next action: independently open the official site or app, call an
+official number, inspect a register, delay payment or data sharing, or ask a trusted relative.
 
-**The pivot is a risk-reducing product decision, not a claim that the old model was strictly unlawful.** By verifying the *situation* (the user's own forwarded content) instead of rating *people*, both risks shrink dramatically, and the product gets simpler, safer, and easier to monetize honestly. We keep the useful engine; we drop the accusation database. *(Residual compliance in §12.)*
+### Share
 
----
+The user may share a sanitized warning or invite another person to check with Avvalo. Shared output
+contains only deterministic, non-identifying metadata and safe advice. It never reproduces submitted
+content, contacts, payment details, or an accusation.
 
-## 3. The shared engine ✅
+Share is distribution support, not a public allegation page, story network, or content community.
 
-All products are thin packages over **one backend**. Build the engine once; package it for each audience.
+## 3. What exists and what comes next
 
-```
-            ┌──────────────────────────────────────────────┐
- Telegram ─▶│  intake (guided categories + text + images)  │
-            │   → OCR (LOCAL / on-prem, v1) UZ + RU         │◀─ Web
-            │   → local rules/signals → PII minimization     │
-            │   → retrieve reviewed knowledge/cards          │
-            │   → LLM semantic analysis + safe validation    │
-            │   → 🚩/✅/❓ output (no verdict, no naming)     │
-            │   → no retention by default (v1)               │
-            └──────────────────────────────────────────────┘
-```
+### Built baseline
 
-- **Intake:** guided categories + freeform text + image upload (screenshots, photos).
-- **OCR — local-first ✅:** run **OCR locally / on-prem for v1**. A cloud OCR sees the *raw* screenshot (full cards, faces, third parties) *before* any redaction is possible — a cross-border-transfer problem SCCs don't fully solve (§12). Do OCR on home soil; send only minimized text onward.
-- **Minimization:** strip/minimize PII and **never store full card numbers**; strip EXIF/GPS from images; send only **genuinely minimized text** to the LLM.
-- **Hybrid analysis (the locally-tuned asset):** a deterministic, versioned, per-category **rule checklist** with UZ/RU keyword sets runs first and is authoritative; rules are high-precision facts, **not a gate for the LLM**. After minimization, the engine retrieves up to three relevant, reviewed knowledge cards/cases. The **LLM** still analyzes the full meaning when no rule or card matches, then writes the UZ/RU output. The validator prevents scores, person-level verdicts, invented database claims, and unsafe instructions. The executable contract is [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md).
-- **Knowledge roles stay separate:** broad retrieval cues may select a potentially relevant card without becoming a red flag; a reviewed case is guidance, never proof that the current situation or person matches it. Backend code validates allowlisted knowledge IDs instead of giving the model unrestricted database access.
-- **Pattern capture (later; useful asset — 🔬 not the moat):** the Avvalo micro-MVP retains **no submitted content or pattern examples by default**. After validation, Avvalo may retain only an **explicitly opt-in, manually reviewed, genuinely de-identified derivative** that improves the rules and powers community pattern-alerts (*"a new fake-delivery scam is circulating"*). The submitter's consent alone does **not** cover every person appearing in a forwarded message or screenshot. Useful — but **competitors can reproduce rules, anonymized examples, and alerts**, so don't mistake it for defensibility. The **stronger future moats** are: local **payment-provider integrations**, **merchant workflows + historical outcomes**, **labeled receipt/document examples**, **distribution partnerships**, and a **trusted UZ/RU safety brand**.
-  - **De-identification caveat:** removing obvious identifiers (names/phones/cards/usernames/faces) does **not** guarantee de-identification — distinctive wording and transaction context can still re-identify a person. Do not retain the derivative unless manual review confirms that re-identification risk is acceptably low; treat every retained example as still-sensitive.
+The repository already contains:
 
----
+- Telegram and anonymous web intake;
+- text and image processing with OCR;
+- local rules and signals, PII minimization, and reviewed knowledge retrieval;
+- LLM explanation behind a deterministic safety validator;
+- localized output in all three language forms;
+- consent, deletion, rate limits, privacy-safe events, and retention controls;
+- a sanitized sharing foundation;
+- local hash-based URL-reputation support that may remain disabled until production verification.
 
-## 4. Output & safety principles ✅
+The runtime exposes one active face, internally named `family`. Seller, payment-screenshot,
+courier, and refund situations enter this same checker; the relevant payment protections are part
+of the main rule and safety path. Avvalo Merchants, the scam library, story capture, and Scam Pulse
+are not dormant modes — they are retired surfaces.
 
-Every product returns the same fixed block, and never a verdict:
+This baseline can explain what is suspicious and what the user should verify. It must not be
+described as having checked an official source unless a typed Avvalo Verify result exists.
 
-- 🚩 **Red flags** found in what the user sent.
-- ✅ **What to verify** — concrete actions to confirm legitimacy.
-- ❓ **Questions to ask** the counterparty before committing.
+### Next product capability
 
-Hard rules:
-1. Verify the **situation/document/process — not a person**.
-2. Never say **"safe," "scammer," or "fraud confirmed."**
-3. Give **concrete verification actions**, not a fear score.
-4. Store **only** what creates lawful, consented, reusable value.
-5. **Minimize** every community example (no names/phones/cards/usernames/faces — and remember §3's caveat that this alone isn't full de-identification).
-6. Keep the **free product genuinely useful**.
-7. Let **organizations pay** to support, distribute, or embed protection — never let a sponsor influence a result, and never sell personal data.
-8. **Build one narrow wedge before** combining ideas into a universal assistant.
+The next capability is the strict Avvalo Verify MVP in §4. It is **not yet authorized for
+implementation**. First it must pass [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md).
 
----
+## 4. Avvalo Verify MVP
 
-## 5. Languages ✅
+Only three verification families belong to the MVP.
 
-Uzbek (**Latin and Cyrillic**) + Russian, from v1. Auto-detect input language; reply in the same. OCR, rule keyword sets, and output all cover all three.
+### 4.1 Official identity match
 
----
+Maintain a founder-reviewed catalog for commonly impersonated organizations: official name,
+domains, support pages, published Telegram handles, source URL, and last-reviewed time.
 
-## 6. The product portfolio
+Avvalo may report an exact match or exact mismatch. A match never makes the whole situation safe.
 
-Three products, one engine. The order below is the **current working hypothesis — not locked** (see §1a, §10).
+### 4.2 Link and QR evidence
 
-| # | Product | Audience | Role | Who pays | Legal risk |
-|---|---|---|---|---|---|
-| **1** | **Avvalo** | Families / consumers | Free community wedge — reach, mission, brand | Family plan + sponsor *(both hypotheses)* | 🟢 Low |
-| **2** | **Avvalo Merchants** (avvalo.uz/merchants) | Small TG/IG merchants | The revenue engine — recurring B2B | Merchant subscription | 🟡 Low–med |
-| **3** | **Deal Check** | Big-ticket buyers | Parked until a vertical + data source exist | Per-report + referral fees | 🟡 Low–med |
+Avvalo may decode a QR code locally, normalize the destination domain including punycode and
+deceptive subdomains, compare it with the official catalog, and consult a local cached
+URL-reputation dataset.
 
-Parked for later (don't build now): **JobPass, Fine Print, Complaint, LinkSafe** — see §17.
+Avvalo must not open, render, or execute an arbitrary submitted page. Submitted URLs and domains
+remain ephemeral and are not echoed back by default.
 
----
+### 4.3 Regulated organization and license routing
 
-## 7. Phase 1 — Avvalo (free / community)
+Use only named official sources appropriate to the claim, such as Central Bank registers, official
+license search, or another permitted state register.
 
-**Concept.** A Telegram-first safety assistant for protecting parents, relatives, and less digitally confident family members.
+Prefer scheduled local snapshots. When a source has no permitted API or requires authentication,
+provide a sourced official deep link and a safe extracted search value instead of scraping the site
+or pretending the check succeeded.
 
-**✅ The v1 is ONE behaviour, not six features.** The whole product the user sees is a single habit:
+### Outside the MVP
 
-> *"Forward any suspicious message or screenshot before you respond or pay."*
+- general autonomous web search or reverse-image search;
+- arbitrary announcement search;
+- screenshot, receipt, document, or deepfake authenticity verdicts;
+- person, phone, card, account, or handle reputation lookup;
+- automatic reports or messages to third parties.
 
-The user does one thing; Avvalo replies with the 🚩/✅/❓ read in UZ/RU. **Internally** the engine recognizes several patterns — fake bank-support, "your child is in trouble" / emergency, payment requests, suspicious links & QR codes, job/investment offers — but these are **detection categories behind one entry point, never presented to the user as separate products.**
+## 5. User-visible answer contract
 
-**Output:** the 🚩/✅/❓ block + the manipulation pattern explained + concrete verification steps. Never "safe"/"scammer."
+A completed answer contains these blocks, in order:
 
-**Free tier:** limited checks · UZ/RU explanations · community scam-pattern alerts · short education guides.
+1. **What Avvalo could establish** — at most three decision-relevant source facts.
+2. **What deserves attention** — red flags in the submitted situation.
+3. **What to do now** — concrete independent action.
+4. **What remains unknown** — limitations and unavailable checks.
+5. **What to ask** — short questions for the counterparty or official organization.
 
-**Paid family plan (later, 🔬 a hypothesis):** up to 5 family members · higher/unlimited checks · shared family alerts (with explicit consent) · priority analysis · monthly "new scams affecting families" digest.
+Allowed evidence statuses are `supported`, `exact_mismatch`, `not_found`, and `unavailable`.
+The answer never aggregates them into a score or verdict.
 
-**Who pays — 🔬 primary monetization hypothesis to validate, NOT an assumption:** the family subscription is one option; the bigger bet is a **telecom/bank bundle or sponsored digital-safety campaign** (B2B2C). Enterprise sponsorship can take **months** and may require procurement, security review, and significant traction. **Do not build Avvalo assuming a sponsor will appear.** Keep costs near zero, and validate willingness-to-pay (family plan) and merchant revenue (Avvalo Merchants) **in parallel.**
+## 6. Evidence rules
 
-**Proves:** whether the one-behaviour wedge earns reach and repeat use, cheaply — and seeds the scam-pattern content.
+Evidence is structured data, not model prose. Every adapter result contains a stable fact ID,
+status, deterministic claim template, source name, source URL, observation time, and limitations.
 
----
+The LLM may explain allowlisted facts. It may not browse unrestricted sources; invent a fact,
+citation, lookup, or timestamp; turn `not_found` into “does not exist”; turn a match into “safe”;
+or combine facts into a person-level judgment.
 
-## 8. Phase 2 — Avvalo Merchants (paid / merchant, avvalo.uz/merchants) ✅ *(the revenue hypothesis)*
+Unknown fact IDs, missing source metadata, stale data outside its freshness window, or an adapter
+failure must fail closed and produce `unavailable`.
 
-**Concept.** A Telegram assistant for small merchants selling via Instagram, Telegram, and informal channels — the **revenue bet**.
+## 7. Privacy and safety
 
-**What merchants forward:** a payment screenshot · an order conversation · a delivery request · a return/refund request · a suspicious customer message.
+- Submitted text, OCR text, captions, images, URLs, contacts, and generated answers are ephemeral
+  and are not persisted or logged.
+- The existing `story_submission.minimized_text` field is a legacy stewardship-only exception.
+  No current flow writes or reads it. Existing rows remain covered by `/delete_my_data` and
+  retention until a separately authorized data purge; the table must not become a content source.
+- Raw screenshots stay inside the controlled OCR boundary; only minimized text may reach an
+  external LLM.
+- Source snapshots contain public reference data, never user submissions.
+- Avvalo never claims to have checked every database.
+- Avvalo never outputs “safe,” “scammer,” “fraud confirmed,” a trust score, or a risk score.
+- Avvalo never contacts a counterparty or institution for the user.
+- Every user-facing string exists in `uz_latn`, `uz_cyrl`, and `ru`.
 
-**What Avvalo checks:** whether receipt fields are internally consistent · whether screenshot editing is suspected · whether order vs. claimed-payment amounts match · whether the chat matches known fake-courier/refund patterns · **what the merchant must verify in their real bank/payment app.**
+## 8. Validation gates
 
-> ✅ **Hard rule:** never claim money *arrived* from a screenshot. A definitive payment result requires an **authorized payment-provider integration** — which is the moat, added later.
+Before implementation, the manual test must show:
 
-**The moat.** Image-forensics is adversarial and only a *hint*. The must-have product is the **verification checklist + authorized payment-provider API confirmation** ("did the money really land in your account?"). Sell that; treat forensics as a supporting signal.
+- at least 40% of representative scenarios produce a decision-relevant source fact;
+- at least 70% of participants prefer the evidence-backed answer to advice alone;
+- zero invented, overstated, unsourced, or person-level facts.
 
-**Monetization:** monthly merchant subscription · team accounts for small shops · payment-provider/marketplace integration (later) · white-label merchant-safety assistant.
+After implementation, the measured alpha must show:
 
-**Why it's the revenue bet:** the only idea with all four of **payer + frequency + ROI + retention** — merchants face suspicious orders repeatedly (recurring need, not a one-time fear product), and one caught fake-payment pays for a year.
+- at least 60 activated users and 150 completed real checks;
+- evidence coverage of at least 35%;
+- audited fact precision of at least 98%, with zero critical false facts;
+- at least 70% evidence usefulness and at least 25% decision impact;
+- 100% of displayed facts carry source and observation time;
+- zero privacy incidents and zero person-level verdicts.
 
-> **🔬 Validate now, in parallel with Avvalo:** interview merchants and test willingness-to-pay from week 1. **If merchants offer to pay before consumers develop repeat usage, move Avvalo Merchants forward immediately** — the §10 order is not locked.
+Definitions and the procedure live in [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md).
 
-**Note:** merchants are a **different audience and go-to-market** from Avvalo's families — the engine is shared, the GTM is not.
+## 9. Current sequence
 
----
+1. Finish and record production smoke verification for the built baseline.
+2. Produce the 30-scenario Avvalo Verify validation packet.
+3. Run paired advice-only versus evidence-backed sessions.
+4. Make one explicit `go`, `revise once`, or `stop` decision.
+5. Only after `go`, write one executor-ready task for the three-family MVP.
+6. Build and audit the narrow MVP.
+7. Run the measured alpha before expanding scope.
 
-## 9. Phase 3 — Avvalo Deal Check (paid reports) 🔶 *(parked)*
+The executable order is maintained in [ROADMAP.md](ROADMAP.md).
 
-**Concept.** A pre-purchase assistant for expensive transactions — cars, electronics, apartments, rentals.
+## 10. Non-goals
 
-**What the user uploads:** the listing · seller conversation · payment request · available documents.
+- Avvalo Merchants or any merchant-first direction;
+- separate products for jobs, deals, links, documents, or payments;
+- an accusation database, public allegation pages, or an open forum;
+- a content library, story flywheel, trend feed, or training product as the current strategy;
+- voice, group monitoring, family accounts, a mobile app, or new product faces;
+- general-purpose browsing or an agent that “checks everything”;
+- collecting submitted content so a model can learn;
+- payment, escrow, or marketplace infrastructure;
+- choosing a revenue model before the core evidence behavior is validated.
 
-**What Avvalo provides:** a deal-specific verification checklist · missing-document detection · price & payment red flags · questions for the seller · inspection/notary/payment-safety steps · a structured "what is known / what is missing" report.
+## 11. Documentation authority
 
-**Monetization:** one-time paid deal reports · premium vehicle/real-estate reports · **referrals** to inspection, insurance, legal, and notary services (the real upside on big-ticket deals).
+- This file defines the product and safety boundary.
+- [ROADMAP.md](ROADMAP.md) defines the order of work.
+- [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md) defines the experiment.
+- [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) defines the current implemented architecture.
+- [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) defines explanation knowledge; a knowledge
+  card is not official-source evidence.
 
-**🔬 Stays parked until:** **one vertical is chosen (likely vehicles or electronics) AND a useful/licensed data source is available.** Without real data integrations it's only a generic checklist generator — so don't schedule it as "the third product"; unpark it when a vertical + data source are in hand.
+Superseded ideas and implementation records belong in Git history, not the active documentation
+tree.
 
----
-
-## 10. Build order & sequencing 🔶 (working hypothesis — not locked)
-
-**Current hypothesis: Avvalo → Avvalo Merchants → Deal Check — but the order after Avvalo is decided by evidence, not by this plan.**
-
-- **Avvalo is a 2–4 week experiment**, not a multi-month build — ship the one-behaviour micro-MVP (§7), then measure the success/failure gates (§16).
-- **Interview merchants in parallel from week 1.** **If merchants offer to pay before consumers develop repeat usage, move Avvalo Merchants forward immediately.**
-- **Deal Check stays parked** until a vertical (vehicles or electronics) is selected and a useful data source is available (§9).
-
-| Phase | Ships | Proves |
-|---|---|---|
-| **1 — Avvalo** *(2–4 wk experiment)* | Shared engine + one-behaviour checker + first community alert | Cheap reach + repeat use? |
-| **2 — Avvalo Merchants** *(unlock on merchant demand)* | Merchant analysis + verification checklist + subscription (+ payment integration later) | Recurring revenue + retention |
-| **3 — Deal Check** *(unlock on vertical + data)* | Deal report (checklist first; data integrations later) + referrals | High-value transactional revenue |
-
-> **Honest watch-item:** Avvalo-first defers revenue, and its payer is an unproven sponsorship hypothesis (§7). So keep running costs near zero, run **merchant validation alongside** from day one, and be ready to flip to Avvalo Merchants the moment the evidence says so.
-
-**Parallel, non-engineering (start in Phase 1):** merchant interviews · telco/bank sponsorship discovery · scam-pattern content authoring (rules + education, UZ-Latin/Cyrillic + RU) · the legal confirmations in §12.
-
----
-
-## 11. Monetization & sustainability 🔶
-
-Free for the core action; the money comes from elsewhere. Consumers are the **audience**, not the main **payer**. Each line below is a hypothesis to validate, not booked revenue.
-
-- **Merchant subscriptions** (Avvalo Merchants) — the **primary** revenue bet; validate willingness-to-pay now.
-- **Telco/bank bundles & sponsored campaigns** (Avvalo) — *a hypothesis; unproven and slow (§7). Don't depend on it.*
-- **Paid deal reports + referral fees** (Deal Check) — after unparking.
-- **White-label** checkers for consumer organizations, employers, schools.
-- **Optional tips / Telegram Stars** — cost-offset only, never the model.
-
-Non-negotiable: **never sell personal data, and never let a sponsor influence an analysis result.**
-
----
-
-## 12. Legal & privacy posture ⚖️ (open — confirm with counsel, do NOT lock)
-
-The §1 principle (verify the situation, not the person) **materially reduces** the *big* risks (criminal defamation + processing the non-consenting accused), but does not eliminate them: forwarded content can still contain identifiable, non-consenting third parties. What remains is ordinary data-protection compliance — real, because we still process personal data, but the **obligations below are open questions to confirm with a licensed Uzbek lawyer / the regulator, not locked product statements.**
-
-**Settled enough to act on now:**
-- **Form an entity (MChJ/LLC)** as the operator / publisher of record.
-- **First-run consent + clear privacy notice** (what's stored, why, retention, how to delete); record consent version + timestamp.
-- **Data minimization** — never store full card numbers; strip EXIF/GPS; keep only minimized examples; **local OCR for v1** (§3).
-- **Disclaimers** — an explanation tool, **not** legal or financial advice; never "safe"/"scammer."
-- **Honor data-subject access / correction / deletion** requests.
-
-**⚖️ Open — confirm with counsel / regulator (these are NOT locked):**
-- **Which authority + whether/when registration is required.** Per the **official registry pd.gov.uz**, the responsible body is the **Migration & Personalization Department under the Ministry of Internal Affairs (MVD)**; several secondary/law-firm sources still name a *Personalization Agency under the Ministry of Justice* — **confirm the current authority.** Registration is **not** unconditionally "before any processing": the amended **Art. 20** ties mandatory registration to databases that must be stored domestically under **Art. 27¹**, while **Art. 31** retains broader registration language — a genuine tension. Confirm *whether, when, and which* databases must be registered.
-- **Foreign processing is only PARTLY solved by SCCs.** The 27 Mar 2026 amendment ([lex.uz/docs/8099215](https://lex.uz/docs/8099215)) does permit some data abroad via adequacy / SCCs / a listed standard (biometric + telecom-subscriber data stay domestic). **But** Art. 15 still governs cross-border *transfer*, Art. 31 separately governs *entrusting processing* to a third party, the submitting user's consent does **not** cover every person shown in a screenshot, and **cloud OCR sees the raw screenshot before any redaction is possible.** SCCs cover only part of the problem.
-  - **→ v1 product decision (de-risks all of the above):** **run OCR locally / on-prem**, then send only **genuinely minimized text** to the LLM (already baked into §3). Revisit cloud OCR only after counsel signs off.
-
-> Not legal advice. Engage a licensed Uzbek *advokat* to confirm the registration trigger and the foreign-processing path, and to draft the ToS + privacy policy (UZ Latin/Cyrillic + RU) before launch. *(See the current consolidated Personal Data Law + the 2026 amendment.)*
-
----
-
-## 13. Metrics
-
-- **Avvalo:** weekly active users, checks/user, **repeat use** (2nd check in 14 days), share/invite rate, "confirmed avoided a payment," cost per check.
-- **Avvalo Merchants:** merchant-interview → willingness-to-pay signal, trial→paid conversion, monthly churn, revenue/ARPU, checks/merchant/week.
-- **Deal Check:** (after unparking) reports sold, referral revenue, repeat rate.
-- **Cross-cutting:** cost per check trending **down**; rule-coverage & education freshness.
-
----
-
-## 14. Non-goals ❌
-
-- ❌ A stored/queryable **database of accusations about identifiable people**.
-- ❌ A **"this person is a scammer" lookup**, scammer clusters, or "reported N×" output about a person.
-- ❌ **Risk scores** or **"safe" verdicts**.
-- ❌ Selling personal data; letting sponsors influence results.
-- ❌ Public/shareable accusation pages.
-- ❌ Building all the products at once, or presenting Avvalo as six features (build one wedge / one behaviour first).
-
----
-
-## 15. Relationship to the other docs (supersession map)
-
-| Doc | Status |
-|---|---|
-| **This guide** | ✅ Authoritative product direction. Start here. |
-| [PRODUCT_DESIGN.md](archive/PRODUCT_DESIGN.md) | Background. **Reuse:** intake §6, output §5, languages §7, hybrid engine §8a, OCR/redaction/privacy §11a, usage limits §10, education. **Retired:** silent accusation graph & clusters §8b/§8e, report-state machine §8c, "reported N×" evidence line, standalone scammer reports, the accused-dispute machinery §8f/US-6.1, B2B fraud-intel-API-as-the-business, "graph-match rate" as the headline metric. |
-| [ADJACENT_PRODUCT_IDEAS.md](archive/ADJACENT_PRODUCT_IDEAS.md) | Source of the reframe and the 8 product ideas. This guide selects and sequences three of them. |
-| `FUNDABILITY_AND_GTM.md` *(removed from repo — git history)* | Background. The "anti-fraud data infrastructure / B2B-API" thesis is **deprioritized** in favor of merchant subscriptions + sponsorship; the IT Park / regional / de-risk-the-founder advice still applies. |
-| `USER_STORIES.md` *(removed from repo — git history)* | Background. Epic 1 (check), Epic 4 (education), and the cross-cutting consent/limits/redaction stories carry over; Epics 2/3/5/6 (reports, accusation-based alerts, accusation moderation, the accused) are retired with the graph. |
-| [SESSION_DECISIONS.md](archive/SESSION_DECISIONS.md) | History — includes the 2026-06-21 pivot entry. |
-
-**Carried-over engine = reusable code/spec.** The pivot changes *what we store and output about people*, while the target engine is now OCR → local rules/signals → minimize → reviewed-knowledge retrieval → LLM → validator → 🚩/✅/❓. See [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md); updating the contract does not by itself prove the current code implements every stage.
-
----
-
-## 16. Open decisions / next deliverable
-
-1. **Tech stack** — Telegram framework; **OCR — local/on-prem for v1** (§12), UZ Latin/Cyrillic + RU; LLM provider (fed only minimized text); a **relational DB is enough** (no graph DB — there's no accusation graph); web framework; UZ-or-compliant hosting.
-2. **Pricing** — Avvalo Merchants monthly tier; size it **bottoms-up** (active UZ TG/IG merchants × realistic paying % × price), not from the $2B TAM.
-3. **Legal confirmations** (§12) — the registration trigger and foreign-processing path, with a local lawyer.
-
-> **Completed 2026-06-21:** [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md) is the Avvalo *validation* spec—not a full technical build spec. It defines:
-> 1. **one entry flow** (the single "forward a suspicious message" path),
-> 2. **five example outputs** (five real pasted scenarios → the exact 🚩/✅/❓ reply),
-> 3. **retention rules** (what's kept, minimized, or discarded, and for how long),
-> 4. a **cost ceiling per check**, and
-> 5. **measurable success / failure gates** (what result greenlights building further vs. kills or pivots it).
->
-> **Next:** implement the validation build and run its private alpha. The full engine schema comes *after* this experiment validates demand.
-
----
-
-## 17. Idea backlog (parked, not now)
-
-Kept for later; each reuses the same engine:
-
-- **JobPass** — job/visa/migration-scam checks. High community impact (large UZ labor-migration market); monetization is lumpy/partner-funded (migration orgs, recruiters, sponsored worker-safety). The mission-first alternative to Deal Check.
-- **Fine Print** — plain-language contract explainer (loans, rentals, services). Broad/horizontal; pay-per-doc + white-label. Must stay an explanation tool, not a lawyer substitute.
-- **Complaint** — consumer-rights assistant that drafts a structured complaint in UZ/RU. A feature or grant-funded module more than a standalone business.
-- **LinkSafe** — link/QR/phishing checker. Globally commoditized — keep it as a **free feature inside Avvalo**, not a standalone product.
-- **Antispam / Group Guard** — automatic anti-scam protection for Telegram **groups & channels**: add the live bot ([@Avvalo_official_bot](https://t.me/Avvalo_official_bot)) as an admin and it screens incoming messages with the shared engine, removing scam links / phishing / spam and CAPTCHA-gating new joiners. Reuses the engine but flips from *user-initiated checks* to *passive monitoring + automated content moderation* — so it needs a conservative default, an admin appeal path, and its own install-time privacy notice (it reads group messages, not private forwards). Detail in [ADJACENT_PRODUCT_IDEAS.md](archive/ADJACENT_PRODUCT_IDEAS.md) §13. 🔬 future.
+Any new feature stays outside the active roadmap until evidence shows it is more important than
+improving this core loop.

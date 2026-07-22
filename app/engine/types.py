@@ -75,6 +75,7 @@ class DraftOutput(BaseModel):
     pattern: str | None = None
     verify: list[str] = Field(default_factory=list)
     ask: list[str] = Field(default_factory=list)
+    addressed_rule_ids: list[str] = Field(default_factory=list)
 
 
 class CheckResult(BaseModel):
@@ -88,6 +89,7 @@ class CheckResult(BaseModel):
     reviewed_case_ids: list[str] = Field(default_factory=list)
     retrieval_mode: str | None = None
     retrieval_status: str | None = None
+    router_status: str | None = None
     kb_version: str | None = None
     no_signal: bool = False
     safety_blocked: bool = False

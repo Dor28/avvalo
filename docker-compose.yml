@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     environment:
       POSTGRES_DB: avvalo
       POSTGRES_USER: avvalo
@@ -32,6 +32,18 @@ services:
       LLM_FALLBACK_BASE_URL: ${LLM_FALLBACK_BASE_URL:-}
       LLM_FALLBACK_API_KEY: ${LLM_FALLBACK_API_KEY:-}
       LLM_FALLBACK_MODEL: ${LLM_FALLBACK_MODEL:-}
+      KNOWLEDGE_ROUTER_ENABLED: ${KNOWLEDGE_ROUTER_ENABLED:-false}
+      KNOWLEDGE_ROUTER_BASE_URL: ${KNOWLEDGE_ROUTER_BASE_URL:-}
+      KNOWLEDGE_ROUTER_API_KEY: ${KNOWLEDGE_ROUTER_API_KEY:-}
+      KNOWLEDGE_ROUTER_MODEL: ${KNOWLEDGE_ROUTER_MODEL:-}
+      KNOWLEDGE_ROUTER_TIMEOUT_S: ${KNOWLEDGE_ROUTER_TIMEOUT_S:-10}
+      URL_REPUTATION_ENABLED: ${URL_REPUTATION_ENABLED:-false}
+      URLHAUS_FEED_URL: ${URLHAUS_FEED_URL:-https://urlhaus.abuse.ch/downloads/csv_online/}
+      OPENPHISH_FEED_URL: ${OPENPHISH_FEED_URL:-https://openphish.com/feed.txt}
+      URL_FEEDS_REFRESH_HOURS: ${URL_FEEDS_REFRESH_HOURS:-12}
+      KNOWLEDGE_GAP_DEFAULT_DAYS: ${KNOWLEDGE_GAP_DEFAULT_DAYS:-7}
+      KNOWLEDGE_UNAVAILABLE_ALERT_THRESHOLD: ${KNOWLEDGE_UNAVAILABLE_ALERT_THRESHOLD:-0.20}
+      KNOWLEDGE_UNAVAILABLE_ALERT_WINDOW_MINUTES: ${KNOWLEDGE_UNAVAILABLE_ALERT_WINDOW_MINUTES:-30}
       OPERATOR_ALERT_CHAT_ID: ${OPERATOR_ALERT_CHAT_ID:-}
       OPERATOR_ALERT_DEBOUNCE_S: ${OPERATOR_ALERT_DEBOUNCE_S:-900}
       SENTRY_DSN: ${SENTRY_DSN:-}
@@ -50,7 +62,7 @@ services:
   ollama:
     # Optional local LLM for dev: docker compose --profile local-llm up -d ollama
     # Then pull once: docker compose exec ollama ollama pull qwen2.5:7b-instruct
-    image: ollama/ollama:latest
+    image: ollama/ollama:latest@sha256:6345fbc18bd73a1e16404be681dbc6fd291a027cab43ed541abe78c4c81051b0
     profiles: ["local-llm"]
     ports:
       - "${OLLAMA_PORT:-11434}:11434"

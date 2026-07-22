@@ -31,6 +31,16 @@ decompress() {
 }
 
 echo "[restore] restoring ${DUMP}"
-decompress | docker compose -f "${COMPOSE_FILE}" exec -T db psql -U avvalo -d avvalo
+echo "[restore] stopping the app so no writes race the restore"
+docker compose -f "${COMPOSE_FILE}" stop app
 
-echo "[restore] done — restart the app: docker compose -f docker-compose.prod.yml restart app"
+# --single-transaction rolls the entire restore back if any statement fails;
+# ON_ERROR_STOP makes psql return non-zero instead of continuing after an SQL
+# error. The app intentionally remains stopped when restore fails.
+decompress | docker compose -f "${COMPOSE_FILE}" exec -T db \
+	psql -X --set ON_ERROR_STOP=1 --single-transaction -U avvalo -d avvalo
+
+echo "[restore] restore succeeded; starting the app and waiting for health"
+docker compose -f "${COMPOSE_FILE}" up -d --wait --wait-timeout 180 app
+
+echo "[restore] done"

@@ -2,18 +2,20 @@
 
 from sqlalchemy import select
 
+from app.data import repo
 from app.data.models import CheckEvent
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.llm import LLMResponse
 from app.engine.ocr import OCRResult
 from app.engine.types import DraftOutput
+from tests.support import addressed_rule_ids
 
 
 class FakeLLMProvider:
     def __init__(self) -> None:
         self.calls = 0
 
-    async def analyze(self, **_kwargs) -> LLMResponse:
+    async def analyze(self, **kwargs) -> LLMResponse:
         self.calls += 1
         return LLMResponse(
             draft=DraftOutput(
@@ -21,6 +23,7 @@ class FakeLLMProvider:
                 pattern="authority pressure",
                 verify=["Use an official channel you find yourself."],
                 ask=["Ask why this cannot wait."],
+                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
             ),
             input_tokens=100,
             output_tokens=50,
@@ -70,6 +73,30 @@ async def test_run_check_text_returns_result_and_records_event(session) -> None:
     assert "fs.credential.otp" in stored_event.rule_ids
 
 
+async def test_rate_limit_reservation_commits_before_external_llm_work(session) -> None:
+    class CommitAwareLLM(FakeLLMProvider):
+        async def analyze(self, **kwargs) -> LLMResponse:
+            # The rate-limit row must not stay locked while a remote provider runs.
+            assert not session.in_transaction()
+            return await super().analyze(**kwargs)
+
+    result = await run_check(
+        CheckInput(
+            face="family",
+            user_key="short-rate-transaction",
+            language=Language.ru,
+            input_type=InputType.text,
+            raw_text="Bank xodimimiz. SMS kodni yuboring.",
+        ),
+        session=session,
+        llm_provider=CommitAwareLLM(),
+        commit_rate_limit_reservation=True,
+    )
+    await session.commit()
+
+    assert result.status == CheckStatus.ok
+
+
 async def test_run_check_image_uses_ocr_and_records_only_metadata(session) -> None:
     ocr_text = (
         "Bank xavfsizlik xizmatidanmiz. Kartangiz bloklanadi. "
@@ -110,6 +137,35 @@ async def test_run_check_image_uses_ocr_and_records_only_metadata(session) -> No
     assert "SMS orqali" not in "".join(stored_values)
 
 
+async def test_image_check_combines_typed_context_caption_and_ocr(session) -> None:
+    class CapturingLLM(FakeLLMProvider):
+        user_prompt = ""
+
+        async def analyze(self, **kwargs) -> LLMResponse:
+            self.user_prompt = kwargs["user"]
+            return await super().analyze(**kwargs)
+
+    llm = CapturingLLM()
+    await run_check(
+        CheckInput(
+            face="family",
+            user_key="u-image-context",
+            language=Language.ru,
+            input_type=InputType.image,
+            raw_text="typed context words",
+            caption="image caption words",
+            image_bytes=b"private-image-bytes",
+        ),
+        session=session,
+        llm_provider=llm,
+        ocr_provider=FakeOCRProvider(text="visible OCR words", confidence=0.99),
+    )
+
+    assert "typed context words" in llm.user_prompt
+    assert "image caption words" in llm.user_prompt
+    assert "visible OCR words" in llm.user_prompt
+
+
 async def test_run_check_low_ocr_returns_without_llm(session) -> None:
     llm = FakeLLMProvider()
     result = await run_check(
@@ -128,6 +184,7 @@ async def test_run_check_low_ocr_returns_without_llm(session) -> None:
     assert result.status == CheckStatus.low_ocr
     assert result.ocr_confidence == 0.2
     assert llm.calls == 0
+    assert await repo.get_usage(session, user_key="u-low-ocr", face="family") == 1
 
 
 async def test_run_check_never_persists_ephemeral_input(session) -> None:

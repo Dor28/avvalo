@@ -46,7 +46,7 @@ async def test_operator_alert_handler_sends_and_debounces() -> None:
     try:
         log_error("llm", "LLMProviderError", face="family")
         log_error("llm", "LLMProviderError", face="family")  # same key -- debounced
-        log_error("ocr", "OCRProviderError", face="merchants")  # different key -- sent
+        log_error("ocr", "OCRProviderError", face="family")  # different stage/type -- sent
 
         await asyncio.gather(*handler._pending)  # let the fire-and-forget sends finish
     finally:

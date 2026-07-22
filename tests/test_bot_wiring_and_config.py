@@ -1,7 +1,7 @@
 """Regression tests for the second review-fix batch.
 
 Covers:
-- #4  DAILY_LIMIT_* settings actually drive the per-face daily limit.
+- #4  DAILY_LIMIT_FAMILY actually drives the unified check limit.
 - #5  the Telegram content handler builds a CheckInput; feedback keyboard is
       localized.
 - #6  the web session cookie honors the configured Secure flag.
@@ -12,7 +12,7 @@ Covers:
 from starlette.responses import Response
 
 from app.bot.handlers import _build_check_input
-from app.bot.keyboards import post_check_keyboard
+from app.bot.keyboards import feedback_callback_data, parse_feedback_callback, post_check_keyboard
 from app.bot.texts import t
 from app.config import Settings
 from app.data import repo
@@ -21,7 +21,9 @@ from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.faces import FACES
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput
+from app.main import PLACEHOLDER_TOKEN, configured_bot_specs
 from app.web.session import WebSession, set_web_session_cookie
+from tests.support import addressed_rule_ids
 
 
 def _settings(**overrides) -> Settings:
@@ -39,12 +41,13 @@ def _settings(**overrides) -> Settings:
 
 
 class _OkLLM:
-    async def analyze(self, **_kwargs) -> LLMResponse:
+    async def analyze(self, **kwargs) -> LLMResponse:
         return LLMResponse(
             draft=DraftOutput(
                 red_flags=["The message asks for a one-time code."],
                 verify=["Open the official app yourself."],
                 ask=["Which official channel shows this request?"],
+                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
             ),
             input_tokens=10,
             output_tokens=5,
@@ -68,10 +71,10 @@ async def test_configured_daily_limit_overrides_face_default(session) -> None:
     assert statuses == [CheckStatus.ok, CheckStatus.ok, CheckStatus.rate_limited]
 
 
-def test_settings_daily_limit_for_maps_faces() -> None:
-    settings = _settings(daily_limit_family=7, daily_limit_merchants=11)
+def test_settings_daily_limit_for_maps_active_face() -> None:
+    settings = _settings(daily_limit_family=7)
     assert settings.daily_limit_for("family") == 7
-    assert settings.daily_limit_for("merchants") == 11
+    assert settings.daily_limit_for("merchants") is None
     assert settings.daily_limit_for("unknown") is None
 
 
@@ -105,13 +108,18 @@ async def test_build_check_input_rejects_unsupported_message() -> None:
 
 
 def test_post_check_keyboard_is_localized_and_keeps_callbacks() -> None:
-    kb = post_check_keyboard("ru")
+    check_id = "11111111-1111-4111-8111-111111111111"
+    kb = post_check_keyboard("ru", check_id)
     labels = [b.text for row in kb.inline_keyboard for b in row]
     callbacks = [b.callback_data for row in kb.inline_keyboard for b in row if b.callback_data]
     assert t("fb_useful", "ru") in labels and t("fb_verify", "ru") in labels
     assert t("fb_share", "ru") in labels
-    assert "feedback:usefulness:yes" in callbacks
-    assert "feedback:next_action:delay_stop" in callbacks
+    usefulness = feedback_callback_data("usefulness", "yes", check_id)
+    next_action = feedback_callback_data("next_action", "delay_stop", check_id)
+    assert usefulness in callbacks
+    assert next_action in callbacks
+    assert parse_feedback_callback(usefulness)[:2] == ("usefulness", "yes")
+    assert all(len(callback.encode("utf-8")) <= 64 for callback in callbacks)
 
 
 def test_post_check_keyboard_uses_share_callback_when_check_id_exists() -> None:
@@ -183,3 +191,17 @@ async def test_usefulness_update_does_not_clear_next_action(session) -> None:
     assert row is not None
     assert row.usefulness == "partly"
     assert row.next_action == "verify"
+
+
+def test_process_uses_single_telegram_token_for_family() -> None:
+    settings = _settings(telegram_token="bot-token")
+
+    specs = configured_bot_specs(settings)
+
+    assert [spec.face_id for spec in specs] == ["family"]
+    assert [spec.token for spec in specs] == ["bot-token"]
+
+
+def test_process_ignores_placeholder_or_empty_telegram_token() -> None:
+    assert configured_bot_specs(_settings(telegram_token=PLACEHOLDER_TOKEN)) == []
+    assert configured_bot_specs(_settings(telegram_token="")) == []

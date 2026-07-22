@@ -12,6 +12,7 @@ from app.engine.format import format_fallback, format_result, format_status_mess
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput, RuleHit
 from app.engine.validate import validate
+from tests.support import addressed_rule_ids
 
 
 class SequenceLLMProvider:
@@ -22,6 +23,9 @@ class SequenceLLMProvider:
     async def analyze(self, **kwargs) -> LLMResponse:
         self.calls.append(kwargs)
         draft = self.drafts[min(len(self.calls) - 1, len(self.drafts) - 1)]
+        draft = draft.model_copy(
+            update={"addressed_rule_ids": addressed_rule_ids(kwargs["user"])}
+        )
         return LLMResponse(draft=draft, input_tokens=100, output_tokens=40)
 
 
@@ -112,6 +116,48 @@ def test_validator_rejects_verdict_words_contacts_and_unsafe_instructions() -> N
         rule_hits,
         Language.ru,
     ).ok
+
+
+def test_validator_rejects_direct_verdicts_scores_lookup_claims_and_bare_domains() -> None:
+    unsafe_texts = (
+        "Это мошенничество.",
+        "Это является мошенничеством.",
+        "Bu firibgarlik.",
+        "Bu firibgarlikdir.",
+        "Бу фирибгарлик.",
+        "Risk score: 95%.",
+        "There is a 95 percent chance of danger.",
+        "Уровень риска: 9/10.",
+        "The external database shows no matches.",
+        "По базе данных совпадений нет.",
+        "Tashqi bazada bu hisob tasdiqlandi.",
+        "Use bank.uz to verify.",
+    )
+
+    for unsafe_text in unsafe_texts:
+        result = validate(
+            DraftOutput(
+                red_flags=[unsafe_text],
+                verify=["Use an independent official channel."],
+                ask=["What can be confirmed independently?"],
+            ),
+            [],
+            [],
+            Language.ru,
+        )
+        assert not result.ok, unsafe_text
+
+    allowed_percentage = validate(
+        DraftOutput(
+            red_flags=["The message promises a 20% investment return."],
+            verify=["Check the written terms independently."],
+            ask=["What documents support the promised return?"],
+        ),
+        [],
+        [],
+        Language.ru,
+    )
+    assert allowed_percentage.ok
 
 
 def test_validator_accepts_clean_draft_and_truncates_blocks() -> None:

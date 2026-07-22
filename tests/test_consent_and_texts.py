@@ -52,14 +52,13 @@ def test_start_intro_is_short_and_explains_the_flow() -> None:
     assert len(intro) < 700
 
 
-def test_privacy_notice_includes_story_capture_exception() -> None:
-    for language in LANGUAGES:
-        assert t("privacy_story_notice", language) in t("privacy_notice", language)
-        assert t("privacy_story_notice", language) in t("privacy", language)
+def test_story_capture_copy_is_retired() -> None:
+    assert not any(key.startswith("story_") for key in TEXTS)
+    assert "privacy_story_notice" not in TEXTS
 
 
-def test_face_entry_text_can_target_merchants() -> None:
-    assert "покупателя" in entry_text("merchants", "ru").lower()
+def test_face_entry_text_uses_the_unified_consumer_copy() -> None:
+    assert entry_text("family", "ru") == t("ready_family", "ru")
     assert entry_text("unknown_face", "ru") == t("ready", "ru")
 
 

@@ -102,3 +102,43 @@ families:
           uz_latn: ["havola orqali to'lang", "linkni bosing", "havolani oching", "qr kodni skanerlang", "saytga kiring", "ushbu havola", "pastdagi qr"]
           uz_cyrl: ["ҳавола орқали тўланг", "линкни босинг", "ҳаволани очинг", "qr кодни сканерланг", "сайтга киринг", "ушбу ҳавола", "пастдаги qr"]
           ru: ["оплатите по ссылке", "перейдите по ссылке", "откройте ссылку", "отсканируйте qr", "зайдите на сайт", "по этой ссылке", "qr-код ниже"]
+  - family: receipt_inconsistency
+    rules:
+      - id: fs.payment.receipt_inconsistent
+        desc: "A claimed incoming payment relies on a delay excuse or inconsistent recipient details instead of a matching transfer visible in the receiving account."
+        message_key: receipt_inconsistency
+        severity: 2
+        match:
+          uz_latn: ["bank ushlab turibdi", "pul yo'lda", "kechikishi mumkin", "boshqa ism chiqyapti", "ertaga tushadi", "tasdiq keladi", "hozircha ko'rinmaydi"]
+          uz_cyrl: ["банк ушлаб турибди", "пул йўлда", "кечикиши мумкин", "бошқа исм чиқяпти", "эртага тушади", "тасдиқ келади", "ҳозирча кўринмайди"]
+          ru: ["задерживает", "деньги в пути", "деньги придут", "может прийти позже", "показывает другое имя", "придёт завтра", "подтверждение придёт", "пока не видно"]
+  - family: edited_screenshot_hint
+    rules:
+      - id: fs.payment.screenshot_claim
+        desc: "A screenshot or receipt is presented as proof of an incoming payment, but only the receiving account can establish whether the transfer arrived."
+        message_key: edited_screenshot
+        severity: 1
+        match:
+          uz_latn: ["skrinshot mana", "chek mana", "rasmini yubordim", "skrin yubordim", "to'lov cheki", "kvitansiya"]
+          uz_cyrl: ["скриншот мана", "чек мана", "расмини юбордим", "скрин юбордим", "тўлов чеки", "квитанция"]
+          ru: ["вот скриншот", "вот чек", "скрин отправил", "фото перевода", "чек об оплате", "квитанция"]
+  - family: amount_mismatch
+    rules:
+      - id: fs.payment.overpayment_refund
+        desc: "Claims an accidental overpayment and asks for a separate refund before the original incoming transfer and amount have been independently confirmed."
+        message_key: amount_mismatch
+        severity: 3
+        match:
+          uz_latn: ["ikki marta to'lab", "ko'p ketib qoldi", "ortig'ini qaytaring", "xato to'lov", "ortiqcha o'tdi", "qaytarib bering"]
+          uz_cyrl: ["икки марта тўлаб", "кўп кетиб қолди", "ортиғини қайтаринг", "хато тўлов", "ортиқча ўтди", "қайтариб беринг"]
+          ru: ["оплатил дважды", "перевёл больше", "верните разницу", "ошибочный платёж", "ушло лишнее", "верните излишек"]
+  - family: fake_courier_refund
+    rules:
+      - id: fs.payment.release_pressure
+        desc: "Creates pressure to hand over or send goods before the incoming payment is independently confirmed in the receiving account."
+        message_key: ship_before_confirm
+        severity: 3
+        match:
+          uz_latn: ["hozir kuryerga bering", "tezroq jo'nating", "darhol yuboring", "kuryer kutyapti", "haridor kutyapti", "hoziroq jo'nating"]
+          uz_cyrl: ["ҳозир курьерга беринг", "тезроқ жўнатинг", "дарҳол юборинг", "курьер кутяпти", "харидор кутяпти", "ҳозироқ жўнатинг"]
+          ru: ["курьеру сейчас", "отдайте курьеру", "отправьте быстрее", "отгрузите немедленно", "курьер ждёт", "покупатель ждёт", "срочно отправьте"]

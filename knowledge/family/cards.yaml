@@ -159,3 +159,66 @@ cards:
       - Can the same action be completed from the official app opened independently?
       - Why is the supplied link or QR code required?
     reviewed_case_ids: []
+
+  - id: family.payment_receipt_claim
+    face: family
+    version: 1.0.0
+    status: approved
+    reviewer: product-contract-2026-07-22
+    trigger_rule_ids: [fs.payment.receipt_inconsistent, fs.payment.screenshot_claim]
+    trigger_signal_kinds: []
+    retrieval_aliases:
+      uz_latn: [pul yo'lda, ertaga tushadi, boshqa ism, skrinshot mana, to'lov cheki]
+      uz_cyrl: [пул йўлда, эртага тушади, бошқа исм, скриншот мана, тўлов чеки]
+      ru: [деньги в пути, придут завтра, другое имя, вот скриншот, чек об оплате]
+    mechanism: A screenshot, receipt, or explanation is presented as proof of an incoming payment even though only the receiving account can establish whether the transfer arrived.
+    red_flags:
+      - The claimed payment details or explanation do not line up consistently.
+      - A screenshot or message is used instead of a matching transfer visible in the receiving account.
+    verify_steps:
+      - Open the receiving bank or payment account independently and check for the matching incoming transfer.
+      - Do not rely on the submitted screenshot or receipt to establish that payment arrived.
+    questions:
+      - Which exact order and amount does the claimed transfer relate to?
+      - Is the matching incoming transfer visible in the receiving account independently of the screenshot?
+    reviewed_case_ids: []
+
+  - id: family.overpayment_refund
+    face: family
+    version: 1.0.0
+    status: approved
+    reviewer: product-contract-2026-07-22
+    trigger_rule_ids: [fs.payment.overpayment_refund]
+    trigger_signal_kinds: []
+    retrieval_aliases:
+      uz_latn: [ortig'ini qaytaring, ko'p ketib qoldi, xato to'lov]
+      uz_cyrl: [ортиғини қайтаринг, кўп кетиб қолди, хато тўлов]
+      ru: [верните разницу, перевёл больше, ошибочный платёж]
+    mechanism: An alleged overpayment creates pressure to send a real refund before the original incoming transfer and amount are independently confirmed.
+    red_flags:
+      - A refund is requested based on a claimed or screenshot-only overpayment.
+    verify_steps:
+      - Confirm the original incoming transfer and its amount in the receiving account before making any refund.
+    questions:
+      - What independently visible incoming transaction supports the refund request?
+    reviewed_case_ids: []
+
+  - id: family.release_before_payment
+    face: family
+    version: 1.0.0
+    status: approved
+    reviewer: product-contract-2026-07-22
+    trigger_rule_ids: [fs.payment.release_pressure]
+    trigger_signal_kinds: []
+    retrieval_aliases:
+      uz_latn: [kuryer kutyapti, hozir yuboring, tezroq jo'nating]
+      uz_cyrl: [курьер кутяпти, ҳозир юборинг, тезроқ жўнатинг]
+      ru: [курьер ждёт, отправьте сейчас, отдайте курьеру]
+    mechanism: Time pressure is used to obtain goods before the claimed incoming payment can be checked independently.
+    red_flags:
+      - Goods are requested before a matching incoming transfer is visible in the receiving account.
+    verify_steps:
+      - Confirm the matching incoming payment independently before handing over or sending goods.
+    questions:
+      - Why must the goods be released before independent payment confirmation?
+    reviewed_case_ids: []

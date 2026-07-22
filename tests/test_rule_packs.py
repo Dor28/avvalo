@@ -24,7 +24,7 @@ ALLOWED_SIGNALS = {
     "phone_new",
 }
 
-# Required + allowed families per face (§11 "Required rule families").
+# Required + allowed families for the unified checker.
 FAMILY_REQUIRED = {
     "credential_theft",
     "urgency_secrecy",
@@ -35,13 +35,10 @@ FAMILY_REQUIRED = {
 FAMILY_ALLOWED = FAMILY_REQUIRED | {
     "implausible_promise",
     "suspicious_link_qr",
-}
-MERCHANTS_REQUIRED = {
     "receipt_inconsistency",
     "amount_mismatch",
     "edited_screenshot_hint",
     "fake_courier_refund",
-    "verify_in_bank_app",
 }
 
 PACKS = {
@@ -50,12 +47,6 @@ PACKS = {
         "id_prefix": "fs.",
         "required_families": FAMILY_REQUIRED,
         "allowed_families": FAMILY_ALLOWED,
-    },
-    "merchants": {
-        "dir": "rules/merchants",
-        "id_prefix": "sg.",
-        "required_families": MERCHANTS_REQUIRED,
-        "allowed_families": MERCHANTS_REQUIRED,
     },
 }
 
@@ -148,9 +139,11 @@ def test_each_rule_matches_the_schema(face: str) -> None:
     assert not problems, "rule schema violations:\n" + "\n".join(problems)
 
 
-def test_merchants_has_always_on_bank_verify_reminder() -> None:
-    """merchants' hard rule: every payment check ends with 'verify in your own bank app' (§11)."""
-    families = {f["family"]: f for f in _load_families(PACKS["merchants"]["dir"])}
-    assert "verify_in_bank_app" in families
-    rule_ids = {rule["id"] for rule in families["verify_in_bank_app"]["rules"]}
-    assert rule_ids, "verify_in_bank_app family must define at least one always-on rule"
+def test_consumer_pack_includes_payment_screenshot_and_refund_protection() -> None:
+    families = {f["family"] for f in _load_families(PACKS["family"]["dir"])}
+    assert {
+        "receipt_inconsistency",
+        "amount_mismatch",
+        "edited_screenshot_hint",
+        "fake_courier_refund",
+    } <= families
