@@ -89,40 +89,48 @@ WEB_COPY = {
         "nav_cases": "Holatlar",
         "trust_label": "Ishonch",
         "skip_to_check": "Tekshiruvga o'tish",
-        "brand_tagline": "Harakatdan oldin tekshiring",
+        "brand_tagline": "Avval tekshiring, keyin harakat qiling",
         "hero_kicker": "Shubha tug‘ildimi?",
         "use_cases_label": "Avvalo'ga nimalarni yuborish mumkin",
         "composer_kicker": "Anonim tekshiruv",
         "composer_title": "Vaziyatni Avvalo'ga yuboring",
         "composer_body": (
-            "Matn yoki havolani kiriting. Skrinshot, to‘lov cheki yoki hujjat "
-            "rasmini ham qo‘shishingiz mumkin."
+            "Matn yoki havolani kiriting, skrinshot yoki rasm yuklang. Bu to‘lov "
+            "so‘rovi, taklif, hujjat yoki suhbat bo‘lishi mumkin."
         ),
         "input_hint": "SMS kod, parol va karta ma’lumotlarini yashiring.",
         "outcome_title": "Javobda nima bo‘ladi",
-        "outcome_body": "Qaror o‘rniga — tushunarli va xavfsiz harakat rejasi.",
+        "outcome_body": (
+            "Avvalo hukm chiqarmaydi va rasmiy manba tekshirilganini aytmaydi. "
+            "Javob mustaqil harakat rejasini beradi."
+        ),
         "outcomes": [
             {
                 "title": "Nima e’tibor talab qiladi",
                 "body": "Bosim, shoshiltirish va vaziyatdagi nomuvofiqliklar.",
             },
             {
-                "title": "Nimani tekshirish kerak",
-                "body": "Manbani mustaqil tasdiqlash uchun aniq qadamlar.",
+                "title": "Hozir nima qilish kerak",
+                "body": "Manbani mustaqil tekshirish uchun aniq qadamlar.",
             },
             {
-                "title": "Hozir nima qilish kerak",
-                "body": "Xavfsiz keyingi harakat va beriladigan savollar.",
+                "title": "Nima noma’lum qoladi",
+                "body": "Tasdiqlanmagan da’volar va bajarilmagan tashqi tekshiruvlar.",
+            },
+            {
+                "title": "Nima deb so‘rash kerak",
+                "body": "Qarshi tomonga yoki rasmiy tashkilotga beriladigan qisqa savollar.",
             },
         ],
-        "boundary_title": "Avvalo odamga baho bermaydi",
+        "boundary_title": "Vaziyatni tekshiring, odamni emas",
         "boundary_body": (
-            "Biz vaziyatdagi belgilarni tahlil qilamiz, odamni tekshirmaymiz va "
-            "yakuniy hukm chiqarmaymiz."
+            "Avvalo vaziyat, material, jarayon yoki manbadagi belgilarni ko‘rib chiqadi. "
+            "U odamning obro‘sini baholamaydi, qilinmagan tashqi tekshiruvni qilgandek "
+            "ko‘rsatmaydi va yakuniy hukm chiqarmaydi."
         ),
         "footer_note": "Shoshilmang. Avval tekshiring, keyin harakat qiling.",
-        "result_ready": "Tahlil tayyor",
-        "result_title": "Tekshiruv rejangiz",
+        "result_ready": "Javob tayyor",
+        "result_title": "Vaziyat bo‘yicha qadamlar",
         "title": "Avvalo",
         "privacy_title": "Maxfiylik",
         "consent_label": "Maxfiylik shartlarini o'qidim va roziman",
@@ -140,13 +148,11 @@ WEB_COPY = {
         "faces": {
             "family": {
                 "name": "Vaziyat tekshiruvi",
-                "headline": (
-                    "Javob berishdan, pul to‘lashdan yoki ma’lumot yuborishdan "
-                    "oldin tekshiring."
-                ),
+                "headline": "Avval Avvalo'ga yuboring.",
                 "subhead": (
-                    "Avvalo xavf belgilarini ajratadi va nimani mustaqil tekshirish, "
-                    "hozir nima qilish va qanday savol berishni ko‘rsatadi."
+                    "Javob berish, pul to‘lash, ilova o‘rnatish, hujjat imzolash yoki "
+                    "shaxsiy ma’lumot yuborishdan oldin nimaga e’tibor berish va nimani "
+                    "mustaqil tekshirishni ko‘ring."
                 ),
                 "prompt": "Matn, havola yoki vaziyat tavsifi",
                 "textarea_placeholder": (
@@ -156,16 +162,16 @@ WEB_COPY = {
                 "caption_placeholder": "Kerak bo'lsa: kim yubordi, nima so'rayapti?",
                 "image_hint": "Yozishma, chek, QR-kod yoki hujjat aniq ko‘rinsin.",
                 "use_cases": [
-                    "Bank yoki SMS xabari",
+                    "Xabar yoki suhbat",
                     "Havola yoki QR-kod",
-                    "To‘lov skrinshoti",
+                    "To‘lov skrinshoti yoki so‘rovi",
                     "Ish yoki savdo taklifi",
                     "Hujjat yoki so‘rov",
                 ],
                 "trust": [
                     "Odamni emas, vaziyatni tekshiradi",
                     "Hukm emas, aniq tekshiruv qadamlari",
-                    "Matn va rasm tekshiruv tarixida saqlanmaydi",
+                    "Matn, rasm va javob saqlanmaydi, logga yozilmaydi",
                 ],
             },
         },
@@ -179,40 +185,48 @@ WEB_COPY = {
         "nav_cases": "Ҳолатлар",
         "trust_label": "Ишонч",
         "skip_to_check": "Текширувга ўтиш",
-        "brand_tagline": "Ҳаракатдан олдин текширинг",
+        "brand_tagline": "Аввал текширинг, кейин ҳаракат қилинг",
         "hero_kicker": "Шубҳа туғилдими?",
         "use_cases_label": "Avvalo'га нималарни юбориш мумкин",
         "composer_kicker": "Аноним текширув",
         "composer_title": "Вазиятни Avvalo'га юборинг",
         "composer_body": (
-            "Матн ёки ҳаволани киритинг. Скриншот, тўлов чеки ёки ҳужжат "
-            "расмини ҳам қўшишингиз мумкин."
+            "Матн ёки ҳаволани киритинг, скриншот ёки расм юкланг. Бу тўлов "
+            "сўрови, таклиф, ҳужжат ёки суҳбат бўлиши мумкин."
         ),
         "input_hint": "SMS-код, пароль ва карта маълумотларини яширинг.",
         "outcome_title": "Жавобда нима бўлади",
-        "outcome_body": "Қарор ўрнига — тушунарли ва хавфсиз ҳаракат режаси.",
+        "outcome_body": (
+            "Avvalo ҳукм чиқармайди ва расмий манба текширилганини айтмайди. "
+            "Жавоб мустақил ҳаракат режасини беради."
+        ),
         "outcomes": [
             {
                 "title": "Нима эътибор талаб қилади",
                 "body": "Босим, шошилтириш ва вазиятдаги номувофиқликлар.",
             },
             {
-                "title": "Нимани текшириш керак",
-                "body": "Манбани мустақил тасдиқлаш учун аниқ қадамлар.",
+                "title": "Ҳозир нима қилиш керак",
+                "body": "Манбани мустақил текшириш учун аниқ қадамлар.",
             },
             {
-                "title": "Ҳозир нима қилиш керак",
-                "body": "Хавфсиз кейинги ҳаракат ва бериладиган саволлар.",
+                "title": "Нима номаълум қолади",
+                "body": "Тасдиқланмаган даъволар ва бажарилмаган ташқи текширувлар.",
+            },
+            {
+                "title": "Нима деб сўраш керак",
+                "body": "Қарши томонга ёки расмий ташкилотга бериладиган қисқа саволлар.",
             },
         ],
-        "boundary_title": "Avvalo одамга баҳо бермайди",
+        "boundary_title": "Вазиятни текширинг, одамни эмас",
         "boundary_body": (
-            "Биз вазиятдаги белгиларни таҳлил қиламиз, одамни текширмаймиз ва "
-            "якуний ҳукм чиқармаймиз."
+            "Avvalo вазият, материал, жараён ёки манбадаги белгиларни кўриб чиқади. "
+            "У одамнинг обрўсини баҳоламайди, қилинмаган ташқи текширувни қилгандек "
+            "кўрсатмайди ва якуний ҳукм чиқармайди."
         ),
         "footer_note": "Шошилманг. Аввал текширинг, кейин ҳаракат қилинг.",
-        "result_ready": "Таҳлил тайёр",
-        "result_title": "Текширув режангиз",
+        "result_ready": "Жавоб тайёр",
+        "result_title": "Вазият бўйича қадамлар",
         "title": "Avvalo",
         "privacy_title": "Махфийлик",
         "consent_label": "Махфийлик шартларини ўқидим ва розиман",
@@ -230,13 +244,11 @@ WEB_COPY = {
         "faces": {
             "family": {
                 "name": "Вазият текшируви",
-                "headline": (
-                    "Жавоб беришдан, пул тўлашдан ёки маълумот юборишдан олдин "
-                    "текширинг."
-                ),
+                "headline": "Аввал Avvalo'га юборинг.",
                 "subhead": (
-                    "Avvalo хавф белгиларини ажратади ва нимани мустақил текшириш, "
-                    "ҳозир нима қилиш ва қандай савол беришни кўрсатади."
+                    "Жавоб бериш, пул тўлаш, илова ўрнатиш, ҳужжат имзолаш ёки "
+                    "шахсий маълумот юборишдан олдин нимага эътибор бериш ва нимани "
+                    "мустақил текширишни кўринг."
                 ),
                 "prompt": "Матн, ҳавола ёки вазият тавсифи",
                 "textarea_placeholder": (
@@ -246,16 +258,16 @@ WEB_COPY = {
                 "caption_placeholder": "Керак бўлса: ким юборди, нима сўраяпти?",
                 "image_hint": "Ёзишма, чек, QR-код ёки ҳужжат аниқ кўринсин.",
                 "use_cases": [
-                    "Банк ёки SMS хабари",
+                    "Хабар ёки суҳбат",
                     "Ҳавола ёки QR-код",
-                    "Тўлов скриншоти",
+                    "Тўлов скриншоти ёки сўрови",
                     "Иш ёки савдо таклифи",
                     "Ҳужжат ёки сўров",
                 ],
                 "trust": [
                     "Одамни эмас, вазиятни текширади",
                     "Ҳукм эмас, аниқ текширув қадамлари",
-                    "Матн ва расм текширув тарихида сақланмайди",
+                    "Матн, расм ва жавоб сақланмайди, логга ёзилмайди",
                 ],
             },
         },
@@ -269,40 +281,48 @@ WEB_COPY = {
         "nav_cases": "Кейсы",
         "trust_label": "Доверие",
         "skip_to_check": "Перейти к проверке",
-        "brand_tagline": "Проверяйте до действия",
+        "brand_tagline": "Сначала проверьте, потом действуйте",
         "hero_kicker": "Возникли сомнения?",
         "use_cases_label": "Что можно отправить в Avvalo",
         "composer_kicker": "Анонимная проверка",
         "composer_title": "Отправьте ситуацию в Avvalo",
         "composer_body": (
-            "Вставьте текст или ссылку. Можно также добавить скриншот, чек оплаты "
-            "или фото документа."
+            "Вставьте текст или ссылку, загрузите скриншот или фото. Это может быть "
+            "запрос на оплату, предложение, документ или переписка."
         ),
         "input_hint": "Скройте SMS-коды, пароли и полные данные карты.",
         "outcome_title": "Что будет в ответе",
-        "outcome_body": "Не вердикт, а понятный и безопасный план действий.",
+        "outcome_body": (
+            "Avvalo не выносит вердикт и не говорит, что проверил официальный источник. "
+            "В ответе будет план самостоятельных действий."
+        ),
         "outcomes": [
             {
                 "title": "Что требует внимания",
                 "body": "Давление, спешка и несостыковки в ситуации.",
             },
             {
-                "title": "Что проверить",
-                "body": "Конкретные шаги для независимого подтверждения.",
+                "title": "Что сделать сейчас",
+                "body": "Конкретные шаги для независимой проверки источника.",
             },
             {
-                "title": "Что сделать сейчас",
-                "body": "Безопасное следующее действие и вопросы собеседнику.",
+                "title": "Что останется неизвестным",
+                "body": "Неподтверждённые заявления и внешние проверки, которые не проводились.",
+            },
+            {
+                "title": "Что спросить",
+                "body": "Короткие вопросы собеседнику или официальной организации.",
             },
         ],
-        "boundary_title": "Avvalo не оценивает людей",
+        "boundary_title": "Проверяйте ситуацию, а не человека",
         "boundary_body": (
-            "Мы разбираем признаки в ситуации, не проверяем личность и не выносим "
-            "окончательный вердикт."
+            "Avvalo разбирает признаки в ситуации, материале, процессе или источнике. "
+            "Он не оценивает репутацию человека, не говорит, что провёл внешнюю проверку, "
+            "если её не было, и не выносит окончательный вердикт."
         ),
         "footer_note": "Не спешите. Сначала проверьте, потом действуйте.",
-        "result_ready": "Разбор готов",
-        "result_title": "Ваш план проверки",
+        "result_ready": "Ответ готов",
+        "result_title": "Шаги по вашей ситуации",
         "title": "Avvalo",
         "privacy_title": "Конфиденциальность",
         "consent_label": "Я прочитал условия конфиденциальности и согласен",
@@ -320,12 +340,11 @@ WEB_COPY = {
         "faces": {
             "family": {
                 "name": "Проверка ситуации",
-                "headline": (
-                    "Проверьте до того, как ответить, заплатить или поделиться данными."
-                ),
+                "headline": "Сначала отправьте это в Avvalo.",
                 "subhead": (
-                    "Avvalo выделит тревожные признаки и подскажет, что проверить "
-                    "самостоятельно, что сделать сейчас и что спросить."
+                    "До ответа, оплаты, установки приложения, подписания документа или "
+                    "передачи личных данных "
+                    "посмотрите, на что обратить внимание и что проверить самостоятельно."
                 ),
                 "prompt": "Текст, ссылка или описание ситуации",
                 "textarea_placeholder": (
@@ -335,16 +354,16 @@ WEB_COPY = {
                 "caption_placeholder": "Если нужно: кто написал и чего просит?",
                 "image_hint": "Подойдёт читаемый скриншот переписки, чека, QR-кода или документа.",
                 "use_cases": [
-                    "Сообщение от банка",
+                    "Сообщение или переписка",
                     "Ссылка или QR-код",
-                    "Скрин оплаты",
+                    "Скрин оплаты или запрос на оплату",
                     "Работа или сделка",
                     "Документ или запрос",
                 ],
                 "trust": [
                     "Проверяем ситуацию, а не человека",
                     "Конкретные шаги проверки вместо вердикта",
-                    "Текст и изображения не сохраняются в истории",
+                    "Текст, изображения и ответ не сохраняются и не записываются в журналы",
                 ],
             },
         },

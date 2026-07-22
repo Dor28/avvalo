@@ -3,24 +3,28 @@
 EDITORIAL_COPY = {
     "uz_latn": {
         "cases_kicker": "Avvalo holatlari",
-        "cases_title": "Boshqalarning holatlaridan o‘rganing",
+        "cases_title": "Shubhali vaziyatlarni sodda misollar orqali tushuning",
         "cases_lead": (
-            "To‘lov, havola, ish taklifi va boshqa shubhali vaziyatlarda qaysi belgilarni "
-            "ko‘rish va nimani tekshirish kerakligini sodda misollarda tushuntiramiz."
+            "Avvalo tahririyati to‘lov, havola, ish taklifi va boshqa vaziyatlarda nimaga "
+            "e’tibor berish va nimani mustaqil tekshirishni tushuntiradi."
         ),
         "cases_empty": "Hozircha e’lon qilingan holatlar yo‘q.",
         "read_time": "{minutes} daqiqa",
         "read_case": "Tahlilni o‘qish",
         "back_to_cases": "Barcha holatlarga qaytish",
         "article_note": (
-            "Bu tahliliy material. U odam yoki tashkilotga hukm bermaydi va sizning "
-            "vaziyatingiz bo‘yicha yakuniy xulosa emas."
+            "Bu Avvalo tahririyati tayyorlagan o‘quv materiali. U foydalanuvchi "
+            "tekshiruvidan olinmagan, odam yoki tashkilot haqidagi dalil emas va sizning "
+            "vaziyatingiz bo‘yicha yakuniy xulosa bermaydi."
         ),
         "case_cta_title": "Shunga o‘xshash vaziyat bormi?",
-        "case_cta_body": "Matn, havola yoki skrinshotni Avvalo’ga yuborib, tekshiruv rejasini oling.",
+        "case_cta_body": (
+            "Vaziyatga oid matn, havola yoki rasmni Avvalo’ga yuboring. To‘lov so‘rovi, "
+            "taklif, hujjat yoki suhbat ham bo‘lishi mumkin."
+        ),
         "case_cta_button": "Vaziyatni tekshirish",
         "latest_title": "Yangi holatlar",
-        "latest_body": "Haqiqiy hayotga yaqin misollar orqali xavf belgilarini tanishni o‘rganing.",
+        "latest_body": "Tahririy misollar orqali nimaga e’tibor berish va nimani tekshirishni o‘rganing.",
         "all_cases": "Barcha holatlar",
         "categories": {
             "payments": "To‘lovlar",
@@ -63,24 +67,28 @@ EDITORIAL_COPY = {
     },
     "uz_cyrl": {
         "cases_kicker": "Avvalo ҳолатлари",
-        "cases_title": "Бошқаларнинг ҳолатларидан ўрганинг",
+        "cases_title": "Шубҳали вазиятларни содда мисоллар орқали тушунинг",
         "cases_lead": (
-            "Тўлов, ҳавола, иш таклифи ва бошқа шубҳали вазиятларда қайси белгиларни "
-            "кўриш ва нимани текшириш кераклигини содда мисолларда тушунтирамиз."
+            "Avvalo таҳририяти тўлов, ҳавола, иш таклифи ва бошқа вазиятларда нимага "
+            "эътибор бериш ва нимани мустақил текширишни тушунтиради."
         ),
         "cases_empty": "Ҳозирча эълон қилинган ҳолатлар йўқ.",
         "read_time": "{minutes} дақиқа",
         "read_case": "Таҳлилни ўқиш",
         "back_to_cases": "Барча ҳолатларга қайтиш",
         "article_note": (
-            "Бу таҳлилий материал. У одам ёки ташкилотга ҳукм бермайди ва сизнинг "
-            "вазиятингиз бўйича якуний хулоса эмас."
+            "Бу Avvalo таҳририяти тайёрлаган ўқув материали. У фойдаланувчи "
+            "текширувидан олинмаган, одам ёки ташкилот ҳақидаги далил эмас ва сизнинг "
+            "вазиятингиз бўйича якуний хулоса бермайди."
         ),
         "case_cta_title": "Шунга ўхшаш вазият борми?",
-        "case_cta_body": "Матн, ҳавола ёки скриншотни Avvalo’га юбориб, текширув режасини олинг.",
+        "case_cta_body": (
+            "Вазиятга оид матн, ҳавола ёки расмни Avvalo’га юборинг. Тўлов сўрови, "
+            "таклиф, ҳужжат ёки суҳбат ҳам бўлиши мумкин."
+        ),
         "case_cta_button": "Вазиятни текшириш",
         "latest_title": "Янги ҳолатлар",
-        "latest_body": "Ҳаётга яқин мисоллар орқали хавф белгиларини танишни ўрганинг.",
+        "latest_body": "Таҳририй мисоллар орқали нимага эътибор бериш ва нимани текширишни ўрганинг.",
         "all_cases": "Барча ҳолатлар",
         "categories": {
             "payments": "Тўловлар",
@@ -123,24 +131,28 @@ EDITORIAL_COPY = {
     },
     "ru": {
         "cases_kicker": "Кейсы Avvalo",
-        "cases_title": "Учитесь на чужих ситуациях",
+        "cases_title": "Разбирайтесь в сомнительных ситуациях на понятных примерах",
         "cases_lead": (
-            "Разбираем понятные примеры с оплатой, ссылками, вакансиями и другими "
-            "сомнительными ситуациями: на что смотреть и что проверять самостоятельно."
+            "Редакция Avvalo объясняет, на что обращать внимание и что проверять "
+            "самостоятельно в ситуациях с оплатой, ссылками, вакансиями и документами."
         ),
         "cases_empty": "Опубликованных кейсов пока нет.",
         "read_time": "{minutes} мин",
         "read_case": "Читать разбор",
         "back_to_cases": "Вернуться ко всем кейсам",
         "article_note": (
-            "Это редакционный разбор. Он не оценивает человека или организацию и не является "
+            "Это учебный материал редакции Avvalo. Он не создан из пользовательской "
+            "проверки, не доказывает ничего о человеке или организации и не является "
             "окончательным выводом по вашей ситуации."
         ),
         "case_cta_title": "Столкнулись с похожей ситуацией?",
-        "case_cta_body": "Отправьте текст, ссылку или скриншот в Avvalo и получите план проверки.",
+        "case_cta_body": (
+            "Отправьте в Avvalo текст, ссылку или изображение ситуации. Это может быть "
+            "запрос на оплату, предложение, документ или переписка."
+        ),
         "case_cta_button": "Проверить ситуацию",
         "latest_title": "Новые кейсы",
-        "latest_body": "Учитесь замечать тревожные признаки на понятных жизненных примерах.",
+        "latest_body": "Учитесь замечать важные признаки и проверять их на редакционных примерах.",
         "all_cases": "Все кейсы",
         "categories": {
             "payments": "Оплата",

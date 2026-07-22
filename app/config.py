@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     ocr_min_confidence: float = Field(default=0.5, ge=0, le=1)
     ocr_timeout_s: float = Field(default=30.0, gt=0)
 
-    notice_version: str = "2026-07-07-v2"
+    notice_version: str = "2026-07-22-v3"
     daily_limit_family: int = Field(default=5, ge=1)
     operator_alert_chat_id: int | None = None
     operator_alert_debounce_s: float = Field(default=900.0, gt=0)
