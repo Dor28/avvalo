@@ -15,7 +15,8 @@ work equally for Claude Code, Codex, or a human.
 
 | ID | Task | Status | Owner | Branch | Depends on |
 |---|---|---|---|---|---|
-| — | _no open tasks yet_ | | | | |
+| [T-09](T-09-knowledge-cards-store.md) | Move knowledge cards into the database behind the existing sync store protocol | done | claude | `claude/product-overview-explanation-90819c` | — |
+| [T-10](T-10-knowledge-cards-admin.md) | Add the operator-only knowledge card editor with a retrieval dry-run | done | claude | `claude/product-overview-explanation-90819c` | T-09 |
 
 Do not create an Avvalo Verify implementation task until Phase A in
 [ROADMAP.md](../ROADMAP.md) records a `go` decision.

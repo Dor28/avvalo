@@ -44,6 +44,8 @@ Important modules:
 | Engine | `app/engine/pipeline.py` | Orchestrates every check |
 | Types | `app/engine/types.py` | Boundary enums and Pydantic models |
 | Rules | `app/engine/rules/`, `rules/*.yaml` | Deterministic local signals |
+| Rule overrides | `app/rules_store/` | Operator-authored patterns merged onto the baseline |
+| Card overrides | `app/knowledge_store/` | Operator-authored cards merged onto the baseline |
 | Minimization | `app/engine/minimize.py` | Removes PII before model calls |
 | Knowledge | `app/engine/knowledge/`, `knowledge/cards/` | Reviewed explanatory guidance |
 | LLM | `app/engine/llm/` | OpenAI-compatible provider boundary and fallback |
@@ -115,6 +117,36 @@ inconsistency, screenshot claims, overpayment/refund requests, and pressure to r
 A screenshot, receipt, or message never proves that an incoming payment arrived. Relevant output
 must tell the user to verify the matching transfer independently in the receiving bank/payment
 account before refunding money or releasing goods.
+
+### Operator overrides
+
+The repository is public, so shipped keyword lists and cards are readable by the people they
+describe. New pattern and card work therefore lives in the `rule_override` and
+`knowledge_card_override` tables (`app/rules_store/`, `app/knowledge_store/`), each on its own
+declarative base beside `EditorialBase` — operator-authored reference data, never user content, and
+so outside the zero-content contract enforced over `app.data.models.Base`.
+
+Both merge onto their shipped YAML baseline **by ID**: a matching ID replaces, a new ID adds, and a
+`disabled` rule row or a `draft`/`retired` card row suppresses the baseline entry. Wholesale
+replacement was rejected because it would force re-entering an entire pack before adding one entry.
+
+`load_rule_pack()` and `KnowledgeStore.load()` keep their synchronous signatures and are served from
+process-level snapshots refreshed every `RULE_PACK_REFRESH_MINUTES` / `KNOWLEDGE_REFRESH_MINUTES`.
+Both failure paths are fail-safe: an unreachable database leaves the previously published pack in
+force and ultimately falls back to the shipped YAML, and a single malformed row is skipped. Falling
+back to an *empty* knowledge base is specifically not acceptable — `retrieval_status` would read
+`empty` rather than `unavailable`, hiding the degradation.
+
+Patterns are validated on write (regexes must compile, literals must clear a minimum length). When a
+card override contributes, `kb_version` becomes `<base-version>.db<YYYYMMDDHHMMSS>`, constrained by
+`VERSION_RE` in `app/data/repo.py`, which rejects a bad `kb_version` on every `check_event` write.
+
+Operators edit both through `/admin/rules` and `/admin/cards`, which reuse the existing
+`ADMIN_ACCESS_KEY` surface. Each screen carries a dry-run that drives the *real* matcher and the
+*real* retrieval path, so a preview cannot drift from production.
+
+Moving this work out of git does not retract what is already published; it only keeps future work
+unpublished.
 
 ## 6. Knowledge and model boundary
 

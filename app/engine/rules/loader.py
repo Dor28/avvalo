@@ -14,6 +14,11 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 # not checker rules, so it must not be swept into the pack.
 RULE_PACK_DIR = _REPO_ROOT / "rules"
 
+# The merged YAML+database pack currently in force. A one-slot list rather than
+# a module global so ``set_active_rule_pack`` can rebind it without ``global``.
+# ``None`` until the first refresh succeeds; see ``load_rule_pack``.
+_ACTIVE_PACK: list[RulePack | None] = [None]
+
 
 @dataclass(frozen=True)
 class RuleDefinition:
@@ -40,9 +45,36 @@ class RulePack:
     descriptions: dict[str, str]
 
 
-@cache
 def load_rule_pack() -> RulePack:
-    """Load and validate every YAML rule file in the rule pack."""
+    """Return the rule pack in force.
+
+    Synchronous by design: the pack is read several times per check and from
+    inside the formatter and prompt builder, so it is served from a process-level
+    snapshot rather than queried. ``app.rules_store.apply`` swaps that snapshot
+    in on a schedule and after an operator edit. Before the first successful
+    refresh — and whenever the database is unreachable — this falls back to the
+    YAML pack shipped in the image, so detection degrades to the baseline
+    instead of to nothing.
+    """
+
+    return _ACTIVE_PACK[0] or load_yaml_rule_pack()
+
+
+def set_active_rule_pack(pack: RulePack) -> None:
+    """Publish a merged pack as the one in force."""
+
+    _ACTIVE_PACK[0] = pack
+
+
+def clear_active_rule_pack() -> None:
+    """Drop the merged pack, reverting to the shipped YAML baseline."""
+
+    _ACTIVE_PACK[0] = None
+
+
+@cache
+def load_yaml_rule_pack() -> RulePack:
+    """Load and validate every YAML rule file in the shipped rule pack."""
 
     pack_dir = RULE_PACK_DIR
     if not pack_dir.exists() or not pack_dir.is_dir():

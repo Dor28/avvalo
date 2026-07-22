@@ -35,7 +35,9 @@ from app.web.admin_auth import (
     set_admin_cookie,
 )
 from app.web.editorial_copy import EDITORIAL_COPY
+from app.web.knowledge_copy import KNOWLEDGE_COPY
 from app.web.routes import WEB_COPY, templates
+from app.web.rules_copy import RULES_COPY
 
 router = APIRouter()
 
@@ -366,6 +368,8 @@ def _admin_context(request: Request, language: str, **extra) -> dict:
         "languages": LANGUAGES,
         "language_labels": LANGUAGE_LABELS,
         "categories": CATEGORIES,
+        "rules_nav_label": RULES_COPY[language]["title"],
+        "cards_nav_label": KNOWLEDGE_COPY[language]["title"],
         **extra,
     }
 

@@ -19,6 +19,11 @@ _ID_RE = re.compile(r"^[a-z][a-z0-9_.-]{0,79}$")
 _VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
 
 
+# The merged YAML+database base currently in force. ``None`` until the first
+# refresh succeeds; see ``FileKnowledgeStore.load``.
+_ACTIVE_BASE: list[KnowledgeBase | None] = [None]
+
+
 class FileKnowledgeStore:
     """Load schema-valid approved cards from the repository knowledge pack."""
 
@@ -26,7 +31,42 @@ class FileKnowledgeStore:
         self.root = root
 
     def load(self) -> KnowledgeBase:
-        return _load_knowledge_base(self.root.resolve())
+        """Return the knowledge base in force.
+
+        Synchronous by contract: ``KnowledgeStore`` is a sync Protocol with
+        several call sites, so a merged base is served from a process-level
+        snapshot rather than queried. ``app.knowledge_store.apply`` swaps that
+        snapshot in on a schedule and after an operator edit. Before the first
+        successful refresh — and whenever the database is unreachable — this
+        falls back to the YAML pack shipped in the image, so knowledge degrades
+        to the baseline instead of to nothing.
+
+        A store built on a non-default root is a tool/test affordance and always
+        reads the files under that root.
+        """
+
+        root = self.root.resolve()
+        if root == _KNOWLEDGE_ROOT.resolve() and _ACTIVE_BASE[0] is not None:
+            return _ACTIVE_BASE[0]
+        return _load_knowledge_base(root)
+
+
+def load_yaml_knowledge_base() -> KnowledgeBase:
+    """Load the shipped baseline, ignoring any published snapshot."""
+
+    return _load_knowledge_base(_KNOWLEDGE_ROOT.resolve())
+
+
+def set_active_knowledge_base(base: KnowledgeBase) -> None:
+    """Publish a merged base as the one in force."""
+
+    _ACTIVE_BASE[0] = base
+
+
+def clear_active_knowledge_base() -> None:
+    """Drop the merged base, reverting to the shipped YAML baseline."""
+
+    _ACTIVE_BASE[0] = None
 
 
 @cache

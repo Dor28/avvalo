@@ -167,16 +167,39 @@ def classify_link(raw_url: str) -> str | None:
     return None
 
 
+def matching_patterns(rule: RuleDefinition, text: str) -> tuple[str, ...]:
+    """Return every pattern in ``rule`` that matches ``text``.
+
+    Shared with the operator dry-run so a preview can never disagree with what
+    production matching actually does.
+    """
+
+    normalized_text = normalize_text(text)
+    return tuple(
+        pattern
+        for patterns in rule.match.values()
+        for pattern in patterns
+        if _pattern_matches(normalize_text(pattern), normalized_text)
+    )
+
+
+def _pattern_matches(normalized_pattern: str, normalized_text: str) -> bool:
+    if normalized_pattern.startswith("regex:"):
+        try:
+            return bool(re.search(normalized_pattern.removeprefix("regex:"), normalized_text))
+        except re.error:
+            # Patterns are validated on write, but a row written out of band
+            # must degrade to "no match" rather than break every check.
+            return False
+    return normalized_pattern in normalized_text
+
+
 def _rule_matches(rule: RuleDefinition, normalized_text: str) -> bool:
-    for patterns in rule.match.values():
-        for pattern in patterns:
-            normalized_pattern = normalize_text(pattern)
-            if normalized_pattern.startswith("regex:"):
-                if re.search(normalized_pattern.removeprefix("regex:"), normalized_text):
-                    return True
-            elif normalized_pattern in normalized_text:
-                return True
-    return False
+    return any(
+        _pattern_matches(normalize_text(pattern), normalized_text)
+        for patterns in rule.match.values()
+        for pattern in patterns
+    )
 
 
 def _domain_from_url(raw_url: str) -> str | None:

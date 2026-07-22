@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b6e75">
+    <title>{{ rules.title }} — Avvalo</title>
+    <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
+  </head>
+  <body class="admin-page">
+    {% set show_logout = true %}
+    {% include "_admin_header.html" %}
+    <main class="admin-shell">
+      <header class="admin-page-heading">
+        <div>
+          <p class="eyebrow">Avvalo Editorial</p>
+          <h1>{{ rules.title }}</h1>
+          <p>{{ rules.subtitle }}</p>
+          <p class="admin-hint">{{ rules.baseline_note.format(count=baseline_count, active=active_count) }}</p>
+        </div>
+        <a class="admin-primary-action" href="/admin/rules/new?language={{ language }}">
+          <span aria-hidden="true">＋</span>{{ rules.new }}
+        </a>
+      </header>
+
+      {% if overrides %}
+        <section class="admin-post-list" aria-label="{{ rules.title }}">
+          {% for override in overrides %}
+            <article class="admin-post-row">
+              <div class="admin-post-main">
+                <div class="admin-post-meta">
+                  <span class="status-pill {% if override.disabled %}draft{% else %}published{% endif %}">
+                    {% if override.disabled %}{{ rules.status_disabled }}{% else %}{{ rules.status_active }}{% endif %}
+                  </span>
+                  <span>{{ override.family }}</span>
+                  <span>severity {{ override.severity }}</span>
+                </div>
+                <h2><code>{{ override.rule_id }}</code></h2>
+                <p>{{ override.description }}</p>
+                <p>{{ rules.updated }} {{ override.updated_ts.strftime('%d.%m.%Y · %H:%M') }}</p>
+              </div>
+              <div class="admin-post-actions">
+                <a class="admin-edit-link" href="/admin/rules/{{ override.id }}/edit?language={{ language }}">
+                  {{ rules.edit }}
+                </a>
+                <form action="/admin/rules/{{ override.id }}/delete" method="post"
+                      onsubmit="return confirm('{{ rules.delete_confirm }}');">
+                  <input type="hidden" name="language" value="{{ language }}">
+                  <button class="admin-logout" type="submit">{{ rules.delete }}</button>
+                </form>
+              </div>
+            </article>
+          {% endfor %}
+        </section>
+      {% else %}
+        <section class="admin-empty">
+          <span aria-hidden="true">＋</span>
+          <p>{{ rules.empty }}</p>
+        </section>
+      {% endif %}
+    </main>
+  </body>
+</html>

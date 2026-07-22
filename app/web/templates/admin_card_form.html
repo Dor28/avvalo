@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b6e75">
+    <title>{{ knowledge.title }} — Avvalo</title>
+    <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
+  </head>
+  <body class="admin-page">
+    {% set show_logout = true %}
+    {% include "_admin_header.html" %}
+    <main class="admin-shell">
+      <header class="admin-page-heading">
+        <div>
+          <p class="eyebrow">Avvalo Editorial</p>
+          <h1>{{ knowledge.title }}</h1>
+          <p>{{ knowledge.subtitle }}</p>
+          <p class="admin-hint">{{ knowledge.body_note }}</p>
+        </div>
+        <a class="admin-edit-link" href="/admin/cards?language={{ language }}">{{ knowledge.back }}</a>
+      </header>
+
+      {% if error %}<p class="admin-form-error" role="alert">{{ error }}</p>{% endif %}
+
+      {% if preview %}
+        <section class="admin-dry-run-result {% if preview.selected %}matched{% endif %}" aria-live="polite">
+          <h2>{{ knowledge.preview_title }}</h2>
+          {% if preview.selected %}
+            <p>{{ knowledge.preview_selected.format(mode=preview.mode) }}</p>
+          {% elif preview.not_approved %}
+            <p>{{ knowledge.preview_not_approved.format(status=preview.status) }}</p>
+          {% else %}
+            <p>{{ knowledge.preview_not_selected }}</p>
+          {% endif %}
+          {% if preview.other_card_ids %}
+            <p>{{ knowledge.preview_others }}</p>
+            <ul>
+              {% for card_id in preview.other_card_ids %}<li><code>{{ card_id }}</code></li>{% endfor %}
+            </ul>
+          {% else %}
+            <p>{{ knowledge.preview_no_others }}</p>
+          {% endif %}
+        </section>
+      {% endif %}
+
+      <form class="admin-editor-form" action="/admin/cards" method="post">
+        <input type="hidden" name="language" value="{{ language }}">
+        <input type="hidden" name="override_id" value="{{ override_id or '' }}">
+
+        <section class="admin-settings-card">
+          <label class="admin-field wide">
+            <span>{{ knowledge.card_id_label }}</span>
+            <input name="card_id" type="text" required maxlength="120"
+                   value="{{ override.card_id if override else '' }}"
+                   aria-describedby="card-id-hint">
+            <small id="card-id-hint">{{ knowledge.card_id_hint }}</small>
+          </label>
+          <label class="admin-field">
+            <span>{{ knowledge.card_version_label }}</span>
+            <input name="card_version" type="text" required maxlength="40"
+                   value="{{ override.card_version if override else '1.0.0' }}">
+          </label>
+          <label class="admin-field">
+            <span>{{ knowledge.status_label }}</span>
+            <select name="status" required aria-describedby="status-hint">
+              {% for option in statuses %}
+                <option value="{{ option }}"
+                        {% if override and override.status == option %}selected{% endif %}>
+                  {{ option }}
+                </option>
+              {% endfor %}
+            </select>
+            <small id="status-hint">{{ knowledge.status_hint }}</small>
+          </label>
+          <label class="admin-field">
+            <span>{{ knowledge.reviewer_label }}</span>
+            <input name="reviewer" type="text" required maxlength="120"
+                   value="{{ override.reviewer if override else '' }}">
+          </label>
+          <label class="admin-field wide">
+            <span>{{ knowledge.mechanism_label }}</span>
+            <textarea name="mechanism" rows="2" required maxlength="600">{{ override.mechanism if override else '' }}</textarea>
+          </label>
+        </section>
+
+        <section class="admin-settings-card">
+          <label class="admin-field wide">
+            <span>{{ knowledge.trigger_rules_label }}</span>
+            <textarea name="trigger_rule_ids" rows="3">{{ fields.trigger_rule_ids }}</textarea>
+            <small>{{ knowledge.list_hint }}</small>
+          </label>
+          <label class="admin-field wide">
+            <span>{{ knowledge.trigger_signals_label }}</span>
+            <textarea name="trigger_signal_kinds" rows="3">{{ fields.trigger_signal_kinds }}</textarea>
+            <small>{{ knowledge.list_hint }}</small>
+          </label>
+          {% for alias_language in alias_languages %}
+            <label class="admin-field wide">
+              <span>{{ knowledge.aliases_label.format(language=script_labels[alias_language]) }}</span>
+              <textarea name="aliases_{{ alias_language }}" rows="4">{{ aliases[alias_language] }}</textarea>
+              <small>{{ knowledge.aliases_hint }}</small>
+            </label>
+          {% endfor %}
+        </section>
+
+        <section class="admin-settings-card">
+          <label class="admin-field wide">
+            <span>{{ knowledge.red_flags_label }}</span>
+            <textarea name="red_flags" rows="4">{{ fields.red_flags }}</textarea>
+            <small>{{ knowledge.list_hint }}</small>
+          </label>
+          <label class="admin-field wide">
+            <span>{{ knowledge.verify_steps_label }}</span>
+            <textarea name="verify_steps" rows="4">{{ fields.verify_steps }}</textarea>
+            <small>{{ knowledge.list_hint }}</small>
+          </label>
+          <label class="admin-field wide">
+            <span>{{ knowledge.questions_label }}</span>
+            <textarea name="questions" rows="4">{{ fields.questions }}</textarea>
+            <small>{{ knowledge.list_hint }}</small>
+          </label>
+          <label class="admin-field wide">
+            <span>{{ knowledge.reviewed_cases_label }}</span>
+            <textarea name="reviewed_case_ids" rows="2">{{ fields.reviewed_case_ids }}</textarea>
+            <small>{{ knowledge.list_hint }}</small>
+          </label>
+        </section>
+
+        <section class="admin-settings-card admin-dry-run">
+          <h2>{{ knowledge.sample_title }}</h2>
+          <p>{{ knowledge.sample_hint }}</p>
+          <label class="admin-field wide">
+            <span>{{ knowledge.sample_label }}</span>
+            <textarea name="sample" rows="3">{{ sample }}</textarea>
+          </label>
+          <button type="submit" formaction="/admin/cards/preview" formnovalidate>
+            {{ knowledge.test }}
+          </button>
+        </section>
+
+        <div class="admin-form-actions">
+          <a href="/admin/cards?language={{ language }}">{{ knowledge.back }}</a>
+          <button class="submit-button" type="submit">{{ knowledge.save }}</button>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>

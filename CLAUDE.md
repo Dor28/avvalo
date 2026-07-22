@@ -62,6 +62,15 @@ Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` an
 
 Boundary contracts are Pydantic models in [app/engine/types.py](app/engine/types.py) (`CheckInput`, `CheckResult`, `CheckStatus`, `DraftOutput`); extend those instead of passing loose dicts. New statuses must also be added to the allow-set in [app/data/repo.py](app/data/repo.py).
 
+**Detection assets are database-backed with a YAML fallback.** The repo is public, so new keyword
+and card work lives in `rule_override` / `knowledge_card_override` (`app/rules_store/`,
+`app/knowledge_store/`) rather than in git; `rules/*.yaml` and `knowledge/cards/` are the shipped
+fallback baseline. Overrides merge onto the baseline **by ID**, are served from process-level
+snapshots so `load_rule_pack()` / `KnowledgeStore.load()` stay synchronous, and fail *safe* — an
+unreachable database falls back to the shipped YAML, never to an empty pack. Operators edit them at
+`/admin/rules` and `/admin/cards` (needs `ADMIN_ACCESS_KEY`), each with a dry-run that calls the real
+matcher / real retrieval so a preview cannot drift from production.
+
 **Providers are injectable and env-selected.** LLM = any OpenAI-compatible host (`LLM_BASE_URL`/`LLM_MODEL`; OpenRouter Qwen in prod, Ollama locally). OCR = `OCR_PROVIDER` ∈ gcv | tesseract | paddleocr | local_stub behind `app/engine/ocr/base.py`. Tests pass fake providers directly into `run_check(..., llm_provider=, ocr_provider=)` — keep new external dependencies injectable the same way.
 
 **Data layer:** async SQLAlchemy + asyncpg on PostgreSQL 16; Alembic owns the schema. Functions in `app/data/repo.py` take a caller-provided `AsyncSession` and flush; the caller owns commit/rollback. Unit tests run on in-memory aiosqlite (see `RULE_IDS_TYPE` variant pattern in models.py for Postgres-only column types).

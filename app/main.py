@@ -16,11 +16,13 @@ from app.data.db import (
 )
 from app.data.retention import RetentionPolicy, start_retention_scheduler
 from app.engine.url_reputation import install_url_reputation_job
+from app.knowledge_store import install_knowledge_refresh_job
 from app.obs.alerts import (
     install_knowledge_availability_alert_job,
     install_operator_alerts,
 )
 from app.obs.metrics import log_knowledge_inventory
+from app.rules_store import install_rule_pack_refresh_job
 from app.web.app import create_app
 
 LOGGER = logging.getLogger(__name__)
@@ -49,6 +51,8 @@ async def run(*, check_only: bool = False) -> None:
         )
         install_url_reputation_job(scheduler, session_factory, settings)
         install_knowledge_availability_alert_job(scheduler, session_factory, settings)
+        install_rule_pack_refresh_job(scheduler, session_factory, settings)
+        install_knowledge_refresh_job(scheduler, session_factory, settings)
         try:
             runners = []
             if settings.web_enabled:
