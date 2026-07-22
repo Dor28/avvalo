@@ -238,7 +238,7 @@ Useful focused checks:
 ```bash
 pytest tests/test_schema_privacy.py
 pytest tests/test_engine_pipeline.py
-pytest tests/test_t13_web.py
+pytest tests/test_web_channel.py
 python -m app.tools.metrics --json
 ```
 

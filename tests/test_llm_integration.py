@@ -1,4 +1,4 @@
-"""T6 LLM prompt/provider/cost integration tests."""
+"""LLM prompt, provider, cost, and pipeline integration tests."""
 
 import json
 import logging

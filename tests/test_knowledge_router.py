@@ -1,4 +1,4 @@
-"""T-01/T-05 acceptance: knowledge ceilings, router recall, health, and cost."""
+"""Allowlisted knowledge routing, health, recall, and cost tests."""
 
 from __future__ import annotations
 

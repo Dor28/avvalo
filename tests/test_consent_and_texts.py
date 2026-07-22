@@ -1,4 +1,4 @@
-"""T3 — consent gate and UI-text completeness tests."""
+"""Consent gate and localized UI-text completeness tests."""
 
 from app.bot.texts import (
     DEFAULT_LANGUAGE,
@@ -14,7 +14,7 @@ from app.data import repo
 from app.privacy.consent import grant_consent, is_consent_current
 
 NOTICE = "2026-06-24-v1"
-R3_NOTICE = "2026-07-07-v2"
+PREVIOUS_NOTICE = "2026-07-07-v2"
 CURRENT_NOTICE = "2026-07-22-v3"
 
 
@@ -125,11 +125,11 @@ async def test_current_notice_bump_forces_reconsent(session) -> None:
     assert settings.notice_version == CURRENT_NOTICE
     await grant_consent(
         session,
-        user_key="u-r3",
+        user_key="u-previous-notice",
         language="ru",
-        notice_version=R3_NOTICE,
+        notice_version=PREVIOUS_NOTICE,
     )
     await session.commit()
 
-    consent = await repo.get_consent(session, user_key="u-r3")
+    consent = await repo.get_consent(session, user_key="u-previous-notice")
     assert is_consent_current(consent, settings.notice_version) is False

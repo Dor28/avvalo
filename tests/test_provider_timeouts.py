@@ -1,4 +1,4 @@
-"""T12 - hardening: provider timeouts and graceful failure."""
+"""Provider timeout and graceful pipeline-failure tests."""
 
 import asyncio
 import logging

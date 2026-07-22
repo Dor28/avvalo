@@ -1,11 +1,5 @@
-"""T9 — daily limits, feedback & privacy-safe events (V1_TECHNICAL_PLAN §12, §13 T9).
+"""Daily-limit, categorical-feedback, and privacy-safe event contracts."""
 
-The rate-limit and feedback storage primitives exist now (tested live below). The
-event logger's content-refusal discipline (§12) is a live spec that skips until
-obs/events.py lands.
-"""
-
-import inspect
 import logging
 
 import pytest
@@ -15,7 +9,7 @@ from app.data import repo
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput
-from app.obs.events import log_error
+from app.obs.events import log_error, log_event
 from tests.support import addressed_rule_ids
 
 
@@ -46,7 +40,7 @@ async def test_daily_limit_boundary_is_reachable(session) -> None:
     assert await repo.get_usage(session, user_key="capped") == limit
 
 
-async def test_sixth_family_check_is_rate_limited(session) -> None:
+async def test_check_after_daily_limit_is_rate_limited(session) -> None:
     provider = FakeLLMProvider()
     check_input = CheckInput(
                 user_key="daily-limit",
@@ -89,16 +83,10 @@ async def test_feedback_rejects_non_categorical_values(session) -> None:
         )
 
 
-def test_log_event_accepts_metadata_and_refuses_content(callable_or_skip) -> None:
-    log_event = callable_or_skip("app.obs.events", "log_event")
-    params = inspect.signature(log_event).parameters.values()
-    if not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params):
-        pytest.skip(f"log_event does not take **fields: {inspect.signature(log_event)}")
+def test_log_event_accepts_metadata_and_refuses_content() -> None:
+    fields = log_event("check_completed", language="ru", status="ok")
 
-    try:
-        log_event("check_completed", language="ru", status="ok")
-    except TypeError as exc:
-        pytest.skip(f"log_event metadata signature differs from §12: {exc}")
+    assert fields == {"event": "check_completed", "language": "ru", "status": "ok"}
 
     # §12: a content-like field must be refused outright.
     with pytest.raises((ValueError, TypeError, KeyError)):
@@ -107,15 +95,11 @@ def test_log_event_accepts_metadata_and_refuses_content(callable_or_skip) -> Non
         log_event("check_failed", error_class="+998 90 123 45 67")
 
 
-def test_kb_version_is_exempt_from_heuristics_but_held_to_a_strict_shape(
-    callable_or_skip,
-) -> None:
+def test_kb_version_is_exempt_from_heuristics_but_held_to_a_strict_shape() -> None:
     """kb_version is operator-controlled metadata from knowledge/version.yaml, so
     date-based versions must not trip the phone-number heuristic. The exemption
     swaps that heuristic for a *stricter* rule -- it must not become a hole
     through which free-form content reaches the log."""
-
-    log_event = callable_or_skip("app.obs.events", "log_event")
 
     # Date-based versions are accepted (they look phone-like to the heuristics).
     assert log_event("check_completed", kb_version="2026-07-15-v1")["kb_version"] == "2026-07-15-v1"

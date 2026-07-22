@@ -1,4 +1,4 @@
-"""T2 — schema, privacy, and repository contract tests."""
+"""Schema, privacy, and repository contract tests."""
 
 import uuid
 from datetime import UTC, datetime

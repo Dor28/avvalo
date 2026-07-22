@@ -1,4 +1,4 @@
-"""T11 - retention TTL jobs and privacy-safe metrics export."""
+"""Retention lifecycle and privacy-safe aggregate metrics tests."""
 
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4

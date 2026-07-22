@@ -1,4 +1,4 @@
-"""R6 acceptance: local hash-only URL reputation stage."""
+"""Local hash-only URL-reputation stage tests."""
 
 from __future__ import annotations
 

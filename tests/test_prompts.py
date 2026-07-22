@@ -1,9 +1,8 @@
-"""Prompt-asset tests (V1_TECHNICAL_PLAN §8, §9).
+"""Safety-critical prompt-asset and template-contract tests.
 
-The prompts are pre-authored safety-critical assets (§0.6). prompt.py (T6) will
-fill the face templates; until then these tests check the assets exist, expose
-the placeholders the builder fills, and still carry the non-negotiable safety
-contract — so an accidental edit that strips a constraint is caught.
+The prompt builder fills the single checker template at runtime. These tests pin
+its placeholders and non-negotiable safety constraints so an accidental asset
+edit cannot silently remove them.
 """
 
 from pathlib import Path
@@ -16,7 +15,13 @@ from app.engine.types import DraftOutput
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROMPTS = REPO_ROOT / "prompts"
 
-FACE_TEMPLATE_PLACEHOLDERS = ("{language}", "{minimized_text}", "{rule_hits}", "{signals}")
+CHECK_TEMPLATE_PLACEHOLDERS = (
+    "{language}",
+    "{minimized_text}",
+    "{rule_hits}",
+    "{signals}",
+    "{knowledge}",
+)
 
 
 def _read(name: str) -> str:
@@ -49,7 +54,7 @@ def test_system_prompt_keeps_the_core_prohibitions() -> None:
 @pytest.mark.parametrize("name", ["check.txt"])
 def test_check_template_exposes_builder_placeholders(name: str) -> None:
     template = _read(name)
-    for placeholder in FACE_TEMPLATE_PLACEHOLDERS:
+    for placeholder in CHECK_TEMPLATE_PLACEHOLDERS:
         assert placeholder in template, f"{name}: missing placeholder {placeholder}"
 
 

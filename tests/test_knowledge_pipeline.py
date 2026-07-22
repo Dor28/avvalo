@@ -1,4 +1,4 @@
-"""T14 / R0 — knowledge retrieval and grounding acceptance tests.
+"""Knowledge retrieval, grounding, fallback, and privacy acceptance tests.
 
 The numbered tests map directly to docs/AI_KNOWLEDGE_PIPELINE.md §7.
 """
@@ -86,7 +86,7 @@ def _useful_no_signal_draft() -> DraftOutput:
     )
 
 
-async def test_r0_criterion_01_zero_rule_message_still_reaches_answer_llm() -> None:
+async def test_zero_rule_message_still_reaches_answer_llm() -> None:
     red_flag = "The other side changed the meeting place twice without explaining why."
     provider = RecordingLLMProvider(
         DraftOutput(
@@ -110,7 +110,7 @@ async def test_r0_criterion_01_zero_rule_message_still_reaches_answer_llm() -> N
     assert "- (none detected)" in str(provider.calls[0]["user"])
 
 
-async def test_r0_criterion_02_authority_cue_retrieves_without_becoming_proof() -> None:
+async def test_authority_cue_retrieves_guidance_without_becoming_proof() -> None:
     provider = RecordingLLMProvider(
         DraftOutput(
             red_flags=[],
@@ -137,7 +137,7 @@ async def test_r0_criterion_02_authority_cue_retrieves_without_becoming_proof() 
     assert "family.authority_impersonation" in str(provider.calls[0]["user"])
 
 
-async def test_r0_criterion_03_mandatory_cards_and_rule_facts_survive() -> None:
+async def test_mandatory_cards_and_rule_facts_survive_the_pipeline() -> None:
     red_flags = [
         "A one-time code is requested in the conversation.",
         "The message demands action immediately.",
@@ -185,7 +185,7 @@ async def test_r0_criterion_03_mandatory_cards_and_rule_facts_survive() -> None:
     assert all(red_flag in (result.text or "") for red_flag in red_flags)
 
 
-async def test_r0_criterion_04_no_match_still_returns_useful_non_verdict_answer() -> None:
+async def test_no_match_still_returns_a_useful_non_verdict_answer() -> None:
     provider = RecordingLLMProvider(_useful_no_signal_draft())
 
     result = await run_check(
@@ -204,7 +204,7 @@ async def test_r0_criterion_04_no_match_still_returns_useful_non_verdict_answer(
     assert "safe" not in (result.text or "").casefold()
 
 
-async def test_r0_criterion_05_router_cannot_inject_a_disallowed_card_id() -> None:
+async def test_router_cannot_inject_a_disallowed_card_id() -> None:
     router = InventingRouter()
 
     retrieval = await retrieve_knowledge(
@@ -223,7 +223,7 @@ async def test_r0_criterion_05_router_cannot_inject_a_disallowed_card_id() -> No
     assert retrieval.router_status == "invalid_ids"
 
 
-async def test_r0_criterion_06_lookup_failure_degrades_without_fabrication() -> None:
+async def test_knowledge_lookup_failure_degrades_without_fabrication() -> None:
     provider = RecordingLLMProvider(
         DraftOutput(
             red_flags=["The explanation changes inside the submitted text."],
@@ -249,7 +249,7 @@ async def test_r0_criterion_06_lookup_failure_degrades_without_fabrication() -> 
     assert "- (none selected)" in str(provider.calls[0]["user"])
 
 
-async def test_r0_criterion_07_provider_failure_uses_fallback_not_no_signal() -> None:
+async def test_answer_provider_failure_uses_fallback_not_no_signal() -> None:
     primary = RecordingLLMProvider(
         LLMProviderError(
             "provider response text must stay private",
@@ -300,7 +300,7 @@ async def test_r0_criterion_07_provider_failure_uses_fallback_not_no_signal() ->
         ),
     ],
 )
-def test_r0_criterion_08_retrieved_cases_cannot_create_verdicts_or_proof(
+def test_retrieved_guidance_cannot_create_verdicts_or_proof(
     unsafe_text: str,
     expected_reason: str,
 ) -> None:
@@ -321,7 +321,7 @@ def test_r0_criterion_08_retrieved_cases_cannot_create_verdicts_or_proof(
     assert expected_reason in validation.reason
 
 
-async def test_r0_criterion_09_logs_and_db_keep_only_allowlisted_metadata(
+async def test_knowledge_logs_and_database_keep_only_allowlisted_metadata(
     session,
     caplog,
 ) -> None:
@@ -371,7 +371,7 @@ async def test_r0_criterion_09_logs_and_db_keep_only_allowlisted_metadata(
     assert "2026-07-15-v1" in messages
 
 
-def test_r0_criterion_10_telegram_and_web_share_run_check() -> None:
+def test_telegram_and_web_share_the_same_run_check_entrypoint() -> None:
     telegram = (REPO_ROOT / "app" / "bot" / "handlers.py").read_text(encoding="utf-8")
     web = (REPO_ROOT / "app" / "web" / "routes.py").read_text(encoding="utf-8")
 
@@ -381,7 +381,7 @@ def test_r0_criterion_10_telegram_and_web_share_run_check() -> None:
     assert "from app.engine import" in web
 
 
-def test_t14_deployed_knowledge_packs_are_loadable_and_copied_into_image() -> None:
+def test_deployed_knowledge_pack_is_loadable_and_copied_into_image() -> None:
     store = FileKnowledgeStore()
     family = store.load()
 
