@@ -291,6 +291,18 @@ Start from [`deploy/env.prod.example`](deploy/env.prod.example), validate
 `docker-compose.prod.yml`, bootstrap TLS with `deploy/nginx/init-letsencrypt.sh`,
 and use the scripts under `deploy/` for update, backup, and restore operations.
 
+Privacy-safe runtime logs stay on the VM in Docker's rotated log files. Each web request and
+Telegram update receives a random, content-free request ID that connects its lifecycle and error
+records. View recent app records or follow them live with:
+
+```bash
+docker compose -f docker-compose.prod.yml logs --since=24h --timestamps app
+docker compose -f docker-compose.prod.yml logs -f --tail=200 app
+```
+
+Web responses expose the generated ID as `X-Request-ID`; operator Telegram alerts include it when
+available. Search that ID in the local logs. Never add request bodies or submitted content.
+
 Secrets must live only in the server `.env`, GitHub Secrets, and provider
 dashboards. Never commit real `.env` values, API keys, Telegram tokens, OCR
 credentials, screenshots of secrets, or provider keys.

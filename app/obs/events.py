@@ -17,6 +17,8 @@ import re
 from enum import Enum
 from typing import Any
 
+from app.obs.context import REQUEST_ID_RE, current_request_id
+
 LOGGER = logging.getLogger(__name__)
 
 ALLOWED_EVENT_NAMES = {
@@ -116,7 +118,10 @@ SAFE_CONTENT_LIKE_FIELD_NAMES = {
 # with no whitespace can't smuggle free-form content into the log. Kept
 # identical to VERSION_RE in app/data/repo.py so a version that the DB layer
 # accepts can never blow up here at log time.
-STRICT_VALUE_FORMATS = {"kb_version": re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")}
+STRICT_VALUE_FORMATS = {
+    "kb_version": re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"),
+    "request_id": REQUEST_ID_RE,
+}
 CONTENT_VALUE_PATTERNS = (
     re.compile(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b"),
     re.compile(r"(?i)\b(?:https?|hxxps?)://[^\s<>()]+|\bwww\.[^\s<>()]+"),
@@ -153,7 +158,7 @@ def log_event(name: str, **fields: Any) -> dict[str, Any]:
     if name not in ALLOWED_EVENT_NAMES:
         raise ValueError(f"Unsupported event name: {name}")
 
-    normalized: dict[str, Any] = {}
+    normalized = _request_fields()
     for key, value in fields.items():
         _validate_field_name(key, ALLOWED_FIELDS)
         normalized[key] = _normalize_value(value, key)
@@ -175,7 +180,11 @@ def log_error(stage: str, error_type: str, **fields: Any) -> dict[str, Any]:
     if stage not in ALLOWED_ERROR_STAGES:
         raise ValueError(f"Unsupported error stage: {stage}")
 
-    normalized: dict[str, Any] = {"stage": stage, "error_type": _normalize_value(error_type)}
+    normalized: dict[str, Any] = {
+        **_request_fields(),
+        "stage": stage,
+        "error_type": _normalize_value(error_type),
+    }
     for key, value in fields.items():
         _validate_field_name(key, ALLOWED_ERROR_FIELDS)
         normalized[key] = _normalize_value(value)
@@ -185,6 +194,13 @@ def log_error(stage: str, error_type: str, **fields: Any) -> dict[str, Any]:
     # OperatorAlertHandler in app/obs/alerts.py) without them re-parsing the message.
     LOGGER.error("event=app_error fields=%s", normalized, extra={"avvalo_error": normalized})
     return payload
+
+
+def _request_fields() -> dict[str, str]:
+    request_id = current_request_id()
+    if request_id is None:
+        return {}
+    return {"request_id": _normalize_value(request_id, "request_id")}
 
 
 def _validate_field_name(key: str, allowed: set[str]) -> None:

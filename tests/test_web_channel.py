@@ -1,6 +1,7 @@
 """Web-channel parity, privacy boundaries, and abuse-gate tests."""
 
 import logging
+import re
 
 from fastapi.testclient import TestClient
 from starlette.formparsers import MultiPartParser
@@ -100,13 +101,20 @@ def test_unhandled_route_exception_logs_and_returns_500(caplog) -> None:
         raise ValueError("unexpected")
 
     client = TestClient(app, raise_server_exceptions=False)
-    response = client.get("/__test_boom")
+    supplied_id = "user-supplied-id-must-not-be-trusted"
+    response = client.get("/__test_boom", headers={"X-Request-ID": supplied_id})
 
     assert response.status_code == 500
+    request_id = response.headers["x-request-id"]
+    assert re.fullmatch(r"[0-9a-f]{32}", request_id)
+    assert request_id != supplied_id
     messages = "\n".join(record.getMessage() for record in caplog.records)
     assert "event=app_error" in messages
     assert "'stage': 'web'" in messages
     assert "'error_type': 'ValueError'" in messages
+    assert f"'request_id': '{request_id}'" in messages
+    assert supplied_id not in messages
+    assert "unexpected" not in messages
 
 
 def test_unified_checker_is_localized_and_old_merchants_url_redirects() -> None:

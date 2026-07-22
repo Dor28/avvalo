@@ -180,7 +180,9 @@ and editorial rows are not part of `/delete_my_data` because they are operator-o
 - dropping the table or purging remaining data requires a separately authorized migration.
 
 `log_event()` and `log_error()` accept only allowlisted categorical metadata. Submitted content,
-OCR text, model output, URLs, contacts, and exception strings are forbidden.
+OCR text, model output, URLs, contacts, and exception strings are forbidden. Each web request,
+Telegram update, or direct checker call receives a server-generated random `request_id` so its
+start, error, and completion records can be connected without identifying the user.
 
 ## 8. Channel behavior
 
@@ -210,6 +212,10 @@ product routes. `/healthz` checks process liveness; `/readyz` also checks databa
 Operational metrics and feedback-label reports read `check_event` rows. They expose
 aggregate counts, statuses, languages, cost/latency, no-signal rate, safety fallback counts,
 knowledge coverage, and categorical feedback without user keys or check IDs.
+
+Runtime event and error records remain local in Docker's rotated logs. Search by the anonymous
+`request_id` returned in web response headers or included in operator alerts; never add request
+bodies, exception strings, submitted content, IP addresses, or raw platform identifiers.
 
 Supported tools include:
 

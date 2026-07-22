@@ -1,6 +1,7 @@
 """Daily-limit, categorical-feedback, and privacy-safe event contracts."""
 
 import logging
+import re
 
 import pytest
 
@@ -9,6 +10,7 @@ from app.data import repo
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput
+from app.obs.context import current_request_id, request_context
 from app.obs.events import log_error, log_event
 from tests.support import addressed_rule_ids
 
@@ -93,6 +95,23 @@ def test_log_event_accepts_metadata_and_refuses_content() -> None:
         log_event("check_completed", raw_text="secret submitted content")
     with pytest.raises(ValueError):
         log_event("check_failed", error_class="+998 90 123 45 67")
+    with pytest.raises(ValueError):
+        log_event("check_completed", request_id="attacker-controlled")
+
+
+def test_log_records_share_only_the_bound_anonymous_request_id() -> None:
+    request_id = "a" * 32
+
+    with request_context(request_id):
+        event = log_event("check_started", language="ru")
+        error = log_error("llm", "TimeoutError", timeout_s=30)
+
+    assert event["request_id"] == request_id
+    assert error["request_id"] == request_id
+    assert current_request_id() is None
+
+    with pytest.raises(ValueError), request_context("not-a-server-request-id"):
+        pass
 
 
 def test_kb_version_is_exempt_from_heuristics_but_held_to_a_strict_shape() -> None:
@@ -145,3 +164,34 @@ async def test_run_check_emits_privacy_safe_events(session, caplog) -> None:
     assert "event=check_started" in messages
     assert "event=check_completed" in messages
     assert "SMS kodni" not in messages
+    request_ids = re.findall(r"'request_id': '([0-9a-f]{32})'", messages)
+    assert len(request_ids) >= 2
+    assert len(set(request_ids)) == 1
+    assert current_request_id() is None
+
+
+async def test_failed_check_correlates_error_and_terminal_event(session, caplog) -> None:
+    class TimeoutProvider:
+        async def analyze(self, **_kwargs):
+            raise TimeoutError
+
+    caplog.set_level(logging.INFO, logger="app.obs.events")
+    result = await run_check(
+        CheckInput(
+            user_key="evented-failure",
+            language=Language.ru,
+            input_type=InputType.text,
+            raw_text="Срочно сообщите код из SMS.",
+        ),
+        session=session,
+        llm_provider=TimeoutProvider(),
+    )
+
+    assert result.status is CheckStatus.timeout
+    messages = "\n".join(record.getMessage() for record in caplog.records)
+    assert "event=app_error" in messages
+    assert "event=check_failed" in messages
+    request_ids = re.findall(r"'request_id': '([0-9a-f]{32})'", messages)
+    assert len(request_ids) >= 3
+    assert len(set(request_ids)) == 1
+    assert "Срочно" not in messages
