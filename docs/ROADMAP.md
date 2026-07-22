@@ -4,8 +4,8 @@
 > **Last updated:** 2026-07-22
 > **Product authority:** [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md)
 
-This roadmap contains one product path only. Older launch-feature lists, merchant-first gates,
-content plans, voice work, group monitoring, and horizon ideas are not active work.
+This roadmap contains one product path only. Founder-authored educational cases support discovery
+and teach the checking habit, but do not create another product or reuse submitted checks.
 
 ## 0. Rules for every work session
 
@@ -15,25 +15,22 @@ content plans, voice work, group monitoring, and horizon ideas are not active wo
 4. Never output a verdict or score.
 5. Never claim an official source was checked without a typed Avvalo Verify result.
 6. Do not create an implementation task for a feature that has not passed its product gate.
-7. `main` deploys to production; do not push without explicit authorization and smoke evidence.
+7. `main` deploys to production; merge only with explicit founder authorization and passing
+   automated checks.
 
-## Phase A — Close baseline production verification
+## Editorial cases — Implemented, content rollout pending
 
-Record the current deployment in [ops/SMOKE_2026-07.md](ops/SMOKE_2026-07.md).
+- [x] Public trilingual list and individual case pages.
+- [x] Founder-only login and trilingual draft/publish editor.
+- [x] Editorial content stored separately from user-check data.
+- [x] Published cases link readers back to the unified checker.
+- [ ] Founder configures `ADMIN_ACCESS_KEY` in production.
+- [ ] Founder writes, reviews, and publishes the first three to five cases in all language forms.
 
-- [ ] Health endpoint and Telegram `/start` work.
-- [ ] Complete one text check in `uz_latn` and `ru`, plus one Cyrillic-Uzbek input that must be
-      answered in `uz_latn`.
-- [ ] Complete one image/OCR check and one low-quality-image failure path.
-- [ ] Manually inspect live Uzbek and Russian answer quality.
-- [ ] Verify anonymous web paths, consent, abuse limits, and friendly failures.
-- [ ] Audit production DB and logs for submitted-content leakage.
-- [ ] Verify deletion, retention, backup restore, cost, and latency evidence.
-- [ ] Record which optional stages are enabled in production.
+Cases are manually authored education. They are not Avvalo Verify evidence, a public allegation
+database, public submissions, comments, ratings, or automatic derivatives of user checks.
 
-This proves the baseline is operable. It does not prove Avvalo Verify exists.
-
-## Phase B — Validate Avvalo Verify manually
+## Phase A — Validate Avvalo Verify manually
 
 Produce the packet in [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md):
 
@@ -47,11 +44,11 @@ Produce the packet in [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md):
 Gate for `go`: at least 40% decision-relevant evidence coverage, at least 70% preference for the
 evidence-backed answer, and zero invented, overstated, unsourced, or person-level facts.
 
-No feature code is part of Phase B.
+No feature code is part of Phase A.
 
-## Phase C — Specify and build the strict MVP
+## Phase B — Specify and build the strict MVP
 
-This phase starts only after a recorded Phase B `go`.
+This phase starts only after a recorded Phase A `go`.
 
 Create one executor-ready task under `docs/tasks/`. It may cover only:
 
@@ -64,11 +61,11 @@ trilingual wording, adversarial tests, migrations if required, and rollout flags
 general web browsing or another product feature.
 
 Implementation is complete only when focused tests, the full suite, Ruff, privacy/secret checks,
-human three-language review, and deployment smoke evidence all pass.
+and human three-language review all pass.
 
-## Phase D — Run the measured alpha
+## Phase C — Run the measured alpha
 
-Recruit only after the MVP is audited and production smoke-tested.
+Recruit only after the MVP is audited and deployed.
 
 - [ ] 60 activated users.
 - [ ] 150 completed real checks.
@@ -84,7 +81,7 @@ source/time attribution, and zero privacy incidents.
 ## Not on the roadmap
 
 - Avvalo Merchants;
-- content library, story flywheel, or aggregate trend feed;
+- user-generated stories, comments, ratings, accusation feeds, or aggregate trend feeds;
 - voice, group monitoring, family accounts, or new product faces;
 - pattern similarity, classifiers, or training on submissions;
 - autonomous browsing, reverse-image search, or authenticity verdicts;
@@ -96,6 +93,6 @@ because they appear in git history or a superseded document.
 
 ## Definition of roadmap complete
 
-The roadmap is complete when baseline production evidence is recorded, the concierge gate passes,
-the strict three-family MVP is live and audited, the measured alpha reaches its sample, and the
-founder makes a written decision from the agreed metrics.
+The roadmap is complete when the concierge gate passes, the strict three-family MVP is live and
+audited, the measured alpha reaches its sample, and the founder makes a written decision from the
+agreed metrics.

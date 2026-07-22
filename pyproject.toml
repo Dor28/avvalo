@@ -60,5 +60,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 # Translations carry long lines and Cyrillic glyphs that look like Latin ones.
 "app/bot/texts.py" = ["E501", "RUF001"]
 "app/web/routes.py" = ["E501", "RUF001"]
+"app/web/editorial_copy.py" = ["E501", "RUF001"]
 "app/engine/format.py" = ["RUF001"]
 "app/engine/validate.py" = ["RUF001"]
+"tests/test_editorial_posts.py" = ["E501", "RUF001"]

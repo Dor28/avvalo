@@ -1,0 +1,22 @@
+<header class="admin-topbar">
+  <a class="admin-brand" href="/admin/posts?language={{ language }}">
+    <img src="/static/icon-192.png?v={{ static_version }}" alt="">
+    <span><strong>Avvalo</strong><small>Editorial</small></span>
+  </a>
+  <div class="admin-topbar-actions">
+    <nav class="language-nav" aria-label="{{ copy.language_label }}">
+      {% for option in languages %}
+        <a class="{% if option == language %}active{% endif %}"
+           {% if option == language %}aria-current="page"{% endif %}
+           aria-label="{{ language_labels[option] }}"
+           href="{{ request.url.path }}?language={{ option }}">{{ short_language_labels[option] }}</a>
+      {% endfor %}
+    </nav>
+    {% if show_logout %}
+      <form action="/admin/logout" method="post">
+        <input type="hidden" name="language" value="{{ language }}">
+        <button class="admin-logout" type="submit">{{ editorial.admin_logout }}</button>
+      </form>
+    {% endif %}
+  </div>
+</header>

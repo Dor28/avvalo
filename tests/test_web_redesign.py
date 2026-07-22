@@ -53,24 +53,25 @@ def test_home_leads_with_the_unified_checker() -> None:
     assert client.get("/sitemap.xml").status_code == 404
 
 
-def test_public_flow_uses_the_minimal_shell_without_duplicate_explainers() -> None:
+def test_home_and_check_share_one_product_shell_and_supported_scope() -> None:
     client = TestClient(create_app())
 
     landing = client.get("/?language=ru")
     checker = client.get("/check?language=ru")
 
-    assert 'class="landing-visual"' not in landing.text
-    assert 'class="preview-card"' not in landing.text
-    # The home form carries its own 1/2/3 chips, so it must not also repeat the
-    # workflow summary that only /check shows above its form.
-    assert 'class="check-summary"' not in landing.text
-    assert 'class="field-step"' in landing.text
-    assert 'class="field-step"' not in checker.text
-    assert 'class="workflow-list"' not in checker.text
-    assert 'class="trust-list"' not in checker.text
-    assert 'class="check-summary"' in checker.text
-    assert 'class="attachment-panel"' in checker.text
-    assert 'class="result-meta"' not in checker.text
+    for response in (landing, checker):
+        assert response.status_code == 200
+        assert 'class="composer-card"' in response.text
+        assert 'class="use-cases"' in response.text
+        assert 'class="trust-list"' in response.text
+        assert 'class="outcome-section"' in response.text
+        assert 'class="boundary-card"' in response.text
+        assert 'class="attachment-grid"' in response.text
+        assert 'Скрин оплаты' in response.text
+        assert 'Документ или запрос' in response.text
+        assert 'class="check-summary"' not in response.text
+        assert 'class="field-step"' not in response.text
+        assert 'class="result-meta"' not in response.text
 
 
 def test_consumer_copy_leads_with_the_check_instead_of_family_branding() -> None:
@@ -80,19 +81,19 @@ def test_consumer_copy_leads_with_the_check_instead_of_family_branding() -> None
             "uz_latn",
             "Oilalar uchun",
             "Oila himoyasi",
-            "Xabar tekshiruvi",
-            "Xabardan tekshiruv rejasigacha",
+            "Vaziyat tekshiruvi",
+            "To\u2018lov skrinshoti",
         ),
         (
             "ru",
             "Для семей",
             "Защита семьи",
-            "Проверка сообщения",
-            "От сообщения к плану проверки",
+            "Проверка ситуации",
+            "Скрин оплаты",
         ),
     ]
 
-    for language, old_audience, old_name, new_name, workflow in localized_copy:
+    for language, old_audience, old_name, new_name, broad_example in localized_copy:
         landing = client.get(f"/?language={language}")
         checker = client.get(f"/check?language={language}")
 
@@ -102,19 +103,25 @@ def test_consumer_copy_leads_with_the_check_instead_of_family_branding() -> None
         assert old_audience not in checker.text
         assert old_name not in landing.text
         assert old_name not in checker.text
+        assert new_name in landing.text
         assert new_name in checker.text
-        assert workflow in landing.text
+        assert broad_example in landing.text
+        assert broad_example in checker.text
 
 
 def test_check_page_exposes_localized_flow_and_busy_state() -> None:
     response = TestClient(create_app()).get("/check?language=ru")
 
     assert response.status_code == 200
-    assert 'aria-label="Как это работает"' in response.text
-    assert 'aria-label="Доверие"' in response.text
+    assert 'aria-label="Что можно отправить в Avvalo"' in response.text
     assert 'aria-current="page"' in response.text
     assert 'data-busy-label="Проверяем..."' in response.text
+    assert 'data-consent-error="Сначала примите условия конфиденциальности."' in response.text
     assert 'class="skip-link"' in response.text
+    assert '>O\u2018z</a>' in response.text
+    assert '>RU</a>' in response.text
+    assert 'aria-label="Русский"' in response.text
+    assert "Avvalo Verify" not in response.text
 
 
 def test_app_pages_are_never_cached_so_a_deploy_is_visible_immediately() -> None:

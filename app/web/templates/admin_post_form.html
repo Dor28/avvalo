@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b6e75">
+    <title>{% if post and post.id %}{{ editorial.form_edit_title }}{% else %}{{ editorial.form_new_title }}{% endif %} — Avvalo</title>
+    <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
+  </head>
+  <body class="admin-page">
+    {% set show_logout = true %}
+    {% include "_admin_header.html" %}
+    <main class="admin-editor-shell">
+      <header class="admin-editor-heading">
+        <a href="/admin/posts?language={{ language }}">← {{ editorial.form_cancel }}</a>
+        <p class="eyebrow">Avvalo Editorial</p>
+        <h1>{% if post and post.id %}{{ editorial.form_edit_title }}{% else %}{{ editorial.form_new_title }}{% endif %}</h1>
+        <p>{{ editorial.form_intro }}</p>
+      </header>
+
+      {% if error %}<p class="admin-form-error" role="alert">{{ error }}</p>{% endif %}
+
+      <form class="admin-editor-form"
+            action="{% if post and post.id %}/admin/posts/{{ post.id }}{% else %}/admin/posts{% endif %}"
+            method="post">
+        <input type="hidden" name="language" value="{{ language }}">
+
+        <section class="admin-settings-card">
+          <label class="admin-field wide">
+            <span>{{ editorial.form_slug }}</span>
+            <input name="slug" type="text" required maxlength="{{ max_slug }}"
+                   pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                   value="{{ post.slug if post else '' }}"
+                   aria-describedby="slug-hint">
+            <small id="slug-hint">{{ editorial.form_slug_hint }}</small>
+          </label>
+          <label class="admin-field">
+            <span>{{ editorial.form_category }}</span>
+            <select name="category" required>
+              {% for category in categories %}
+                <option value="{{ category }}" {% if post and post.category == category %}selected{% endif %}>
+                  {{ editorial.categories[category] }}
+                </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="admin-field">
+            <span>{{ editorial.form_state }}</span>
+            <select name="state" required>
+              <option value="draft" {% if not post or post.state == 'draft' %}selected{% endif %}>{{ editorial.admin_draft }}</option>
+              <option value="published" {% if post and post.state == 'published' %}selected{% endif %}>{{ editorial.admin_published }}</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="translation-editor" data-translation-editor>
+          <div class="translation-bar">
+            <strong>{{ editorial.form_translation }}</strong>
+            <div class="translation-tabs" role="tablist" aria-label="{{ editorial.form_translation }}">
+              {% for option in languages %}
+                <button type="button" role="tab" data-translation-tab="{{ option }}"
+                        aria-controls="translation-{{ option }}"
+                        aria-selected="{{ 'true' if option == language else 'false' }}">
+                  {{ short_language_labels[option] }}
+                </button>
+              {% endfor %}
+            </div>
+          </div>
+
+          {% for option in languages %}
+            <section id="translation-{{ option }}" class="translation-panel" role="tabpanel"
+                     data-translation-panel="{{ option }}">
+              <label class="admin-field">
+                <span>{{ editorial.form_title }} · {{ language_labels[option] }}</span>
+                <input name="title_{{ option }}" type="text" required maxlength="{{ max_title }}"
+                       value="{{ post['title_' ~ option] if post else '' }}">
+              </label>
+              <label class="admin-field">
+                <span>{{ editorial.form_summary }} · {{ language_labels[option] }}</span>
+                <textarea name="summary_{{ option }}" rows="3" required maxlength="{{ max_summary }}">{{ post['summary_' ~ option] if post else '' }}</textarea>
+              </label>
+              <label class="admin-field">
+                <span>{{ editorial.form_article }} · {{ language_labels[option] }}</span>
+                <textarea name="article_{{ option }}" rows="16" required maxlength="{{ max_article }}">{{ post['article_' ~ option] if post else '' }}</textarea>
+              </label>
+            </section>
+          {% endfor %}
+        </section>
+
+        <div class="admin-form-actions">
+          <a href="/admin/posts?language={{ language }}">{{ editorial.form_cancel }}</a>
+          <button class="submit-button" type="submit">{{ editorial.form_save }}</button>
+        </div>
+      </form>
+    </main>
+    <script src="/static/admin.js?v={{ static_version }}" defer></script>
+  </body>
+</html>

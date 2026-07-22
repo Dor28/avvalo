@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b6e75">
+    <title>{{ editorial.admin_login_title }} — Avvalo</title>
+    <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
+  </head>
+  <body class="admin-page admin-login-page">
+    {% set show_logout = false %}
+    {% include "_admin_header.html" %}
+    <main class="admin-login-shell">
+      <section class="admin-login-card" aria-labelledby="admin-login-title">
+        <span class="admin-lock" aria-hidden="true">✦</span>
+        <p class="eyebrow">Avvalo Editorial</p>
+        <h1 id="admin-login-title">{{ editorial.admin_login_title }}</h1>
+        <p>{{ editorial.admin_login_body }}</p>
+        {% if login_error %}
+          <p class="admin-form-error" role="alert">{{ editorial.admin_login_error }}</p>
+        {% endif %}
+        <form action="/admin/login" method="post" class="admin-login-form">
+          <input type="hidden" name="language" value="{{ language }}">
+          <label>
+            <span>{{ editorial.admin_key_label }}</span>
+            <input name="access_key" type="password" required autocomplete="current-password">
+          </label>
+          <button class="submit-button" type="submit">{{ editorial.admin_login_button }}</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>
