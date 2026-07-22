@@ -45,6 +45,7 @@ Important modules:
 | Types | `app/engine/types.py` | Boundary enums and Pydantic models |
 | Rules | `app/engine/rules/`, `rules/checker/` | Deterministic local signals |
 | Rule overrides | `app/rules_store/` | Operator-authored patterns merged onto the baseline |
+| Card overrides | `app/knowledge_store/` | Operator-authored cards merged onto the baseline |
 | Minimization | `app/engine/minimize.py` | Removes PII before model calls |
 | Knowledge | `app/engine/knowledge/`, `knowledge/checker/` | Reviewed explanatory guidance |
 | LLM | `app/engine/llm/` | OpenAI-compatible provider boundary and fallback |
@@ -150,6 +151,23 @@ identity, intent, or fraud.
 The semantic router is optional and receives minimized text plus a server-generated allowlist. It
 may select only allowed card IDs. Empty or unavailable knowledge must degrade safely to the rule and
 signal context.
+
+### 6.1 Operator card overrides
+
+Cards follow the same posture as rule patterns (§5.1): new card work lives in the
+`knowledge_card_override` table (`app/knowledge_store/`) rather than in the public repository, on
+its own declarative base, and merges onto the shipped `knowledge/<face>/cards.yaml` base **by card
+ID**. A `draft` or `retired` override suppresses the baseline card of that ID.
+
+`KnowledgeStore.load()` stays synchronous and is served from a process-level snapshot refreshed
+every `KNOWLEDGE_REFRESH_MINUTES`. An unreachable database leaves the previous base in force and
+ultimately falls back to the YAML baseline; a single malformed row is skipped. Degrading to an
+*empty* base is specifically not acceptable, because `retrieval_status` would then read `empty`
+rather than `unavailable` and the pipeline would look healthy while answering with no knowledge.
+
+When an override contributes, `kb_version` becomes `<base-version>.db<YYYYMMDDHHMMSS>`. The format
+is constrained by `app/data/repo.py`'s `VERSION_RE`, which rejects a bad `kb_version` on every
+`check_event` write — `+`, `:` and spaces are not permitted.
 
 The full knowledge contract lives in
 [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md).

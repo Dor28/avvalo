@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     openphish_feed_url: str | None = None
     url_feeds_refresh_hours: int = Field(default=12, ge=1, le=168)
     rule_pack_refresh_minutes: int = Field(default=15, ge=1, le=1440)
+    knowledge_refresh_minutes: int = Field(default=15, ge=1, le=1440)
     knowledge_gap_default_days: int = Field(default=7, ge=1, le=365)
     knowledge_unavailable_alert_threshold: float = Field(default=0.2, ge=0, le=1)
     knowledge_unavailable_alert_window_minutes: int = Field(default=30, ge=1, le=1440)

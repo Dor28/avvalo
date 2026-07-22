@@ -34,10 +34,13 @@ ALLOWED_EVENT_NAMES = {
     "deletion_requested",
     "deletion_completed",
     "rule_pack_refreshed",
+    "knowledge_base_refreshed",
 }
 
 ALLOWED_FIELDS = {
+    "active_cards",
     "active_rules",
+    "baseline_cards",
     "baseline_rules",
     "cost_usd",
     "error_class",
@@ -57,6 +60,7 @@ ALLOWED_FIELDS = {
     "ocr_confidence",
     "ocr_ms",
     "output_tokens",
+    "override_cards",
     "override_rules",
     "retrieval_mode",
     "retrieval_status",
@@ -65,6 +69,7 @@ ALLOWED_FIELDS = {
     "rule_ids",
     "safety_blocked",
     "status",
+    "suppressed_cards",
     "tokens",
     "usefulness",
 }
@@ -95,7 +100,16 @@ CONTENT_FIELD_TOKENS = (
 # ``card`` normally means payment-card content, but this exact field contains
 # validated static knowledge IDs only. Keep the broad token guard for every
 # other field name.
-SAFE_CONTENT_LIKE_FIELD_NAMES = {"knowledge_card_ids"}
+# "card" is a CONTENT_FIELD_TOKEN because of payment card numbers. These names
+# are about *knowledge* cards and carry integer counts or allowlisted IDs, so
+# they are exempted by name rather than renamed to slip past the check.
+SAFE_CONTENT_LIKE_FIELD_NAMES = {
+    "knowledge_card_ids",
+    "active_cards",
+    "baseline_cards",
+    "override_cards",
+    "suppressed_cards",
+}
 
 # Fields exempt from the CONTENT_VALUE_PATTERNS heuristics, held to a strict
 # shape instead. ``kb_version`` is operator-controlled metadata read from

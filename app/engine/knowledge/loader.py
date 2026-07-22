@@ -19,6 +19,11 @@ _ID_RE = re.compile(r"^[a-z][a-z0-9_.-]{0,79}$")
 _VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
 
 
+# Merged YAML+database bases currently in force, keyed by face ID. Empty until
+# the first refresh succeeds; see ``FileKnowledgeStore.load``.
+_ACTIVE_BASES: dict[str, KnowledgeBase] = {}
+
+
 class FileKnowledgeStore:
     """Load schema-valid approved cards from the repository knowledge pack."""
 
@@ -26,7 +31,44 @@ class FileKnowledgeStore:
         self.root = root
 
     def load(self, face_id: str) -> KnowledgeBase:
-        return _load_knowledge_base(self.root.resolve(), face_id)
+        """Return the base in force for ``face_id``.
+
+        Synchronous by contract: ``KnowledgeStore`` is a sync Protocol with
+        three call sites, so a merged base is served from a process-level
+        snapshot rather than queried. ``app.knowledge_store.apply`` swaps that
+        snapshot in on a schedule and after an operator edit. Before the first
+        successful refresh — and whenever the database is unreachable — this
+        falls back to the YAML pack shipped in the image, so knowledge degrades
+        to the baseline instead of to nothing.
+
+        A store built on a non-default root is a tool/test affordance and always
+        reads the files under that root.
+        """
+
+        root = self.root.resolve()
+        if root == _KNOWLEDGE_ROOT.resolve():
+            active = _ACTIVE_BASES.get(face_id)
+            if active is not None:
+                return active
+        return _load_knowledge_base(root, face_id)
+
+
+def load_yaml_knowledge_base(face_id: str) -> KnowledgeBase:
+    """Load the shipped baseline for ``face_id``, ignoring any published snapshot."""
+
+    return _load_knowledge_base(_KNOWLEDGE_ROOT.resolve(), face_id)
+
+
+def set_active_knowledge_base(face_id: str, base: KnowledgeBase) -> None:
+    """Publish a merged base as the one in force for ``face_id``."""
+
+    _ACTIVE_BASES[face_id] = base
+
+
+def clear_active_knowledge_bases() -> None:
+    """Drop every merged base, reverting to the shipped YAML baseline."""
+
+    _ACTIVE_BASES.clear()
 
 
 @cache
