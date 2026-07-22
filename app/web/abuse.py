@@ -16,9 +16,10 @@ from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.config import Settings
+from app.engine.types import MAX_IMAGE_BYTES
 from app.privacy.user_key import derive_user_key
 
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_UPLOAD_BYTES = MAX_IMAGE_BYTES
 # Includes multipart framing and the small text fields submitted alongside an
 # image.  Keeping this below the multipart spool threshold ensures submitted
 # content is rejected from memory before Starlette can roll it onto disk.

@@ -5,6 +5,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+MAX_SUBMITTED_TEXT_CHARS = 6_000
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+
 
 class Language(StrEnum):
     """Supported reply languages.
@@ -50,9 +53,9 @@ class CheckInput(BaseModel):
     user_key: str
     language: Language
     input_type: InputType
-    raw_text: str | None = None
-    image_bytes: bytes | None = None
-    caption: str | None = None
+    raw_text: str | None = Field(default=None, max_length=MAX_SUBMITTED_TEXT_CHARS)
+    image_bytes: bytes | None = Field(default=None, max_length=MAX_IMAGE_BYTES)
+    caption: str | None = Field(default=None, max_length=MAX_SUBMITTED_TEXT_CHARS)
 
 
 class Signal(BaseModel):

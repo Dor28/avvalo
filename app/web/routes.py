@@ -26,6 +26,7 @@ from app.engine import (
     run_check,
 )
 from app.engine.format import format_status_message
+from app.engine.types import MAX_SUBMITTED_TEXT_CHARS
 from app.privacy.consent import is_consent_current
 from app.web.abuse import (
     pseudonymous_ip_key,
@@ -62,7 +63,7 @@ def _static_version() -> str:
 
 templates.env.globals["static_version"] = _static_version()
 DEV_WEB_SESSION_SECRET = "development-web-session-secret"
-WEB_MAX_TEXT_CHARS = 6000
+WEB_MAX_TEXT_CHARS = MAX_SUBMITTED_TEXT_CHARS
 WEB_IP_SCOPE = "web_ip"
 
 # The form's own maxlength attributes come from the same constants the POST
