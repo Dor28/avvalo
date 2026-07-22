@@ -68,12 +68,18 @@ class _UnavailableKnowledgeRouter:
     async def route(self, **_kwargs) -> RouterResponse:
         raise RuntimeError("knowledge router unavailable")
 
-# Outcomes that consume a daily-limit slot: a real completion (ok / no_signal)
-# or a safety fallback that still ran the model. Every other status is a
-# pre-analysis or system fault and is refunded so it doesn't burn the quota.
+# Outcomes that consume a daily-limit slot: a real completion (ok / no_signal),
+# an OCR attempt that reached the configured provider, or a safety fallback
+# that still ran the model. Every other status is a pre-analysis or system fault
+# and is refunded so it doesn't burn the quota.
 # Public because the web channel's per-IP limit applies the same refund rule.
 BILLABLE_STATUSES = frozenset(
-    {CheckStatus.ok, CheckStatus.no_signal, CheckStatus.safety_fallback}
+    {
+        CheckStatus.ok,
+        CheckStatus.no_signal,
+        CheckStatus.low_ocr,
+        CheckStatus.safety_fallback,
+    }
 )
 
 
@@ -89,11 +95,14 @@ async def run_check(
     url_reputation_store: URLReputationStore | None = None,
     settings: Settings | None = None,
     rate_limit_override: int | None = None,
+    commit_rate_limit_reservation: bool = False,
 ) -> CheckResult:
     """Run one check through the current skeleton stages.
 
     Passing ``session`` records a ``check_event`` row with IDs, status, and
-    metrics only. The caller still owns the transaction.
+    metrics only. The caller still owns the transaction unless
+    ``commit_rate_limit_reservation`` is enabled to release the counter-row
+    lock before external OCR or LLM work.
     """
 
     started = perf_counter()
@@ -107,17 +116,32 @@ async def run_check(
         else None
     )
     if result is None:
-        result = await _run_stages(
-            check_input,
-            llm_provider=llm_provider,
-            fallback_llm_provider=fallback_llm_provider,
-            ocr_provider=ocr_provider,
-            knowledge_store=knowledge_store,
-            knowledge_router=knowledge_router,
-            url_reputation_store=url_reputation_store,
-            session=session,
-            settings=settings,
+        reservation_committed = bool(
+            session is not None
+            and check_input.face in FACES
+            and commit_rate_limit_reservation
         )
+        if reservation_committed:
+            await session.commit()
+        try:
+            result = await _run_stages(
+                check_input,
+                llm_provider=llm_provider,
+                fallback_llm_provider=fallback_llm_provider,
+                ocr_provider=ocr_provider,
+                knowledge_store=knowledge_store,
+                knowledge_router=knowledge_router,
+                url_reputation_store=url_reputation_store,
+                session=session,
+                settings=settings,
+            )
+        except Exception:
+            if reservation_committed:
+                await repo.refund_usage(
+                    session, user_key=check_input.user_key, face=check_input.face
+                )
+                await session.commit()
+            raise
     result.latency_ms = max(0, round((perf_counter() - started) * 1000))
     _log_check_finished(
         check_input, result, limit_override=rate_limit_override, settings=settings
@@ -435,7 +459,11 @@ async def _content_from_input(
             ),
         )
 
-    parts = [part.strip() for part in (check_input.caption, ocr_text) if part and part.strip()]
+    parts = [
+        part.strip()
+        for part in (check_input.caption, check_input.raw_text, ocr_text)
+        if part and part.strip()
+    ]
     return _ContentStageResult(
         text="\n".join(parts),
         ocr_ms=ocr_ms,

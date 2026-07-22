@@ -177,13 +177,12 @@ async def test_daily_metrics_include_coverage_unavailable_and_card_inventory(ses
     assert summary["knowledge"]["unavailable_rate"] == 0.3333
     assert summary["knowledge"]["inventory"]["version"] == "2026-07-15-v1"
     assert summary["knowledge"]["inventory"]["approved_cards"] == {
-        "family": 7,
-        "merchants": 5,
+        "family": 10,
     }
     assert "knowledge_coverage_rate=0.3333" in exported
     assert "knowledge_unavailable_rate=0.3333" in exported
     assert "kb_version=2026-07-15-v1" in exported
-    assert "kb_approved_cards_family=7" in exported
+    assert "kb_approved_cards_family=10" in exported
 
 
 async def test_knowledge_unavailable_alert_fires_above_and_stays_quiet_below(

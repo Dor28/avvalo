@@ -31,7 +31,6 @@ ALLOWED_EVENT_NAMES = {
     "decision_answered",
     "share_clicked",
     "share_tapped",
-    "story_submitted",
     "deletion_requested",
     "deletion_completed",
 }

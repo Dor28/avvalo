@@ -1,5 +1,6 @@
 """Static checks for deployment privacy guardrails."""
 
+import asyncio
 import re
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import yaml
 
 from app.engine.faces import FACES
 from app.engine.knowledge import FileKnowledgeStore
+from app.main import _run_service_runners
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -42,6 +44,16 @@ def test_nginx_rejects_unknown_hosts_and_throttles_check_posts() -> None:
     assert "location = /check" in nginx
     assert "limit_req zone=web_check_posts" in nginx
     assert "client_body_timeout 15s;" in nginx
+
+
+def test_nginx_timeout_exceeds_full_pipeline_budget() -> None:
+    nginx = (REPO_ROOT / "deploy" / "nginx" / "templates" / "avvalo.conf.template").read_text(
+        encoding="utf-8"
+    )
+
+    proxy_timeout = re.search(r"proxy_read_timeout (\d+)s;", nginx)
+    assert proxy_timeout is not None
+    assert int(proxy_timeout.group(1)) > 30 + 10 + (2 * 2 * 30)
 
 
 def test_nginx_csp_does_not_allow_inline_scripts() -> None:
@@ -105,6 +117,62 @@ def test_deploy_uses_a_pretrusted_ssh_host_key() -> None:
     assert "DEPLOY_HOST_KEY" in workflow
     assert "ssh-keyscan" not in workflow
     assert "printf '%s\\n' \"$SSH_HOST_KEY\" > ~/.ssh/known_hosts" in workflow
+
+
+def test_production_jobs_are_gated_to_main() -> None:
+    workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(
+        encoding="utf-8"
+    )
+
+    main_gate = "github.ref == 'refs/heads/main'"
+    assert workflow.count(f"if: github.event_name != 'pull_request' && {main_gate}") == 2
+    assert "group: deploy-production" not in workflow
+    assert "format('ci-{0}', github.ref)" in workflow
+
+
+def test_remote_update_waits_for_service_health() -> None:
+    script = (REPO_ROOT / "deploy" / "remote-update.sh").read_text(encoding="utf-8")
+
+    assert "$COMPOSE up -d --wait --wait-timeout 180" in script
+    assert script.index("--wait --wait-timeout") < script.index(">> Deploy complete.")
+
+    compose = (REPO_ROOT / "docker-compose.prod.yml").read_text(encoding="utf-8")
+    assert "http://localhost:8000/readyz" in compose
+
+
+def test_restore_stops_writers_and_fails_atomically() -> None:
+    script = (REPO_ROOT / "deploy" / "restore.sh").read_text(encoding="utf-8")
+
+    assert 'stop app' in script
+    assert "ON_ERROR_STOP=1" in script
+    assert "--single-transaction" in script
+    assert script.index("stop app") < script.index("psql -X")
+    assert "up -d --wait --wait-timeout 180 app" in script
+
+
+async def test_service_runner_exit_cancels_peer() -> None:
+    peer_started = asyncio.Event()
+    peer_stopped = asyncio.Event()
+
+    async def peer() -> None:
+        peer_started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            peer_stopped.set()
+
+    async def owner() -> None:
+        await peer_started.wait()
+
+    await _run_service_runners([peer(), owner()])
+
+    assert peer_stopped.is_set()
+
+
+def test_web_process_assigns_signal_ownership_to_uvicorn() -> None:
+    main = (REPO_ROOT / "app" / "main.py").read_text(encoding="utf-8")
+
+    assert "handle_signals=not settings.web_enabled" in main
 
 
 def test_dependabot_tracks_all_supply_chain_inputs() -> None:

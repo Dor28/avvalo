@@ -26,6 +26,11 @@ app, rule packs, OCR providers, an OpenAI-compatible LLM adapter, reviewed
 knowledge retrieval, a safety validator, consent/deletion flows, privacy-safe
 metrics, Docker deployment, and tests.
 
+The runtime has one active product face, internally named `family`. Seller,
+payment-screenshot, courier, and refund situations are handled by the same
+checker and its safety rules. Avvalo Merchants, the public scam library, story
+capture, and Scam Pulse are retired surfaces, not optional product modes.
+
 The next product capability is **Avvalo Verify**: bounded, source-backed facts
 for official identity, links/QR codes, and regulated-organization/license
 routing. It is not considered built or live yet. The manual validation gate in
@@ -104,9 +109,9 @@ app/
   obs/          privacy-safe events, metrics, cost accounting
   privacy/      consent and pseudonymous user-key helpers
   tools/        operator CLI modules
-rules/          YAML rule packs; merchant files are legacy compatibility code
+rules/          YAML rules for the single Avvalo checker
 knowledge/      versioned knowledge cards and reviewed case references
-prompts/        safety and face-specific prompt templates
+prompts/        shared safety instructions and the Avvalo task template
 tests/          unit/integration tests and golden fixtures
 tools/          standalone operator/research tools, including model eval
 deploy/         production env template, nginx, backup/restore helpers
@@ -162,8 +167,8 @@ docker compose up --build
 ```
 
 Open `http://localhost:8000` for the public landing page and
-`http://localhost:8000/check` for Avvalo. The legacy `/merchants` compatibility
-route may still exist in the baseline but is not an active product surface.
+`http://localhost:8000/check` for Avvalo. There is no separate merchant or
+content-library product surface.
 
 Text checks require a reachable LLM endpoint. Image checks also require an OCR
 provider and, on the web, Turnstile configuration unless tests/mocks bypass it.
@@ -262,9 +267,8 @@ Runtime config is loaded from environment variables through
 | `OCR_PROVIDER` | `gcv`, `tesseract`, `paddleocr`, or local stub paths. |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Cloud Vision service-account path when using GCV. |
 | `NOTICE_VERSION` | Consent notice version; bump to force re-consent. |
-| `DAILY_LIMIT_FAMILY` | Daily Telegram checks for family face. |
-| `DAILY_LIMIT_MERCHANTS` | Legacy merchant-face compatibility limit. |
-| `OPERATOR_ALERT_CHAT_ID` | Founder chat for minimized story review and debounced technical alerts. |
+| `DAILY_LIMIT_FAMILY` | Daily Telegram checks for the Avvalo checker. |
+| `OPERATOR_ALERT_CHAT_ID` | Founder chat for debounced technical alerts. |
 | `OPERATOR_ALERT_DEBOUNCE_S` | Minimum interval between duplicate technical alerts. |
 | `SENTRY_DSN` | Optional Sentry DSN; blank disables external error tracking. |
 | `SENTRY_ENVIRONMENT` | Environment tag for privacy-safe Sentry error events. |
@@ -284,9 +288,9 @@ Production is a single-VM Docker Compose deployment targeting Hetzner:
 - `deploy/backup.sh` and `deploy/restore.sh` cover database backup/restore.
 - GitHub Actions can test, build, push to GHCR, and deploy on `main`.
 
-Follow [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) end to end. The production
-guide includes server hardening, `.env` handling, GHCR login, TLS bootstrap,
-backups, scaling notes, and a go-live checklist.
+Start from [`deploy/env.prod.example`](deploy/env.prod.example), validate
+`docker-compose.prod.yml`, bootstrap TLS with `deploy/nginx/init-letsencrypt.sh`,
+and use the scripts under `deploy/` for update, backup, and restore operations.
 
 Secrets must live only in the server `.env`, GitHub Secrets, and provider
 dashboards. Never commit real `.env` values, API keys, Telegram tokens, OCR
@@ -304,9 +308,12 @@ python tools/secret_scan.py --all
 
 ## Engineering Guardrails
 
-- Do not store submitted content. The existing, explicit-consent
-  `story_submission.minimized_text` field is the only sanctioned exception and
-  must not be expanded into a content strategy.
+- Do not store submitted content. `story_submission.minimized_text` is a legacy
+  stewardship-only exception: no new writes or product reads; old rows remain
+  covered by `/delete_my_data` and retention until a separately authorized purge.
+- Keep one active face (`family`). Merchant payment protections belong in the
+  main checker; do not recreate Merchants, scam-library, story-capture, or
+  Scam-Pulse surfaces.
 - Do not add person, phone, card, or "reported N times" lookup features.
 - Do not weaken the safety prompts, validator, or output contract casually.
 - Do not put analysis logic in Telegram handlers or web routes; call the shared
@@ -323,10 +330,10 @@ Read in this order:
 - [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) — canonical product and safety.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — the only active order of work.
 - [docs/VERIFY_VALIDATION.md](docs/VERIFY_VALIDATION.md) — experiment and gates.
-- [docs/V1_TECHNICAL_PLAN.md](docs/V1_TECHNICAL_PLAN.md) — implemented baseline.
+- [docs/V1_TECHNICAL_PLAN.md](docs/V1_TECHNICAL_PLAN.md) — current implemented
+  architecture and engineering constraints.
 - [docs/AI_KNOWLEDGE_PIPELINE.md](docs/AI_KNOWLEDGE_PIPELINE.md) — explanation
   knowledge and LLM safety contract.
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — production operations.
 
 For the full docs index, see [docs/README.md](docs/README.md).
 

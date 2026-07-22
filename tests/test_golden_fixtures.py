@@ -1,10 +1,7 @@
-"""Golden-fixture integrity tests (V1_TECHNICAL_PLAN §13 T5/T10, §8).
+"""Golden-fixture integrity tests for the unified consumer checker.
 
-The golden fixtures are the mandatory acceptance set: 5 family + >=3
-merchants examples. End-to-end engine evaluation against them lands with the
-LLM (T6/T7/T10); until then these tests validate the fixtures' own structure and
-cross-check them against the rule packs so an example can't expect a family that
-no rule pack models.
+Payment, courier, and refund scenarios live in the same family set as the
+original consumer examples.
 """
 
 import json
@@ -31,9 +28,7 @@ REQUIRED_KEYS = {
     "no_signal",
 }
 
-# §8: the merchants face must never imply a payment was actually received. Each
-# merchants fixture must forbid at least one "money confirmed" phrasing. Apostrophes are
-# normalized so curly/straight variants compare equal.
+# Payment fixtures must never imply that an incoming payment was confirmed.
 SG_MONEY_CONFIRMED = {
     "деньги пришли",
     "оплата прошла",
@@ -70,12 +65,10 @@ def _families_for(face: str) -> set[str]:
 
 
 def test_minimum_golden_counts() -> None:
-    # §13: "5 family + >=3 merchants golden examples".
-    assert len(_load("family")) == 5
-    assert len(_load("merchants")) >= 3
+    assert len(_load("family")) >= 8
 
 
-@pytest.mark.parametrize("face", ["family", "merchants"])
+@pytest.mark.parametrize("face", ["family"])
 def test_fixture_shape_and_values(face: str) -> None:
     valid_languages = {lang.value for lang in Language}
     valid_input_types = {it.value for it in InputType}
@@ -103,7 +96,7 @@ def test_fixture_shape_and_values(face: str) -> None:
             )
 
 
-@pytest.mark.parametrize("face", ["family", "merchants"])
+@pytest.mark.parametrize("face", ["family"])
 def test_expected_families_exist_in_the_rule_pack(face: str) -> None:
     """Every expected family must be modeled by the face's rule pack (else it can never fire)."""
     pack_families = _families_for(face)
@@ -115,10 +108,11 @@ def test_expected_families_exist_in_the_rule_pack(face: str) -> None:
     assert not problems, "\n".join(problems)
 
 
-def test_merchants_fixtures_forbid_claiming_money_arrived() -> None:
+def test_payment_fixtures_forbid_claiming_money_arrived() -> None:
     confirmed = {_norm(phrase) for phrase in SG_MONEY_CONFIRMED}
-    for fixture in _load("merchants"):
+    payment_fixtures = [fixture for fixture in _load("family") if fixture["id"] >= "fs_06"]
+    for fixture in payment_fixtures:
         forbidden = {_norm(item) for item in fixture["must_not_contain"]}
         assert forbidden & confirmed, (
-            f"{fixture['id']}: must_not_contain should forbid a 'money arrived' phrase (§8)"
+            f"{fixture['id']}: must_not_contain should forbid a 'money arrived' phrase"
         )

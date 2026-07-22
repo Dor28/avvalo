@@ -10,13 +10,83 @@ from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
 from fastapi import HTTPException, UploadFile
+from starlette.formparsers import MultiPartParser
 from starlette.requests import Request
+from starlette.responses import Response
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.config import Settings
 from app.privacy.user_key import derive_user_key
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+# Includes multipart framing and the small text fields submitted alongside an
+# image.  Keeping this below the multipart spool threshold ensures submitted
+# content is rejected from memory before Starlette can roll it onto disk.
+MAX_REQUEST_BODY_BYTES = 12 * 1024 * 1024
 TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+
+class _RequestBodyTooLarge(Exception):
+    """Internal control flow for a streaming request-body rejection."""
+
+
+class EphemeralRequestBodyLimitMiddleware:
+    """Cap request bodies before multipart uploads can spill to a temp file."""
+
+    def __init__(self, app: ASGIApp, *, max_body_bytes: int = MAX_REQUEST_BODY_BYTES) -> None:
+        self.app = app
+        self.max_body_bytes = max_body_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope.get("method") not in {"POST", "PUT", "PATCH"}:
+            await self.app(scope, receive, send)
+            return
+
+        content_length = _content_length(scope)
+        if content_length is not None and content_length > self.max_body_bytes:
+            await _send_body_too_large(scope, receive, send)
+            return
+
+        received = 0
+
+        async def limited_receive() -> Message:
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > self.max_body_bytes:
+                    raise _RequestBodyTooLarge
+            return message
+
+        try:
+            await self.app(scope, limited_receive, send)
+        except _RequestBodyTooLarge:
+            await _send_body_too_large(scope, receive, send)
+
+
+def configure_ephemeral_multipart() -> None:
+    """Keep every accepted multipart body in memory for its ephemeral lifetime."""
+
+    MultiPartParser.spool_max_size = MAX_REQUEST_BODY_BYTES + 1
+
+
+def _content_length(scope: Scope) -> int | None:
+    for name, value in scope.get("headers", []):
+        if name.lower() != b"content-length":
+            continue
+        try:
+            return int(value)
+        except ValueError:
+            return None
+    return None
+
+
+async def _send_body_too_large(scope: Scope, receive: Receive, send: Send) -> None:
+    response = Response(
+        status_code=413,
+        headers={"Cache-Control": "no-store", "Pragma": "no-cache"},
+    )
+    await response(scope, receive, send)
 
 
 def require_same_origin(request: Request) -> None:

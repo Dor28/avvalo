@@ -18,11 +18,10 @@ from app.engine.rules.engine import (
 
 
 def test_rule_packs_load_with_description_map() -> None:
-    for face in ("family", "merchants"):
-        pack = load_rule_pack(face)
-        assert pack.rules, f"{face}: no rules loaded"
-        for rule in pack.rules:
-            assert pack.descriptions[rule.id] == rule.desc
+    pack = load_rule_pack("family")
+    assert pack.rules
+    for rule in pack.rules:
+        assert pack.descriptions[rule.id] == rule.desc
 
 
 def test_unknown_face_is_rejected() -> None:
@@ -59,6 +58,21 @@ def test_minimize_tokenizes_email_and_handle() -> None:
     assert "[EMAIL]" in out
     assert "[HANDLE]" in out
     assert "support@bank.example" not in out
+
+
+@pytest.mark.parametrize(
+    "phone",
+    [
+        "+7 999 123 45 67",
+        "+1 (415) 555-2671",
+        "+44 20 7946 0958",
+    ],
+)
+def test_international_phone_is_minimized_and_emits_signal(phone: str) -> None:
+    raw = f"Call this number: {phone}"
+
+    assert minimize(raw) == "Call this number: [PHONE]"
+    assert "phone" in {signal.kind for signal in extract_structural_signals(raw)}
 
 
 @pytest.mark.parametrize("passport", ["AA1234567", "aa 1234567"])

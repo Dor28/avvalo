@@ -8,7 +8,7 @@
 # (with certbot for Let's Encrypt TLS) as the reverse proxy for the web channel.
 #
 # All secrets and host-specific values come from a `.env` file in this directory.
-# Start from deploy/env.prod.example. See docs/DEPLOYMENT.md for the full guide.
+# Start from deploy/env.prod.example and use the helpers under deploy/.
 
 services:
   db:
@@ -23,8 +23,7 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     command:
       - "postgres"
-      # Conservative defaults for a small VM. Raise as you scale up (see the
-      # "Scaling the database" section of docs/DEPLOYMENT.md).
+      # Conservative defaults for a small VM. Review them before scaling.
       - "-c"
       - "max_connections=100"
       - "-c"
@@ -70,7 +69,7 @@ services:
         condition: service_healthy
     # Apply migrations (idempotent — Alembic tracks the version) then run the
     # bot(s) + web in one process. For a multi-instance deploy, run migrations as
-    # a separate one-shot step instead (see docs/DEPLOYMENT.md "Scaling").
+    # a separate one-shot step instead.
     command: ["sh", "-c", "alembic upgrade head && python -m app.main"]
     env_file:
       - .env
@@ -100,7 +99,7 @@ services:
           memory: 3072M
     healthcheck:
       # Requires WEB_ENABLED=true. For a bot-only deploy, delete this block.
-      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz', timeout=3).status==200 else 1)\""]
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/readyz', timeout=3).status==200 else 1)\""]
       interval: 30s
       timeout: 5s
       retries: 3

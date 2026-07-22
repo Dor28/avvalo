@@ -27,7 +27,9 @@ $COMPOSE pull app                       # requires a one-time `docker login ghcr
 # the previous app container. Retry the idempotent Compose update a few times so
 # that transient daemon state does not leave a tested image undeployed.
 for attempt in 1 2 3; do
-  if $COMPOSE up -d; then               # migrations run on app start (alembic upgrade head)
+  # `--wait` keeps CI pending until migrations finish and the app healthcheck
+  # passes instead of reporting success for a container that is crash-looping.
+  if $COMPOSE up -d --wait --wait-timeout 180; then
     break
   fi
   if [ "$attempt" -eq 3 ]; then

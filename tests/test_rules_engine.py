@@ -38,6 +38,20 @@ _EXPECTED_FS_RULE_IDS = {
         "fs.payment.prepay",
         "fs.credential.secret_docs",
     },
+    "fs_06_incoming_payment_screenshot": {
+        "fs.payment.receipt_inconsistent",
+        "fs.payment.screenshot_claim",
+        "fs.payment.release_pressure",
+    },
+    "fs_07_overpayment_refund": {
+        "fs.payment.overpayment_refund",
+        "fs.payment.screenshot_claim",
+    },
+    "fs_08_payment_name_mismatch": {
+        "fs.payment.receipt_inconsistent",
+        "fs.payment.screenshot_claim",
+        "fs.payment.release_pressure",
+    },
 }
 
 

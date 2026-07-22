@@ -1,7 +1,7 @@
 name: CI / Deploy
 
 # Test on every push/PR. Build the image, push it to GHCR, and deploy to the
-# Hetzner VM only on push to main (or a manual run). See docs/DEPLOYMENT.md §18.
+# Hetzner VM only on push to main (or a manual run).
 
 on:
   push:
@@ -15,7 +15,9 @@ permissions:
 
 # Never let two production deploys overlap.
 concurrency:
-  group: deploy-production
+  # Keep production serialized without letting PR or feature-branch checks
+  # replace a queued main deployment in GitHub's one-pending-run slot.
+  group: ${{ github.ref == 'refs/heads/main' && 'deploy-production' || format('ci-{0}', github.ref) }}
   cancel-in-progress: false
 
 env:
@@ -44,7 +46,7 @@ jobs:
   # ── 2. Build the image once, push to GHCR ───────────────────────────────────
   build-and-push:
     needs: test
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -77,7 +79,7 @@ jobs:
   # ── 3. Deploy: sync config, pull the new image, restart ─────────────────────
   deploy:
     needs: build-and-push
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4

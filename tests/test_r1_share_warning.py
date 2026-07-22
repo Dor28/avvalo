@@ -21,14 +21,13 @@ _SETTINGS = SimpleNamespace(app_hmac_secret=SecretStr("test-share-hmac-secret"))
 
 
 def test_share_summary_is_content_free_for_all_golden_fixtures(golden) -> None:
-    for face in ("family", "merchants"):
-        for case in golden(face):
-            rule_hits, _signals = run_rules(case["input"], case["face"])
-            rule_ids = [hit.rule_id for hit in rule_hits]
-            for language in Language:
-                summary = share_summary(rule_ids, language, case["face"])
-                _assert_content_free(summary, submitted_text=case["input"])
-                assert BOT_LINK in summary
+    for case in golden("family"):
+        rule_hits, _signals = run_rules(case["input"], case["face"])
+        rule_ids = [hit.rule_id for hit in rule_hits]
+        for language in Language:
+            summary = share_summary(rule_ids, language, case["face"])
+            _assert_content_free(summary, submitted_text=case["input"])
+            assert BOT_LINK in summary
 
 
 def test_share_summary_has_generic_copy_when_no_rules_fire() -> None:

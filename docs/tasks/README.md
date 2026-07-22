@@ -58,7 +58,6 @@ to an executor; the generator can be wrong about scope in a way the executor wil
 
 ## Related
 
-- [IMPROVEMENT_BACKLOG.md](../IMPROVEMENT_BACKLOG.md) — historical summary of T-01…T-07.
 - [ROADMAP.md](../ROADMAP.md) — the only active order of work.
 - [VERIFY_VALIDATION.md](../VERIFY_VALIDATION.md) — the gate that must pass before the first
   Avvalo Verify implementation task is written.

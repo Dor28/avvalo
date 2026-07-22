@@ -11,6 +11,11 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings
 from app.obs.events import log_error
+from app.web.abuse import (
+    MAX_REQUEST_BODY_BYTES,
+    EphemeralRequestBodyLimitMiddleware,
+    configure_ephemeral_multipart,
+)
 from app.web.routes import router
 
 
@@ -31,7 +36,12 @@ def create_app(
     )
     web_app.state.settings = settings
     web_app.state.session_factory = session_factory
+    configure_ephemeral_multipart()
     web_app.router.routes.extend(router.routes)
+    web_app.add_middleware(
+        EphemeralRequestBodyLimitMiddleware,
+        max_body_bytes=MAX_REQUEST_BODY_BYTES,
+    )
     web_app.middleware("http")(_prevent_post_caching)
     web_app.add_exception_handler(Exception, _handle_unexpected_error)
 

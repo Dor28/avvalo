@@ -388,14 +388,11 @@ def test_r0_criterion_10_telegram_and_web_share_run_check() -> None:
 def test_t14_deployed_knowledge_packs_are_loadable_and_copied_into_image() -> None:
     store = FileKnowledgeStore()
     family = store.load("family")
-    merchants = store.load("merchants")
 
-    assert family.version == merchants.version == "2026-07-15-v1"
+    assert family.version == "2026-07-15-v1"
     assert family.face == "family"
-    assert merchants.face == "merchants"
-    assert len(family.cards) == 7
-    assert len(merchants.cards) == 5
-    assert all(card.status == "approved" for card in [*family.cards, *merchants.cards])
+    assert len(family.cards) == 10
+    assert all(card.status == "approved" for card in family.cards)
 
     dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
     ignored = {

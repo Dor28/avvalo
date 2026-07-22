@@ -26,8 +26,9 @@ async def collect_metrics(
 ) -> dict[str, Any]:
     """Return aggregate-only operational metrics.
 
-    The result intentionally contains no user keys, check IDs, text, OCR text,
-    prompts, model outputs, links, phone numbers, or file identifiers.
+    The result includes only active product faces and intentionally contains no
+    user keys, check IDs, text, OCR text, prompts, model outputs, links, phone
+    numbers, or file identifiers.
     """
 
     since = _normalize_bound(since)
@@ -206,7 +207,7 @@ def _event_window(
     since: datetime | None,
     until: datetime | None,
 ) -> list[Any]:
-    conditions: list[Any] = []
+    conditions: list[Any] = [CheckEvent.face.in_(tuple(FACES))]
     if since is not None:
         conditions.append(CheckEvent.ts >= since)
     if until is not None:
@@ -219,7 +220,7 @@ def _consent_window(
     since: datetime | None,
     until: datetime | None,
 ) -> list[Any]:
-    conditions: list[Any] = []
+    conditions: list[Any] = [Consent.face.in_(tuple(FACES))]
     if since is not None:
         conditions.append(Consent.ts >= since)
     if until is not None:
@@ -263,7 +264,11 @@ async def _feedback_breakdown(
         conditions.append(column.is_not(None))
     rows = (
         await session.execute(
-            select(column, func.count()).select_from(Feedback).where(*conditions).group_by(column)
+            select(column, func.count())
+            .select_from(Feedback)
+            .join(CheckEvent, Feedback.check_id == CheckEvent.id)
+            .where(*conditions)
+            .group_by(column)
         )
     ).all()
     return {str(key): int(count) for key, count in rows}
@@ -297,7 +302,7 @@ def _feedback_window(
     since: datetime | None,
     until: datetime | None,
 ) -> list[Any]:
-    conditions: list[Any] = []
+    conditions: list[Any] = [CheckEvent.face.in_(tuple(FACES))]
     if since is not None:
         conditions.append(Feedback.ts >= since)
     if until is not None:

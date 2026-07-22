@@ -1,7 +1,7 @@
-"""Face registry (§5.1).
+"""Registry for the single active Avvalo check surface.
 
-A face selects which rule pack and prompt template a check uses and the daily
-limit that applies. Everything else in the pipeline is shared between faces.
+The internal ``family`` identifier is retained for database and rule-ID
+compatibility even though it now represents the whole consumer product.
 """
 
 from dataclasses import dataclass
@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Face:
-    """A product face (family or merchants)."""
+    """Configuration for the active consumer checking flow."""
 
     id: str
     rule_pack_dir: str
@@ -23,11 +23,5 @@ FACES: dict[str, Face] = {
         rule_pack_dir="rules/family",
         prompt_template="prompts/family.txt",
         daily_limit=5,
-    ),
-    "merchants": Face(
-        id="merchants",
-        rule_pack_dir="rules/merchants",
-        prompt_template="prompts/merchants.txt",
-        daily_limit=20,
     ),
 }

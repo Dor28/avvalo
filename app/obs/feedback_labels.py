@@ -1,7 +1,7 @@
-"""Privacy-safe Scam Pulse and feedback-label aggregations.
+"""Privacy-safe feedback-label aggregations for internal product review.
 
 Only categorical fields already stored in ``check_event`` and ``feedback`` are
-read. User keys and check IDs are never selected or returned by this module.
+read. User keys, check IDs, and submitted content are never selected or returned.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ _CANDIDATE_GAP = 0.15
 
 
 def rule_family_map() -> dict[str, str]:
-    """Return the current rule-id to family mapping from the loaded packs."""
+    """Return the current rule-id to family mapping from active packs."""
 
     mapping: dict[str, str] = {}
     for face_id in FACES:
@@ -32,78 +32,18 @@ def rule_family_map() -> dict[str, str]:
     return mapping
 
 
-def month_window(month: str) -> tuple[datetime, datetime, datetime]:
-    """Return previous-start, start, and end UTC bounds for ``YYYY-MM``."""
-
-    try:
-        parsed = datetime.strptime(month, "%Y-%m").replace(tzinfo=UTC)
-    except ValueError as exc:
-        raise ValueError("month must use YYYY-MM") from exc
-
-    if parsed.strftime("%Y-%m") != month:
-        raise ValueError("month must use YYYY-MM")
-
-    start = parsed.replace(day=1)
-    end = _shift_month(start, 1)
-    previous_start = _shift_month(start, -1)
-    return previous_start, start, end
-
-
-async def collect_pulse(session: AsyncSession, *, month: str) -> dict[str, Any]:
-    """Aggregate one month and its predecessor by family, language, and face."""
-
-    previous_start, start, end = month_window(month)
-    family_by_rule = rule_family_map()
-    previous = await _collect_pulse_window(
-        session,
-        since=previous_start,
-        until=start,
-        family_by_rule=family_by_rule,
-    )
-    current = await _collect_pulse_window(
-        session,
-        since=start,
-        until=end,
-        family_by_rule=family_by_rule,
-    )
-
-    keys = sorted(set(current["breakdown"]) | set(previous["breakdown"]))
-    breakdowns = [
-        {
-            "family": family,
-            "language": language,
-            "face": face,
-            "count": current["breakdown"].get((family, language, face), 0),
-            "previous_count": previous["breakdown"].get((family, language, face), 0),
-            "delta": current["breakdown"].get((family, language, face), 0)
-            - previous["breakdown"].get((family, language, face), 0),
-        }
-        for family, language, face in keys
-    ]
-
-    return {
-        "month": month,
-        "previous_month": previous_start.strftime("%Y-%m"),
-        "total_checks": current["total"],
-        "previous_total_checks": previous["total"],
-        "total_delta": current["total"] - previous["total"],
-        "no_signal_count": current["no_signal"],
-        "no_signal_rate": _rate(current["no_signal"], current["total"]),
-        "breakdowns": breakdowns,
-    }
-
-
 async def collect_labels(
     session: AsyncSession,
     *,
     since: date | datetime | None = None,
 ) -> dict[str, Any]:
-    """Correlate categorical feedback with rule IDs and the overall baseline."""
+    """Correlate active-product feedback with rule IDs and the overall baseline."""
 
     since_bound = _since_bound(since)
     statement = (
         select(CheckEvent.rule_ids, Feedback.usefulness, Feedback.next_action)
         .join(Feedback, Feedback.check_id == CheckEvent.id)
+        .where(CheckEvent.face.in_(tuple(FACES)))
         .order_by(Feedback.ts)
     )
     if since_bound is not None:
@@ -154,43 +94,6 @@ async def collect_labels(
         "overall_next_actions": dict(sorted(overall_actions.items())),
         "rules": rules,
     }
-
-
-def render_pulse(report: dict[str, Any]) -> str:
-    """Render a monthly Pulse as aggregate-only Markdown."""
-
-    total_delta = report["total_delta"]
-    previous_total = report["previous_total_checks"]
-    delta_rate = _rate(total_delta, previous_total) if previous_total else None
-    delta_label = f"{total_delta:+d}"
-    if delta_rate is not None:
-        delta_label += f" ({delta_rate:+.1%})"
-    elif total_delta > 0:
-        delta_label += " (new)"
-
-    lines = [
-        f"# Avvalo Scam Pulse — {report['month']}",
-        "",
-        f"- Total checks: {report['total_checks']}",
-        f"- Previous month ({report['previous_month']}): {previous_total}",
-        f"- Month-over-month: {delta_label}",
-        (
-            f"- No-signal checks: {report['no_signal_count']} "
-            f"({report['no_signal_rate']:.1%})"
-        ),
-        "",
-        "| Rule family | Language | Face | Current | Previous | Delta |",
-        "|---|---|---|---:|---:|---:|",
-    ]
-    if report["breakdowns"]:
-        for row in report["breakdowns"]:
-            lines.append(
-                "| {family} | {language} | {face} | {count} | {previous_count} | "
-                "{delta:+d} |".format(**row)
-            )
-    else:
-        lines.append("| No rule-family hits | — | — | 0 | 0 | 0 |")
-    return "\n".join(lines) + "\n"
 
 
 def render_labels(report: dict[str, Any]) -> str:
@@ -245,40 +148,6 @@ def render_labels(report: dict[str, Any]) -> str:
     if action_rows == 0:
         lines.append("| No next-action labels | — | 0 | 0.0% | 0 | 0.0% | +0.0% |")
     return "\n".join(lines) + "\n"
-
-
-async def _collect_pulse_window(
-    session: AsyncSession,
-    *,
-    since: datetime,
-    until: datetime,
-    family_by_rule: dict[str, str],
-) -> dict[str, Any]:
-    rows = (
-        await session.execute(
-            select(
-                CheckEvent.rule_ids,
-                CheckEvent.language,
-                CheckEvent.face,
-                CheckEvent.no_signal,
-            ).where(CheckEvent.ts >= since, CheckEvent.ts < until)
-        )
-    ).all()
-    breakdown: Counter[tuple[str, str, str]] = Counter()
-    no_signal = 0
-    for rule_ids, language, face, event_no_signal in rows:
-        if event_no_signal:
-            no_signal += 1
-        families = {family_by_rule.get(rule_id, "unmapped") for rule_id in rule_ids or []}
-        for family in families:
-            breakdown[(family, language, face)] += 1
-    return {"total": len(rows), "no_signal": no_signal, "breakdown": breakdown}
-
-
-def _shift_month(value: datetime, delta: int) -> datetime:
-    month_index = value.year * 12 + value.month - 1 + delta
-    year, month_zero = divmod(month_index, 12)
-    return value.replace(year=year, month=month_zero + 1, day=1)
 
 
 def _since_bound(value: date | datetime | None) -> datetime | None:

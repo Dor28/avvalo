@@ -1,4 +1,4 @@
-"""Face registry contract tests (V1_TECHNICAL_PLAN §5.1).
+"""Single active product-face registry contract tests.
 
 A face selects a rule pack + prompt template + daily limit and nothing else.
 These tests pin the registry to the plan and verify it points at assets that
@@ -14,24 +14,19 @@ from app.engine.faces import FACES, Face
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_exactly_the_two_documented_faces() -> None:
-    assert set(FACES) == {"family", "merchants"}
+def test_exactly_the_one_active_face() -> None:
+    assert set(FACES) == {"family"}
     for key, face in FACES.items():
         assert isinstance(face, Face)
         assert face.id == key, f"FACES['{key}'].id must equal its key"
 
 
 def test_daily_limits_match_the_spec_and_config_defaults() -> None:
-    # §5.1: family = 5, merchants = 20 (merchant checks more).
     assert FACES["family"].daily_limit == 5
-    assert FACES["merchants"].daily_limit == 20
 
     # The registry must not disagree with the configurable defaults in config.py.
     assert FACES["family"].daily_limit == Settings.model_fields[
         "daily_limit_family"
-    ].default
-    assert FACES["merchants"].daily_limit == Settings.model_fields[
-        "daily_limit_merchants"
     ].default
 
 

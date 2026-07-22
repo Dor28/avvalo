@@ -29,7 +29,14 @@ All configuration comes from environment variables via [app/config.py](app/confi
 
 One process ([app/main.py](app/main.py)) runs everything: the aiogram Telegram bot (polling), the FastAPI anonymous web channel (when `WEB_ENABLED=true`), and the retention scheduler, sharing one async SQLAlchemy engine.
 
-**One public product, two legacy code faces.** A face ([app/engine/faces.py](app/engine/faces.py)) is a rule-pack directory + prompt template + daily limit: `family` and `merchants`. The `merchants` face and legacy `fs.` / `sg.` rule prefixes remain technical compatibility surfaces, not active product direction. Everything else is shared. Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` and call `run_check()` — new product behavior belongs in the engine, not in a channel handler. Do not extend the merchant face unless an explicit task changes the product decision.
+**One public product, one active code face.** The internal compatibility ID is `family`; it selects
+the main rule pack, prompt template, and daily limit. Seller, payment-screenshot, courier, and
+refund situations use this same checker rather than a merchant product. The former `merchants`
+face, scam library, story-capture flow, and Scam Pulse are retired and must not be restored from
+git history. Keep persisted `face` values and legacy `fs.` / `sg.` IDs stable where they are needed
+for historical metadata or safety filtering; do not create another active face. Channels
+(`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` and call `run_check()` — new
+product behavior belongs in the engine, not in a channel handler.
 
 **The pipeline** ([app/engine/pipeline.py](app/engine/pipeline.py), `run_check`) is the core; every check from every channel flows through the same stages:
 
@@ -53,15 +60,23 @@ Boundary contracts are Pydantic models in [app/engine/types.py](app/engine/types
 The legal posture depends on these; several are enforced by tests that will fail the build:
 
 - **Submitted content is never persisted or logged.** `raw_text` / `image_bytes` / `caption` on `CheckInput` are ephemeral. `check_event` rows and `log_event()` output carry only IDs, enums, rule IDs, and metrics.
-- **The DB schema has no content columns** — `tests/test_schema_privacy.py` inspects ORM metadata and rejects content-like columns.
+- **Active product writes have no content columns.** `tests/test_schema_privacy.py` rejects new
+  content-like persistence. The existing `story_submission.minimized_text` column is legacy
+  stewardship only: no new writes or product reads, while `/delete_my_data` and retention continue
+  to cover old rows until a separately authorized purge removes the table.
 - **Users are pseudonymous:** `user_key = HMAC_SHA256(APP_HMAC_SECRET, telegram_id)[:32]` ([app/privacy/user_key.py](app/privacy/user_key.py)); raw Telegram IDs are never stored or logged.
 - Retention ([app/data/retention.py](app/data/retention.py)) prunes aged rows; `/delete_my_data` is audited in `deletion_log`.
 - `tests/test_secret_scan.py` scans the tree for committed secrets.
 
 ## Conventions
 
-- **Spec-driven:** [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) defines product scope; [docs/ROADMAP.md](docs/ROADMAP.md) is the only current work queue; [docs/V1_TECHNICAL_PLAN.md](docs/V1_TECHNICAL_PLAN.md) describes the built baseline. Module docstrings cite technical-plan sections (§5.1, §9, …) — keep those references in sync.
-- Tests named `test_tNN_*.py` map to the numbered build tasks in V1_TECHNICAL_PLAN §13; golden end-to-end fixtures live in `tests/fixtures/golden/<face>.json`.
+- **Spec-driven:** [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) defines product scope;
+  [docs/ROADMAP.md](docs/ROADMAP.md) is the only current work queue;
+  [docs/V1_TECHNICAL_PLAN.md](docs/V1_TECHNICAL_PLAN.md) describes the retained core and clearly
+  marks removed legacy surfaces as history. Module docstrings cite technical-plan sections
+  (§5.1, §9, …) — keep those references in sync.
+- Tests named `test_tNN_*.py` map to the numbered build history in V1_TECHNICAL_PLAN §13; the
+  active golden end-to-end fixtures live in `tests/fixtures/golden/family.json`.
 - **Every user-facing string exists in all three languages** (`uz_latn`, `uz_cyrl`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
 - Async end-to-end; pytest runs with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed).
 - Style follows ruff config in [pyproject.toml](pyproject.toml): 100-char lines, import sorting (I), modern syntax (UP). Module docstrings state purpose and spec section; internal helpers use frozen dataclasses, boundary types use Pydantic.

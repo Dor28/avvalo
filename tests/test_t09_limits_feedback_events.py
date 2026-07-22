@@ -170,7 +170,7 @@ def test_log_error_forwards_tags_to_sentry(monkeypatch) -> None:
 def test_log_error_is_a_safe_no_op_without_sentry_init() -> None:
     # No sentry_sdk.init() has run anywhere in the test process (no SENTRY_DSN),
     # so this must not raise or attempt a network call.
-    log_error("ocr", "OCRProviderError", face="merchants")
+    log_error("ocr", "OCRProviderError", face="family")
 
 
 async def test_run_check_emits_privacy_safe_events(session, caplog) -> None:

@@ -14,7 +14,6 @@ def test_redesign_assets_are_cache_busted_across_public_pages() -> None:
         client.get("/?language=uz_latn"),
         client.get("/check?language=uz_latn"),
         client.get("/privacy?language=ru"),
-        client.get("/scams?language=uz_latn"),
     ]
 
     for response in responses:
@@ -23,7 +22,7 @@ def test_redesign_assets_are_cache_busted_across_public_pages() -> None:
         assert re.search(r'/static/icon-192\.png\?v=[0-9a-f]{12}', response.text)
 
 
-def test_home_leads_with_the_checker_and_hides_merchants() -> None:
+def test_home_leads_with_the_unified_checker() -> None:
     """The home page IS the checker.
 
     This deliberately reverses the earlier landing/checker split: a visitor who
@@ -35,26 +34,23 @@ def test_home_leads_with_the_checker_and_hides_merchants() -> None:
 
     landing = client.get("/?language=uz_latn")
     checker = client.get("/check?language=uz_latn")
-    merchant = client.get("/merchants?language=uz_latn")
+    merchant = client.get("/merchants?language=uz_latn", follow_redirects=False)
 
     assert landing.status_code == 200
     assert checker.status_code == 200
-    assert merchant.status_code == 200
+    assert merchant.status_code == 308
+    assert merchant.headers["location"] == "/check?language=uz_latn"
     assert 'class="check-form"' in landing.text
     assert 'action="/check"' in landing.text
-    assert 'value="family"' in landing.text
+    assert 'name="face"' not in landing.text
     assert 'id="result"' in landing.text
     assert 'href="/merchants' not in landing.text
     assert 'class="check-form"' in checker.text
     assert 'id="result"' in checker.text
-    assert 'value="family"' in checker.text
+    assert 'name="face"' not in checker.text
     assert 'href="/merchants' not in checker.text
-    assert 'value="merchants"' in merchant.text
-    product_nav = re.search(
-        r'<nav class="product-nav".*?</nav>', merchant.text, flags=re.DOTALL
-    )
-    assert product_nav is not None
-    assert 'href="/merchants' not in product_nav.group()
+    assert client.get("/scams").status_code == 404
+    assert client.get("/sitemap.xml").status_code == 404
 
 
 def test_public_flow_uses_the_minimal_shell_without_duplicate_explainers() -> None:
@@ -121,11 +117,10 @@ def test_consumer_copy_leads_with_the_check_instead_of_family_branding() -> None
         assert workflow in landing.text
 
 
-def test_check_page_exposes_localized_navigation_and_busy_state() -> None:
+def test_check_page_exposes_localized_flow_and_busy_state() -> None:
     response = TestClient(create_app()).get("/check?language=ru")
 
     assert response.status_code == 200
-    assert 'aria-label="Разделы"' in response.text
     assert 'aria-label="Как это работает"' in response.text
     assert 'aria-label="Доверие"' in response.text
     assert 'aria-current="page"' in response.text

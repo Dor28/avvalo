@@ -1,6 +1,7 @@
 """T2 — schema, privacy, and repository contract tests."""
 
 import uuid
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import select
@@ -37,7 +38,7 @@ EXPECTED_TABLES = {
     "story_submission",
     "url_blocklist",
 }
-# R3 reviewed exception: opt-in, minimized, founder-reviewed story corpus.
+# Legacy exception: intake is disabled, but old rows remain deletable/retained.
 ALLOWED_CONTENT_COLUMNS = {"story_submission.minimized_text"}
 
 
@@ -137,12 +138,16 @@ async def test_delete_user_data_removes_every_row(session) -> None:
         status="ok",
     )
     await repo.record_feedback(session, check_id=check_id, usefulness="yes", next_action="verify")
-    await repo.store_story(
-        session,
-        user_key="u1",
-        face="family",
-        language="ru",
-        raw_text="Murod Karimov asked for SMS kod 123456 and +998 90 123 45 67.",
+    session.add(
+        StorySubmission(
+            id=uuid.uuid4(),
+            user_key="u1",
+            face="family",
+            language="ru",
+            minimized_text="Legacy minimized story",
+            status="submitted",
+            created_ts=datetime.now(UTC),
+        )
     )
     await repo.increment_usage(session, user_key="u1", face="family")
     await session.commit()
@@ -157,28 +162,3 @@ async def test_delete_user_data_removes_every_row(session) -> None:
     deletion_log = (await session.execute(select(DeletionLog))).scalar_one()
     assert deletion_log.user_key != "u1"
     assert len(deletion_log.user_key) == 32
-
-
-async def test_store_story_reminimizes_raw_text_before_db_write(session) -> None:
-    story = await repo.store_story(
-        session,
-        user_key="story-user",
-        face="family",
-        language="ru",
-        raw_text=(
-            "Murod Karimov wrote from +998 90 123 45 67, asked for SMS kod 123456, "
-            "sent card 8600 1234 5678 9012 and link https://payme-fake.example/login."
-        ),
-    )
-    await session.commit()
-
-    stored = await session.get(StorySubmission, story.id)
-    assert stored is not None
-    assert stored.status == "submitted"
-    assert "[PHONE]" in stored.minimized_text
-    assert "[CARD]" in stored.minimized_text
-    assert "[LINK" in stored.minimized_text
-    assert "+998" not in stored.minimized_text
-    assert "8600" not in stored.minimized_text
-    assert "123456" not in stored.minimized_text
-    assert "Murod Karimov" not in stored.minimized_text

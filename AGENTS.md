@@ -15,8 +15,9 @@ nit.
 
 1. **Submitted content is never persisted or logged.** `raw_text` / `image_bytes` / `caption`
    on `CheckInput` are ephemeral. `check_event` rows and `log_event()` output carry only IDs,
-   enums, rule IDs, and metrics. The one sanctioned exception is `story_submission.minimized_text`
-   (explicit user consent, minimizer runs in the repo layer).
+   enums, rule IDs, and metrics. `story_submission.minimized_text` is a legacy stewardship-only
+   exception: no new product flow may write or read it, and the old rows remain reachable only for
+   `/delete_my_data` and retention until a separately authorized data purge.
 2. **No verdicts, no risk scores.** The product verifies the *situation, never the person*, and
    never outputs "safe" / "scam" / "fraud confirmed" in any language. Enforced deterministically
    in [app/engine/validate.py](app/engine/validate.py).
@@ -28,6 +29,10 @@ nit.
 6. **Never push to `main`.** Pushing to `main` deploys to production
    (`.github/workflows/deploy.yml`). Work on a branch.
 7. **Every user-facing string exists in all three languages** — `uz_latn`, `uz_cyrl`, `ru`.
+
+8. **There is one active product face:** the internal compatibility ID is `family`. Merchant
+   payment situations use the same checker and safety pipeline. Do not restore Avvalo Merchants,
+   the scam library, story capture, Scam Pulse, or another face from git history.
 
 ## Definition of done
 

@@ -9,7 +9,7 @@
     "must_include": ["do not share the SMS code", "open the bank app yourself", "call the number printed on the card"],
     "must_not_contain": ["firibgar", "xavfsiz", "ishonchli"],
     "no_signal": false,
-    "notes": "Canonical golden output in FAMILY_VALIDATION.md Example 1."
+    "notes": "Canonical golden case 1 for the unified consumer flow."
   },
   {
     "id": "fs_02_family_emergency",
@@ -21,7 +21,7 @@
     "must_include": ["do not transfer money yet", "call the relative on the saved old number", "ask a control question only family knows"],
     "must_not_contain": ["мошенник", "безопасно", "афёрист", "надёжный"],
     "no_signal": false,
-    "notes": "Canonical golden output in FAMILY_VALIDATION.md Example 2."
+    "notes": "Canonical golden case 2 for the unified consumer flow."
   },
   {
     "id": "fs_03_seller_prepayment",
@@ -33,7 +33,7 @@
     "must_include": ["do not prepay before seeing the item", "ask for a short video with today's date", "compare price and photos with other listings"],
     "must_not_contain": ["фирибгар", "хавфсиз", "ишончли"],
     "no_signal": false,
-    "notes": "Canonical golden output in FAMILY_VALIDATION.md Example 3."
+    "notes": "Canonical golden case 3 for the unified consumer flow."
   },
   {
     "id": "fs_04_fake_delivery_link",
@@ -45,7 +45,7 @@
     "must_include": ["do not open the link or scan the QR", "open the delivery app/site manually", "contact the service via an independently found channel"],
     "must_not_contain": ["мошенник", "безопасно", "афёрист", "надёжный"],
     "no_signal": false,
-    "notes": "Canonical golden output in FAMILY_VALIDATION.md Example 4. Output must not repeat the URL."
+    "notes": "Canonical golden case 4. Output must not repeat the URL."
   },
   {
     "id": "fs_05_upfront_fee_job",
@@ -57,6 +57,42 @@
     "must_include": ["do not pay a registration fee before a contract", "verify the legal entity name and address independently", "do not send a passport photo in an ordinary chat"],
     "must_not_contain": ["firibgar", "xavfsiz", "ishonchli"],
     "no_signal": false,
-    "notes": "Canonical golden output in FAMILY_VALIDATION.md Example 5."
+    "notes": "Canonical golden case 5 for the unified consumer flow."
+  },
+  {
+    "id": "fs_06_incoming_payment_screenshot",
+    "face": "family",
+    "language": "ru",
+    "input_type": "text",
+    "input": "Здравствуйте! Оплату отправила, вот скриншот перевода на 850 000 сум. Деньги придут в течение дня, банк иногда задерживает. Отдайте товар курьеру сейчас, я очень спешу.",
+    "expected_rule_families": ["edited_screenshot_hint", "receipt_inconsistency", "fake_courier_refund"],
+    "must_include": ["a screenshot is not proof of payment", "confirm the incoming transfer in the receiving bank app", "do not give goods to the courier before the transfer is confirmed"],
+    "must_not_contain": ["мошенник", "безопасно", "деньги пришли", "оплата прошла", "платёж настоящий"],
+    "no_signal": false,
+    "notes": "Incoming-payment screenshot, delay excuse, and courier pressure in the unified consumer flow."
+  },
+  {
+    "id": "fs_07_overpayment_refund",
+    "face": "family",
+    "language": "uz_latn",
+    "input_type": "text",
+    "input": "Akangiz men. Xato qilib ikki marta to‘lab yuboribman, 1 200 000 o‘rniga 2 400 000 ketdi. Iltimos, ortig‘ini shu kartaga qaytarib bering, skrinshot mana. Tezroq bo‘lsa yaxshi edi.",
+    "expected_rule_families": ["amount_mismatch", "edited_screenshot_hint"],
+    "must_include": ["do not refund anything before confirming the incoming transfer and amount", "a screenshot does not prove the overpayment", "check the receiving account independently"],
+    "must_not_contain": ["firibgar", "xavfsiz", "pul keldi", "to‘lov o‘tdi"],
+    "no_signal": false,
+    "notes": "Overpayment-and-refund pressure handled by the unified consumer flow."
+  },
+  {
+    "id": "fs_08_payment_name_mismatch",
+    "face": "family",
+    "language": "uz_cyrl",
+    "input_type": "text",
+    "input": "Тўловни қилдим, чек мана. Лекин банк иловамда бошқа исм чиқяпти, унчалик муҳим эмас, пул барибир тушади. Тезроқ жўнатинг, харидор кутиб турибди.",
+    "expected_rule_families": ["receipt_inconsistency", "edited_screenshot_hint", "fake_courier_refund"],
+    "must_include": ["a different name is an inconsistency", "confirm the incoming transfer in the receiving account", "do not send goods before independent confirmation"],
+    "must_not_contain": ["фирибгар", "хавфсиз", "пул тушди", "тўлов ўтди"],
+    "no_signal": false,
+    "notes": "Recipient-name mismatch and release pressure handled by the unified consumer flow."
   }
 ]

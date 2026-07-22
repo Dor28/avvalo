@@ -1,11 +1,10 @@
 """Regression tests for code-review fixes.
 
-Covers three bugs found during review that the existing suite did not exercise:
+Covers privacy and quota bugs found during review that the existing suite did not exercise:
 
 1. ``minimize`` left raw phone numbers with operator codes 50/55/88/20 in the
    text sent to the model (privacy leak).
-2. The merchants face's always-on severity-1 reminder forced the validator to reject
-   benign payment checks for having no red flags, pushing them to the fallback.
+2. High-severity signals must still require an explicit red-flag explanation.
 3. Failed / empty checks consumed a daily-limit slot.
 """
 
@@ -16,7 +15,6 @@ from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.llm import LLMResponse
 from app.engine.llm.base import LLMProviderError
 from app.engine.minimize import minimize
-from app.engine.rules import run_rules
 from app.engine.rules.engine import extract_structural_signals
 from app.engine.types import DraftOutput, RuleHit
 from app.engine.validate import validate
@@ -52,28 +50,11 @@ def test_phone_signal_emitted_for_previously_missed_prefixes(prefix: str) -> Non
 
 # --- Fix #2: severity-gated red_flags requirement ---------------------------
 
-def test_benign_merchants_message_passes_with_no_red_flags() -> None:
-    benign = "Assalomu alaykum, men karta orqali to'lov qildim, rahmat."
-    hits, signals = run_rules(benign, "merchants")
-
-    # Only the always-on severity-1 reminder should fire here.
-    assert [hit.rule_id for hit in hits] == ["sg.verify.always"]
-
-    draft = DraftOutput(
-        red_flags=[],
-        pattern=None,
-        verify=["Open your own bank app and confirm the incoming transfer yourself."],
-        ask=["Which account name and exact amount does your statement show?"],
-    )
-    result = validate(draft, signals, hits, Language.uz_latn)
-    assert result.ok, result.reason
-
-
 def test_high_severity_hit_still_requires_red_flags() -> None:
     # The safety property must hold: a real (severity>=2) signal with an empty
     # red_flags block is still rejected.
     hits = [
-        RuleHit(rule_id="sg.amount.overpay", family="amount_mismatch",
+        RuleHit(rule_id="fs.payment.overpayment_refund", family="amount_mismatch",
                 message_key="amount_mismatch", severity=3),
     ]
     draft = DraftOutput(
@@ -84,39 +65,6 @@ def test_high_severity_hit_still_requires_red_flags() -> None:
     result = validate(draft, [], hits, Language.uz_latn)
     assert not result.ok
     assert result.reason == "red_flags block is empty despite detected signals"
-
-
-class _EmptyRedFlagsLLM:
-    """Well-behaved model: returns no red flags for benign input."""
-
-    async def analyze(self, **kwargs) -> LLMResponse:
-        return LLMResponse(
-            draft=DraftOutput(
-                red_flags=[],
-                pattern=None,
-                verify=["Open your bank app and confirm the transfer before shipping."],
-                ask=["Which payment record matches this order?"],
-                addressed_rule_ids=addressed_rule_ids(kwargs["user"]),
-            ),
-            input_tokens=20,
-            output_tokens=10,
-        )
-
-
-async def test_benign_merchants_check_is_ok_not_safety_fallback(session) -> None:
-    result = await run_check(
-        CheckInput(
-            face="merchants",
-            user_key="sg-benign",
-            language=Language.uz_latn,
-            input_type=InputType.text,
-            raw_text="Assalomu alaykum, karta orqali to'lov qildim, rahmat.",
-        ),
-        session=session,
-        llm_provider=_EmptyRedFlagsLLM(),
-    )
-    assert result.status == CheckStatus.ok
-    assert result.safety_blocked is False
 
 
 # --- Fix #3: failed / empty checks must not burn the daily quota ------------

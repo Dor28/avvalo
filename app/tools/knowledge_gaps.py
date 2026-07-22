@@ -39,6 +39,8 @@ async def collect_knowledge_gaps(
     conditions = [CheckEvent.ts >= since, CheckEvent.ts < until]
     if face is not None:
         conditions.append(CheckEvent.face == face)
+    else:
+        conditions.append(CheckEvent.face.in_(tuple(FACES)))
     rows = (
         await session.execute(
             select(
@@ -177,7 +179,8 @@ def render_knowledge_gaps(report: dict[str, Any]) -> str:
             "",
             "Privacy note: submitted content is not stored. This report shows where "
             "the system missed, not what the message said. Identify the pattern through "
-            "the explicitly consented, minimized story corpus before writing a card.",
+            "a synthetic case or a separately approved one-time consented review before "
+            "writing a card; there is no standing story-capture corpus.",
         ]
     )
     return "\n".join(lines) + "\n"

@@ -71,6 +71,11 @@ The repository already contains:
 - a sanitized sharing foundation;
 - local hash-based URL-reputation support that may remain disabled until production verification.
 
+The runtime exposes one active face, internally named `family`. Seller, payment-screenshot,
+courier, and refund situations enter this same checker; the relevant payment protections are part
+of the main rule and safety path. Avvalo Merchants, the scam library, story capture, and Scam Pulse
+are not dormant modes — they are retired surfaces.
+
 This baseline can explain what is suspicious and what the user should verify. It must not be
 described as having checked an official source unless a typed Avvalo Verify result exists.
 
@@ -145,8 +150,9 @@ failure must fail closed and produce `unavailable`.
 
 - Submitted text, OCR text, captions, images, URLs, contacts, and generated answers are ephemeral
   and are not persisted or logged.
-- The existing `story_submission.minimized_text` field is a legacy explicit-consent exception. It
-  is not part of the current product loop and must not become a content strategy.
+- The existing `story_submission.minimized_text` field is a legacy stewardship-only exception.
+  No current flow writes or reads it. Existing rows remain covered by `/delete_my_data` and
+  retention until a separately authorized data purge; the table must not become a content source.
 - Raw screenshots stay inside the controlled OCR boundary; only minimized text may reach an
   external LLM.
 - Source snapshots contain public reference data, never user submissions.
@@ -203,12 +209,12 @@ The executable order is maintained in [ROADMAP.md](ROADMAP.md).
 - This file defines the product and safety boundary.
 - [ROADMAP.md](ROADMAP.md) defines the order of work.
 - [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md) defines the experiment.
-- [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) describes the implemented baseline, including
-  legacy code surfaces that are not active product direction.
+- [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) defines the current implemented architecture.
 - [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) defines explanation knowledge; a knowledge
   card is not official-source evidence.
-- [DEPLOYMENT.md](DEPLOYMENT.md) defines production operations.
-- Files under `docs/archive/` and files marked superseded are history only.
+
+Superseded ideas and implementation records belong in Git history, not the active documentation
+tree.
 
 Any new feature stays outside the active roadmap until evidence shows it is more important than
 improving this core loop.

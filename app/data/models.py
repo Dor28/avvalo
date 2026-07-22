@@ -122,11 +122,11 @@ class DeletionLog(Base):
 
 
 class StorySubmission(Base):
-    """Opt-in minimized story awaiting founder review.
+    """Legacy minimized story retained only for stewardship.
 
-    This is the one R3 exception to the no-content schema rule:
-    ``minimized_text`` may store only the minimizer's derivative, never raw
-    user-submitted text.
+    New product paths do not write or read this table. It remains mapped so
+    retention and ``/delete_my_data`` can cover rows created by the retired
+    story-capture flow until a separately authorized purge removes the table.
     """
 
     __tablename__ = "story_submission"

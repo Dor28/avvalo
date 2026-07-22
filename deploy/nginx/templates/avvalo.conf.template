@@ -8,7 +8,7 @@
 #
 # Certificates are issued/renewed by the certbot service into the shared
 # certbot_certs volume. Run deploy/nginx/init-letsencrypt.sh ONCE to bootstrap
-# the first certificate (see docs/DEPLOYMENT.md §9).
+# the first certificate with deploy/nginx/init-letsencrypt.sh.
 
 # Re-resolve the app container through Docker's embedded DNS so a restarted app
 # (which gets a new container IP) doesn't leave nginx serving 502s on a stale
@@ -108,7 +108,10 @@ server {
     client_body_timeout 15s;
     client_header_timeout 15s;
     keepalive_timeout 30s;
-    send_timeout 75s;
+    # Full worst-case request budget at production defaults: OCR (30s) +
+    # knowledge router (10s) + two primary/fallback LLM attempts (120s).
+    # Keep proxy/client response timeouts above that 160s application budget.
+    send_timeout 180s;
 
     # Surface the real client IP + scheme to the app (abuse / Turnstile layer).
     # Inherited by the location blocks (none of them set their own).
@@ -119,7 +122,7 @@ server {
     proxy_http_version 1.1;
     proxy_connect_timeout 5s;
     proxy_send_timeout 15s;
-    proxy_read_timeout 75s;
+    proxy_read_timeout 180s;
 
     set $avvalo_upstream app;
 

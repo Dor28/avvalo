@@ -1,8 +1,7 @@
-"""Retention cleanup jobs for privacy-safe tables.
+"""Retention cleanup jobs for privacy-safe tables and legacy story rows.
 
-The database never stores submitted content, so retention here is about
-pseudonymous metadata: check events, feedback, consent, limits, and deletion
-audit rows.
+Active product paths store only pseudonymous metadata. The mapped legacy story
+table remains covered here until a separately authorized purge removes it.
 """
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ LOGGER = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class RetentionPolicy:
-    """TTL windows from the v1 technical plan."""
+    """TTL windows for active metadata and rejected legacy stories."""
 
     check_event_days: int = 90
     feedback_days: int = 90
