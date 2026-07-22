@@ -9,18 +9,24 @@ from typing import Any
 
 import yaml
 
-from app.engine.faces import FACES
-
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+# Top-level YAML only: rules/shared/ holds feed data for the URL-reputation job,
+# not checker rules, so it must not be swept into the pack.
+RULE_PACK_DIR = _REPO_ROOT / "rules"
 
-# Merged YAML+database packs currently in force, keyed by face ID. Empty until
-# the first refresh succeeds; see ``load_rule_pack``.
-_ACTIVE_PACKS: dict[str, RulePack] = {}
+# The merged YAML+database pack currently in force. A one-slot list rather than
+# a module global so ``set_active_rule_pack`` can rebind it without ``global``.
+# ``None`` until the first refresh succeeds; see ``load_rule_pack``.
+_ACTIVE_PACK: list[RulePack | None] = [None]
 
 
 @dataclass(frozen=True)
 class RuleDefinition:
-    """One validated rule flattened from a face's YAML pack."""
+    """One validated rule flattened from the YAML pack.
+
+    ``family`` is the scam-family taxonomy the rule belongs to (credential_theft,
+    urgency_secrecy, …) — it has nothing to do with any product identifier.
+    """
 
     id: str
     family: str
@@ -33,15 +39,14 @@ class RuleDefinition:
 
 @dataclass(frozen=True)
 class RulePack:
-    """A validated rule pack for one product face."""
+    """The validated deterministic rule pack."""
 
-    face_id: str
     rules: tuple[RuleDefinition, ...]
     descriptions: dict[str, str]
 
 
-def load_rule_pack(face_id: str) -> RulePack:
-    """Return the pack in force for ``face_id``.
+def load_rule_pack() -> RulePack:
+    """Return the rule pack in force.
 
     Synchronous by design: the pack is read several times per check and from
     inside the formatter and prompt builder, so it is served from a process-level
@@ -52,31 +57,26 @@ def load_rule_pack(face_id: str) -> RulePack:
     instead of to nothing.
     """
 
-    return _ACTIVE_PACKS.get(face_id) or load_yaml_rule_pack(face_id)
+    return _ACTIVE_PACK[0] or load_yaml_rule_pack()
 
 
-def set_active_rule_pack(face_id: str, pack: RulePack) -> None:
-    """Publish a merged pack as the one in force for ``face_id``."""
+def set_active_rule_pack(pack: RulePack) -> None:
+    """Publish a merged pack as the one in force."""
 
-    _ACTIVE_PACKS[face_id] = pack
+    _ACTIVE_PACK[0] = pack
 
 
-def clear_active_rule_packs() -> None:
-    """Drop every merged pack, reverting to the shipped YAML baseline."""
+def clear_active_rule_pack() -> None:
+    """Drop the merged pack, reverting to the shipped YAML baseline."""
 
-    _ACTIVE_PACKS.clear()
+    _ACTIVE_PACK[0] = None
 
 
 @cache
-def load_yaml_rule_pack(face_id: str) -> RulePack:
-    """Load and validate all YAML rule files for ``face_id``."""
+def load_yaml_rule_pack() -> RulePack:
+    """Load and validate every YAML rule file in the shipped rule pack."""
 
-    try:
-        face = FACES[face_id]
-    except KeyError as exc:
-        raise ValueError(f"Unknown face: {face_id}") from exc
-
-    pack_dir = _REPO_ROOT / face.rule_pack_dir
+    pack_dir = RULE_PACK_DIR
     if not pack_dir.exists() or not pack_dir.is_dir():
         raise FileNotFoundError(f"Rule pack directory does not exist: {pack_dir}")
 
@@ -86,7 +86,6 @@ def load_yaml_rule_pack(face_id: str) -> RulePack:
         rules.extend(_load_rule_file(path, rule_ids))
 
     return RulePack(
-        face_id=face_id,
         rules=tuple(rules),
         descriptions={rule.id: rule.desc for rule in rules},
     )

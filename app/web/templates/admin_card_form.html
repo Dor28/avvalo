@@ -98,7 +98,7 @@
           </label>
           {% for alias_language in alias_languages %}
             <label class="admin-field wide">
-              <span>{{ knowledge.aliases_label.format(language=language_labels[alias_language]) }}</span>
+              <span>{{ knowledge.aliases_label.format(language=script_labels[alias_language]) }}</span>
               <textarea name="aliases_{{ alias_language }}" rows="4">{{ aliases[alias_language] }}</textarea>
               <small>{{ knowledge.aliases_hint }}</small>
             </label>

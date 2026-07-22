@@ -15,7 +15,7 @@ from app.data.models import Base
 from app.engine.rules import run_rules
 from app.engine.rules.loader import (
     RuleDefinition,
-    clear_active_rule_packs,
+    clear_active_rule_pack,
     load_rule_pack,
     load_yaml_rule_pack,
 )
@@ -29,12 +29,9 @@ from app.rules_store import (
     run_rule_pack_refresh_job,
 )
 
-FACE = "family"
-
 
 def _draft(**overrides) -> RuleOverrideDraft:
     values = {
-        "face": FACE,
         "rule_id": "fs.test.rule",
         "family": "credential_theft",
         "description": "Test rule used by the override suite.",
@@ -65,9 +62,9 @@ async def rules_session():
 def _reset_active_packs():
     """The active pack is process-level state; never leak it between tests."""
 
-    clear_active_rule_packs()
+    clear_active_rule_pack()
     yield
-    clear_active_rule_packs()
+    clear_active_rule_pack()
 
 
 # --- privacy boundary -------------------------------------------------------
@@ -95,7 +92,6 @@ def test_overrides_live_on_their_own_base_away_from_user_data() -> None:
         {"severity": 0},
         {"severity": 9},
         {"description": ""},
-        {"face": "merchants"},
         {"patterns": {"en": ["hello there"]}},
         {"patterns": {}},
         {"patterns": {"ru": ["ab"]}},  # too short to be a useful literal
@@ -140,7 +136,7 @@ def _definition(rule_id: str, *, patterns: dict[str, tuple[str, ...]]) -> RuleDe
 
 
 def test_override_replaces_a_baseline_rule_in_place() -> None:
-    base = load_yaml_rule_pack(FACE)
+    base = load_yaml_rule_pack()
     target = base.rules[0].id
     replacement = _definition(target, patterns={"ru": ("совершенно новый шаблон",)})
 
@@ -152,7 +148,7 @@ def test_override_replaces_a_baseline_rule_in_place() -> None:
 
 
 def test_override_with_a_new_id_is_appended() -> None:
-    base = load_yaml_rule_pack(FACE)
+    base = load_yaml_rule_pack()
     addition = _definition("fs.brand.new", patterns={"ru": ("абсолютно новый шаблон",)})
 
     merged = merge_rule_pack(base, (addition,), frozenset())
@@ -162,7 +158,7 @@ def test_override_with_a_new_id_is_appended() -> None:
 
 
 def test_disabled_id_suppresses_the_baseline_rule() -> None:
-    base = load_yaml_rule_pack(FACE)
+    base = load_yaml_rule_pack()
     target = base.rules[0].id
 
     merged = merge_rule_pack(base, (), frozenset({target}))
@@ -173,7 +169,7 @@ def test_disabled_id_suppresses_the_baseline_rule() -> None:
 
 
 def test_disabled_wins_over_an_addition_with_the_same_id() -> None:
-    base = load_yaml_rule_pack(FACE)
+    base = load_yaml_rule_pack()
     addition = _definition("fs.brand.new", patterns={"ru": ("абсолютно новый шаблон",)})
 
     merged = merge_rule_pack(base, (addition,), frozenset({"fs.brand.new"}))
@@ -185,7 +181,7 @@ def test_disabled_wins_over_an_addition_with_the_same_id() -> None:
 
 
 def test_load_rule_pack_falls_back_to_yaml_before_any_refresh() -> None:
-    assert load_rule_pack(FACE) == load_yaml_rule_pack(FACE)
+    assert load_rule_pack() == load_yaml_rule_pack()
 
 
 # --- end to end -------------------------------------------------------------
@@ -198,14 +194,14 @@ async def test_stored_override_fires_through_run_rules(rules_session) -> None:
     )
     await rules_session.commit()
 
-    await refresh_rule_pack(rules_session, FACE)
-    hits, _signals = run_rules("Пришлите мне: секретная кодовая фраза", FACE)
+    await refresh_rule_pack(rules_session)
+    hits, _signals = run_rules("Пришлите мне: секретная кодовая фраза")
 
     assert "fs.test.newpattern" in {hit.rule_id for hit in hits}
 
 
 async def test_disabled_override_stops_a_baseline_rule_from_firing(rules_session) -> None:
-    baseline_hits, _ = run_rules("Пришлите код из смс прямо сейчас", FACE)
+    baseline_hits, _ = run_rules("Пришлите код из смс прямо сейчас")
     assert "fs.credential.otp" in {hit.rule_id for hit in baseline_hits}
 
     await create_override(
@@ -214,8 +210,8 @@ async def test_disabled_override_stops_a_baseline_rule_from_firing(rules_session
     )
     await rules_session.commit()
 
-    await refresh_rule_pack(rules_session, FACE)
-    hits, _ = run_rules("Пришлите код из смс прямо сейчас", FACE)
+    await refresh_rule_pack(rules_session)
+    hits, _ = run_rules("Пришлите код из смс прямо сейчас")
 
     assert "fs.credential.otp" not in {hit.rule_id for hit in hits}
 
@@ -229,7 +225,7 @@ async def test_a_corrupt_row_is_skipped_rather_than_taking_the_pack_down(
     bad.patterns = {"ru": ["regex:("]}
     await rules_session.commit()
 
-    definitions, disabled = await load_overrides(rules_session, face=FACE)
+    definitions, disabled = await load_overrides(rules_session)
 
     assert [definition.id for definition in definitions] == [good.rule_id]
     assert disabled == frozenset()
@@ -243,4 +239,4 @@ async def test_refresh_job_never_raises_when_the_database_is_unreachable() -> No
     await run_rule_pack_refresh_job(_BrokenFactory())
 
     # The YAML baseline still serves checks.
-    assert load_rule_pack(FACE).rules
+    assert load_rule_pack().rules

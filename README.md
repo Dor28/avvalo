@@ -9,9 +9,10 @@ The product rule is simple:
 > Verify the situation, artifact, process, or source. Never rate the reputation
 > of a person.
 
-Avvalo is one consumer product, Telegram-first, and available in Uzbek Latin,
-Uzbek Cyrillic, and Russian. Telegram and the anonymous web checker are two
-channels over one shared engine.
+Avvalo is one consumer product, Telegram-first, and available in Uzbek (Latin
+script) and Russian. Cyrillic-Uzbek input is still read and analysed, but
+replies are always Latin-script Uzbek. Telegram and the anonymous web checker
+are two channels over one shared engine.
 
 The product loop is:
 
@@ -26,7 +27,7 @@ app, rule packs, OCR providers, an OpenAI-compatible LLM adapter, reviewed
 knowledge retrieval, a safety validator, consent/deletion flows, privacy-safe
 metrics, Docker deployment, and tests.
 
-The runtime has one active product face, internally named `family`. Seller,
+The runtime has one consumer checker and no product-face concept. Seller,
 payment-screenshot, courier, and refund situations are handled by the same
 checker and its safety rules. Avvalo Merchants, the public scam library, story
 capture, and Scam Pulse are retired surfaces, not optional product modes.
@@ -237,7 +238,7 @@ Useful focused checks:
 ```bash
 pytest tests/test_schema_privacy.py
 pytest tests/test_engine_pipeline.py
-pytest tests/test_t13_web.py
+pytest tests/test_web_channel.py
 python -m app.tools.metrics --json
 ```
 
@@ -267,11 +268,9 @@ Runtime config is loaded from environment variables through
 | `OCR_PROVIDER` | `gcv`, `tesseract`, `paddleocr`, or local stub paths. |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Cloud Vision service-account path when using GCV. |
 | `NOTICE_VERSION` | Consent notice version; bump to force re-consent. |
-| `DAILY_LIMIT_FAMILY` | Daily Telegram checks for the Avvalo checker. |
+| `DAILY_CHECK_LIMIT` | Daily Telegram checks for the Avvalo checker. |
 | `OPERATOR_ALERT_CHAT_ID` | Founder chat for debounced technical alerts. |
 | `OPERATOR_ALERT_DEBOUNCE_S` | Minimum interval between duplicate technical alerts. |
-| `SENTRY_DSN` | Optional Sentry DSN; blank disables external error tracking. |
-| `SENTRY_ENVIRONMENT` | Environment tag for privacy-safe Sentry error events. |
 | `WEB_ENABLED` | Starts the FastAPI web app in the shared process. |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | Gates web image uploads. |
 | `WEB_COOKIE_SECURE` | Must be `true` behind HTTPS in production. |
@@ -311,7 +310,7 @@ python tools/secret_scan.py --all
 - Do not store submitted content. `story_submission.minimized_text` is a legacy
   stewardship-only exception: no new writes or product reads; old rows remain
   covered by `/delete_my_data` and retention until a separately authorized purge.
-- Keep one active face (`family`). Merchant payment protections belong in the
+- Keep one checker and do not reintroduce a product/face/mode discriminator. Merchant payment protections belong in the
   main checker; do not recreate Merchants, scam-library, story-capture, or
   Scam-Pulse surfaces.
 - Do not add person, phone, card, or "reported N times" lookup features.

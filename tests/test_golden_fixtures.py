@@ -7,21 +7,16 @@ original consumer examples.
 import json
 from pathlib import Path
 
-import pytest
 import yaml
 
-from app.engine.faces import FACES
+from app.engine.rules.loader import RULE_PACK_DIR
 from app.engine.types import InputType, Language
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GOLDEN_DIR = REPO_ROOT / "tests" / "fixtures" / "golden"
-# The fixture file is named for the asset set it exercises; the ``face`` value
-# it asserts against stays "family", which is frozen for database compatibility.
-GOLDEN_FILE = "checker"
 
 REQUIRED_KEYS = {
     "id",
-    "face",
     "language",
     "input_type",
     "input",
@@ -53,15 +48,15 @@ def _norm(text: str) -> str:
     return text.lower()
 
 
-def _load(name: str = GOLDEN_FILE) -> list[dict]:
-    data = json.loads((GOLDEN_DIR / f"{name}.json").read_text(encoding="utf-8"))
-    assert isinstance(data, list), f"{name}.json must be a JSON array"
+def _load() -> list[dict]:
+    data = json.loads((GOLDEN_DIR / "checks.json").read_text(encoding="utf-8"))
+    assert isinstance(data, list), "checks.json must be a JSON array"
     return data
 
 
-def _families_for(face: str) -> set[str]:
+def _pack_families() -> set[str]:
     families: set[str] = set()
-    for path in sorted((REPO_ROOT / FACES[face].rule_pack_dir).glob("*.yaml")):
+    for path in sorted(RULE_PACK_DIR.glob("*.yaml")):
         doc = yaml.safe_load(path.read_text(encoding="utf-8"))
         families.update(f["family"] for f in doc["families"])
     return families
@@ -71,8 +66,7 @@ def test_minimum_golden_counts() -> None:
     assert len(_load()) >= 8
 
 
-@pytest.mark.parametrize("face", ["family"])
-def test_fixture_shape_and_values(face: str) -> None:
+def test_fixture_shape_and_values() -> None:
     valid_languages = {lang.value for lang in Language}
     valid_input_types = {it.value for it in InputType}
     seen_ids: set[str] = set()
@@ -85,7 +79,6 @@ def test_fixture_shape_and_values(face: str) -> None:
         assert fixture["id"] not in seen_ids, f"duplicate fixture id {fixture['id']}"
         seen_ids.add(fixture["id"])
 
-        assert fixture["face"] == face, f"{fid}: face '{fixture['face']}' wrong file"
         assert fixture["language"] in valid_languages, f"{fid}: bad language {fixture['language']}"
         assert fixture["input_type"] in valid_input_types, f"{fid}: bad input_type"
         assert isinstance(fixture["input"], str) and fixture["input"].strip(), f"{fid}: empty input"
@@ -99,15 +92,14 @@ def test_fixture_shape_and_values(face: str) -> None:
             )
 
 
-@pytest.mark.parametrize("face", ["family"])
-def test_expected_families_exist_in_the_rule_pack(face: str) -> None:
-    """Every expected family must be modeled by the face's rule pack (else it can never fire)."""
-    pack_families = _families_for(face)
+def test_expected_families_exist_in_the_rule_pack() -> None:
+    """Every expected family must be modeled by the rule pack (else it can never fire)."""
+    pack_families = _pack_families()
     problems: list[str] = []
     for fixture in _load():
         unknown = set(fixture["expected_rule_families"]) - pack_families
         if unknown:
-            problems.append(f"{fixture['id']}: families not in {face} pack: {sorted(unknown)}")
+            problems.append(f"{fixture['id']}: families not in the pack: {sorted(unknown)}")
     assert not problems, "\n".join(problems)
 
 

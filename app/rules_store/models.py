@@ -14,7 +14,7 @@ fallback baseline (V1_TECHNICAL_PLAN §5).
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer, Text, UniqueConstraint, Uuid
+from sqlalchemy import JSON, Boolean, DateTime, Integer, Text, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -26,11 +26,9 @@ class RuleOverride(RuleStoreBase):
     """One rule that overrides, adds to, or disables a YAML pack rule by ID."""
 
     __tablename__ = "rule_override"
-    __table_args__ = (UniqueConstraint("face", "rule_id", name="uq_rule_override_face_rule"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    face: Mapped[str] = mapped_column(Text, nullable=False, index=True)
-    rule_id: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    rule_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
 
     family: Mapped[str] = mapped_column(Text, nullable=False)
     # Neutral-English meaning handed to the LLM as a grounded fact.

@@ -10,62 +10,50 @@ BOT_LINK = "https://t.me/Avvalo_official_bot"
 _FAMILY_LABELS = {
     "credential_theft": {
         Language.uz_latn: "kod yoki maxfiy ma'lumot so'rash",
-        Language.uz_cyrl: "код ёки махфий маълумот сўраш",
         Language.ru: "запрос кодов или секретных данных",
     },
     "urgency_secrecy": {
         Language.uz_latn: "shoshirish yoki sir tutishni so'rash",
-        Language.uz_cyrl: "шошириш ёки сир тутишни сўраш",
         Language.ru: "срочность или просьба держать в тайне",
     },
     "authority_impersonation": {
         Language.uz_latn: "rasmiy tashkilot yoki yaqin odam nomidan yozish",
-        Language.uz_cyrl: "расмий ташкилот ёки яқин одам номидан ёзиш",
         Language.ru: "сообщение от имени организации или близкого",
     },
     "upfront_payment": {
         Language.uz_latn: "oldindan to'lov yoki depozit so'rash",
-        Language.uz_cyrl: "олдиндан тўлов ёки депозит сўраш",
         Language.ru: "предоплата или депозит до проверки",
     },
     "verification_avoidance": {
         Language.uz_latn: "mustaqil tekshiruvdan qochish",
-        Language.uz_cyrl: "мустақил текширувдан қочиш",
         Language.ru: "уход от независимой проверки",
     },
     "implausible_promise": {
         Language.uz_latn: "juda yaxshi ko'rinadigan va'da",
-        Language.uz_cyrl: "жуда яхши кўринадиган ваъда",
         Language.ru: "слишком выгодное обещание",
     },
     "suspicious_link_qr": {
         Language.uz_latn: "havola yoki QR orqali bosim",
-        Language.uz_cyrl: "ҳавола ёки QR орқали босим",
         Language.ru: "давление через ссылку или QR",
     },
     "receipt_inconsistency": {
         Language.uz_latn: "to'lov hikoyasidagi nomuvofiqlik",
-        Language.uz_cyrl: "тўлов ҳикоясидаги номувофиқлик",
         Language.ru: "несостыковка в истории оплаты",
     },
     "amount_mismatch": {
         Language.uz_latn: "summa yoki qaytarim talabi mos kelmasligi",
-        Language.uz_cyrl: "сумма ёки қайтарим талаби мос келмаслиги",
         Language.ru: "несовпадение суммы или просьба о возврате",
     },
     "edited_screenshot_hint": {
         Language.uz_latn: "skrinshotni to'lov isboti sifatida ko'rsatish",
-        Language.uz_cyrl: "скриншотни тўлов исботи сифатида кўрсатиш",
         Language.ru: "скриншот как доказательство оплаты",
     },
     "fake_courier_refund": {
         Language.uz_latn: "pul tasdiqlanmasdan jo'natishga bosim",
-        Language.uz_cyrl: "пул тасдиқланмасдан жўнатишга босим",
         Language.ru: "давление отправить товар до подтверждения",
     },
     "verify_in_bank_app": {
         Language.uz_latn: "bank ilovasida tasdiqlash zarurati",
-        Language.uz_cyrl: "банк иловасида тасдиқлаш зарурати",
         Language.ru: "нужно проверить в банковском приложении",
     },
 }
@@ -77,13 +65,6 @@ _SHARE_COPY = {
         "generic": "Men Avvalo bilan shubhali vaziyatni ko'rib chiqdim.",
         "caution": "Harakat qilishdan oldin muhim ma'lumotlarni mustaqil tekshiring.",
         "cta": f"Shubhangiz bormi? Avvalo'ga yuboring: {BOT_LINK}",
-    },
-    Language.uz_cyrl: {
-        "lead": "Мен Avvalo билан шубҳали вазиятни кўриб чиқдим.",
-        "families": "Топилган белгилар: {families}.",
-        "generic": "Мен Avvalo билан шубҳали вазиятни кўриб чиқдим.",
-        "caution": "Ҳаракат қилишдан олдин муҳим маълумотларни мустақил текширинг.",
-        "cta": f"Шубҳангиз борми? Avvalo'га юборинг: {BOT_LINK}",
     },
     Language.ru: {
         "lead": "Я разобрал(а) сомнительную ситуацию с Avvalo.",
@@ -115,26 +96,6 @@ _HEADINGS = {
             "orqali tekshiring."
         ),
     },
-    Language.uz_cyrl: {
-        "red_flags": "🚩 **Хавф белгилари**",
-        "pattern": "**Қандай босим ишлатяпти:**",
-        "verify": "✅ **Нимани текширинг**",
-        "ask": "❓ **Қандай савол беринг**",
-        "no_signal": (
-            "Аниқ хавф белгиси кўринмади. Лекин бу кафолат эмас: пул, код ёки "
-            "ҳужжат юборишдан олдин манбани ўзингиз текширинг."
-        ),
-        "limitation": (
-            "ℹ️ **Нима номаълум қолди**\n"
-            "Avvalo фақат жавобда кўрсатилган белгилар ва манбаларга таянди. Бу одамни "
-            "текшириш ёки якуний хулоса эмас."
-        ),
-        "fallback": (
-            "Ҳозир жавобни хавфсиз шаклда тайёрлай олмадим. Кодларни айтманг, "
-            "пул юборманг. Аввал расмий илова ёки ўзингиз топган алоқа канали "
-            "орқали текширинг."
-        ),
-    },
     Language.ru: {
         "red_flags": "🚩 **Тревожные признаки**",
         "pattern": "**Как на вас давят:**",
@@ -158,11 +119,11 @@ _HEADINGS = {
 }
 
 
-def share_summary(rule_ids: list[str], language: Language | str, face: str) -> str:
+def share_summary(rule_ids: list[str], language: Language | str) -> str:
     """Build a deterministic, content-free share warning from stored rule IDs."""
 
     resolved_language = _coerce_language(language)
-    labels = _top_family_labels(rule_ids, resolved_language, face)
+    labels = _top_family_labels(rule_ids, resolved_language)
     copy = _SHARE_COPY[resolved_language]
     if not labels:
         return "\n".join([copy["generic"], copy["cta"]])
@@ -179,17 +140,14 @@ def share_summary(rule_ids: list[str], language: Language | str, face: str) -> s
 _STATUS_MESSAGES = {
     CheckStatus.rate_limited: {
         Language.uz_latn: "Bugungi tekshiruvlar limiti tugadi. Ertaga yana urinib ko'ring.",
-        Language.uz_cyrl: "Бугунги текширувлар лимити тугади. Эртага яна уриниб кўринг.",
         Language.ru: "На сегодня лимит проверок закончился. Попробуйте завтра.",
     },
     CheckStatus.empty_input: {
         Language.uz_latn: "Tekshirish uchun vaziyatga oid matn yoki havolani yuboring.",
-        Language.uz_cyrl: "Текшириш учун вазиятга оид матн ёки ҳаволани юборинг.",
         Language.ru: "Пришлите текст или ссылку, относящиеся к ситуации.",
     },
     CheckStatus.low_ocr: {
         Language.uz_latn: "Rasm matnini aniq o'qiy olmadim. Muhim joyini xabar qilib yuboring.",
-        Language.uz_cyrl: "Расм матнини аниқ ўқий олмадим. Муҳим жойини хабар қилиб юборинг.",
         Language.ru: (
             "Не получилось чётко прочитать текст на изображении. "
             "Пришлите важный фрагмент сообщением."
@@ -197,12 +155,10 @@ _STATUS_MESSAGES = {
     },
     CheckStatus.timeout: {
         Language.uz_latn: "Tekshiruv cho'zilib ketdi. Qayta urinib ko'ring.",
-        Language.uz_cyrl: "Текширув чўзилиб кетди. Қайта уриниб кўринг.",
         Language.ru: "Проверка затянулась. Попробуйте ещё раз.",
     },
     CheckStatus.llm_error: {
         Language.uz_latn: "Hozir bu vaziyatni tahlil qila olmadim. Qayta urinib ko'ring.",
-        Language.uz_cyrl: "Ҳозир бу вазиятни таҳлил қила олмадим. Қайта уриниб кўринг.",
         Language.ru: (
             "Сейчас не получилось разобрать эту ситуацию. "
             "Попробуйте ещё раз."
@@ -210,7 +166,6 @@ _STATUS_MESSAGES = {
     },
     CheckStatus.ocr_error: {
         Language.uz_latn: "Hozir bu rasmni qayta ishlay olmadim. Qayta urinib ko'ring.",
-        Language.uz_cyrl: "Ҳозир бу расмни қайта ишлай олмадим. Қайта уриниб кўринг.",
         Language.ru: (
             "Сейчас не получилось обработать изображение. "
             "Попробуйте ещё раз."
@@ -218,7 +173,6 @@ _STATUS_MESSAGES = {
     },
     CheckStatus.unsupported_media: {
         Language.uz_latn: "Matn yoki o'qilishi mumkin bo'lgan skrinshot yuboring.",
-        Language.uz_cyrl: "Матн ёки ўқилиши мумкин бўлган скриншот юборинг.",
         Language.ru: "Пришлите текст или читаемый скриншот.",
     },
 }
@@ -278,8 +232,8 @@ def _coerce_language(language: Language | str) -> Language:
         return Language.uz_latn
 
 
-def _top_family_labels(rule_ids: list[str], language: Language, face: str) -> list[str]:
-    by_rule = _rules_by_id(face)
+def _top_family_labels(rule_ids: list[str], language: Language) -> list[str]:
+    by_rule = _rules_by_id()
     ranked: dict[str, tuple[int, int]] = {}
     for index, rule_id in enumerate(rule_ids):
         rule = by_rule.get(rule_id)
@@ -294,9 +248,9 @@ def _top_family_labels(rule_ids: list[str], language: Language, face: str) -> li
 
 
 @cache
-def _rules_by_id(face: str):
+def _rules_by_id():
     try:
-        pack = load_rule_pack(face)
+        pack = load_rule_pack()
     except (FileNotFoundError, ValueError):
         return {}
     return {rule.id: rule for rule in pack.rules}

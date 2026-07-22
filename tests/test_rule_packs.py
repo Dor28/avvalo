@@ -1,14 +1,12 @@
-"""Pre-authored rule-pack integrity tests (V1_TECHNICAL_PLAN §11).
+"""Pre-authored unified rule-pack integrity tests.
 
-The YAML packs under ``rules/`` are hand-authored, safety-critical assets that
-the plan says to *use, not regenerate* (§0.6). The rule engine/loader (T5) is
-not built yet, so these tests validate the packs directly against the §11
-schema and the required-family list — the same contract the loader will enforce.
+The YAML files under ``rules/`` are hand-authored, safety-critical assets. These
+tests validate them directly against the current loader schema and allowed family
+taxonomy.
 """
 
 from pathlib import Path
 
-import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -41,14 +39,8 @@ FAMILY_ALLOWED = FAMILY_REQUIRED | {
     "fake_courier_refund",
 }
 
-PACKS = {
-    "family": {
-        "dir": "rules/checker",
-        "id_prefix": "fs.",
-        "required_families": FAMILY_REQUIRED,
-        "allowed_families": FAMILY_ALLOWED,
-    },
-}
+RULES_DIR = "rules"
+FROZEN_RULE_ID_PREFIX = "fs."
 
 
 def _load_families(pack_dir: str) -> list[dict]:
@@ -72,39 +64,35 @@ def _all_rules(pack_dir: str) -> list[dict]:
     return rules
 
 
-@pytest.mark.parametrize("face", PACKS)
-def test_required_families_present(face: str) -> None:
-    cfg = PACKS[face]
-    present = {family["family"] for family in _load_families(cfg["dir"])}
+def test_required_families_present() -> None:
+    present = {family["family"] for family in _load_families(RULES_DIR)}
 
-    missing = cfg["required_families"] - present
-    assert not missing, f"{face}: missing required families {missing}"
+    missing = FAMILY_REQUIRED - present
+    assert not missing, f"missing required families {missing}"
 
-    unexpected = present - cfg["allowed_families"]
-    assert not unexpected, f"{face}: families not allowed by §11 {unexpected}"
+    unexpected = present - FAMILY_ALLOWED
+    assert not unexpected, f"unexpected rule families {unexpected}"
 
 
-@pytest.mark.parametrize("face", PACKS)
-def test_every_family_has_rules(face: str) -> None:
-    for family in _load_families(PACKS[face]["dir"]):
+def test_every_family_has_rules() -> None:
+    for family in _load_families(RULES_DIR):
         assert family.get("family"), "a family entry is missing its `family:` name"
         assert family.get("rules"), f"family '{family.get('family')}' has no rules"
 
 
-@pytest.mark.parametrize("face", PACKS)
-def test_rule_ids_unique_and_namespaced(face: str) -> None:
-    cfg = PACKS[face]
-    ids = [rule["id"] for rule in _all_rules(cfg["dir"])]
+def test_rule_ids_unique_and_keep_the_frozen_prefix() -> None:
+    ids = [rule["id"] for rule in _all_rules(RULES_DIR)]
 
-    assert len(ids) == len(set(ids)), f"{face}: duplicate rule ids {sorted(ids)}"
-    bad_prefix = [rid for rid in ids if not rid.startswith(cfg["id_prefix"])]
-    assert not bad_prefix, f"{face}: rule ids must start with '{cfg['id_prefix']}': {bad_prefix}"
+    assert len(ids) == len(set(ids)), f"duplicate rule ids {sorted(ids)}"
+    bad_prefix = [rid for rid in ids if not rid.startswith(FROZEN_RULE_ID_PREFIX)]
+    assert not bad_prefix, (
+        f"rule ids must keep the frozen '{FROZEN_RULE_ID_PREFIX}' prefix: {bad_prefix}"
+    )
 
 
-@pytest.mark.parametrize("face", PACKS)
-def test_each_rule_matches_the_schema(face: str) -> None:
+def test_each_rule_matches_the_schema() -> None:
     problems: list[str] = []
-    for rule in _all_rules(PACKS[face]["dir"]):
+    for rule in _all_rules(RULES_DIR):
         rid = rule.get("id", "<no-id>")
 
         for field in ("id", "desc", "message_key"):
@@ -140,7 +128,7 @@ def test_each_rule_matches_the_schema(face: str) -> None:
 
 
 def test_consumer_pack_includes_payment_screenshot_and_refund_protection() -> None:
-    families = {f["family"] for f in _load_families(PACKS["family"]["dir"])}
+    families = {f["family"] for f in _load_families(RULES_DIR)}
     assert {
         "receipt_inconsistency",
         "amount_mismatch",

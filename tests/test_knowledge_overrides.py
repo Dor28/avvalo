@@ -19,7 +19,7 @@ from app.data.models import Base
 from app.engine.knowledge import retrieve_knowledge
 from app.engine.knowledge.loader import (
     FileKnowledgeStore,
-    clear_active_knowledge_bases,
+    clear_active_knowledge_base,
     load_yaml_knowledge_base,
 )
 from app.engine.knowledge.types import KnowledgeLookupError
@@ -35,12 +35,9 @@ from app.knowledge_store import (
     run_knowledge_refresh_job,
 )
 
-FACE = "family"
-
 
 def _draft(**overrides) -> KnowledgeCardDraft:
     values = {
-        "face": FACE,
         "card_id": "family.test_card",
         "card_version": "1.0.0",
         "status": "approved",
@@ -77,9 +74,9 @@ async def knowledge_session():
 def _reset_active_bases():
     """The active base is process-level state; never leak it between tests."""
 
-    clear_active_knowledge_bases()
+    clear_active_knowledge_base()
     yield
-    clear_active_knowledge_bases()
+    clear_active_knowledge_base()
 
 
 # --- privacy boundary -------------------------------------------------------
@@ -100,7 +97,6 @@ def test_cards_live_on_their_own_base_away_from_user_data() -> None:
 @pytest.mark.parametrize(
     "kwargs",
     [
-        {"face": "merchants"},
         {"card_id": "NOT A CARD"},
         {"card_id": "nodots"},
         {"card_version": "not a version"},
@@ -123,7 +119,6 @@ def test_invalid_drafts_are_rejected(kwargs: dict) -> None:
 def test_valid_draft_projects_onto_the_engine_card_contract() -> None:
     card = _draft().as_card()
     assert card.id == "family.test_card"
-    assert card.face == FACE
     assert card.status == "approved"
 
 
@@ -131,12 +126,12 @@ def test_valid_draft_projects_onto_the_engine_card_contract() -> None:
 
 
 async def test_override_replaces_a_baseline_card_in_place(knowledge_session) -> None:
-    base = load_yaml_knowledge_base(FACE)
+    base = load_yaml_knowledge_base()
     target = base.cards[0].id
     await create_card(knowledge_session, _draft(card_id=target, mechanism="Replaced mechanism."))
     await knowledge_session.commit()
 
-    merged = merge_knowledge_base(base, await load_overrides(knowledge_session, face=FACE))
+    merged = merge_knowledge_base(base, await load_overrides(knowledge_session))
 
     assert len(merged.cards) == len(base.cards)
     assert [card.id for card in merged.cards] == [card.id for card in base.cards]
@@ -144,11 +139,11 @@ async def test_override_replaces_a_baseline_card_in_place(knowledge_session) -> 
 
 
 async def test_override_with_a_new_id_is_appended(knowledge_session) -> None:
-    base = load_yaml_knowledge_base(FACE)
+    base = load_yaml_knowledge_base()
     await create_card(knowledge_session, _draft(card_id="family.brand_new"))
     await knowledge_session.commit()
 
-    merged = merge_knowledge_base(base, await load_overrides(knowledge_session, face=FACE))
+    merged = merge_knowledge_base(base, await load_overrides(knowledge_session))
 
     assert len(merged.cards) == len(base.cards) + 1
     assert merged.cards[-1].id == "family.brand_new"
@@ -158,12 +153,12 @@ async def test_override_with_a_new_id_is_appended(knowledge_session) -> None:
 async def test_non_approved_override_suppresses_the_baseline_card(
     knowledge_session, status: str
 ) -> None:
-    base = load_yaml_knowledge_base(FACE)
+    base = load_yaml_knowledge_base()
     target = base.cards[0].id
     await create_card(knowledge_session, _draft(card_id=target, status=status))
     await knowledge_session.commit()
 
-    merged = merge_knowledge_base(base, await load_overrides(knowledge_session, face=FACE))
+    merged = merge_knowledge_base(base, await load_overrides(knowledge_session))
 
     assert target not in {card.id for card in merged.cards}
     assert len(merged.cards) == len(base.cards) - 1
@@ -178,7 +173,7 @@ async def test_a_corrupt_row_is_skipped_rather_than_taking_the_base_down(
     bad.retrieval_aliases = {"klingon": ["nuqneH"]}
     await knowledge_session.commit()
 
-    overrides = await load_overrides(knowledge_session, face=FACE)
+    overrides = await load_overrides(knowledge_session)
 
     assert [card.id for card in overrides.approved] == [good.card_id]
 
@@ -203,11 +198,11 @@ def test_derived_kb_version_survives_the_event_write_validation() -> None:
 async def test_refresh_stamps_a_new_kb_version_when_an_override_exists(
     knowledge_session,
 ) -> None:
-    baseline = load_yaml_knowledge_base(FACE).version
+    baseline = load_yaml_knowledge_base().version
     await create_card(knowledge_session, _draft(card_id="family.version_probe"))
     await knowledge_session.commit()
 
-    merged = await refresh_knowledge_base(knowledge_session, FACE)
+    merged = await refresh_knowledge_base(knowledge_session)
 
     assert merged.version != baseline
     assert merged.version.startswith(baseline)
@@ -218,7 +213,7 @@ async def test_refresh_stamps_a_new_kb_version_when_an_override_exists(
 
 
 def test_store_falls_back_to_yaml_before_any_refresh() -> None:
-    assert FileKnowledgeStore().load(FACE) == load_yaml_knowledge_base(FACE)
+    assert FileKnowledgeStore().load() == load_yaml_knowledge_base()
 
 
 async def test_refresh_job_never_raises_when_the_database_is_unreachable() -> None:
@@ -229,18 +224,17 @@ async def test_refresh_job_never_raises_when_the_database_is_unreachable() -> No
     await run_knowledge_refresh_job(_BrokenFactory())
 
     # The YAML baseline still answers checks — not an empty base.
-    assert FileKnowledgeStore().load(FACE).cards
+    assert FileKnowledgeStore().load().cards
 
 
 async def test_store_failure_degrades_to_unavailable_not_empty() -> None:
     """§5 requires degradation to be visible; an empty base would look healthy."""
 
     class _BrokenStore:
-        def load(self, face_id: str):
+        def load(self):
             raise KnowledgeLookupError("knowledge files could not be loaded")
 
     result = await retrieve_knowledge(
-        face_id=FACE,
         minimized_text="срочно пришлите код",
         rule_hits=[],
         signals=[],
@@ -260,10 +254,9 @@ async def test_stored_card_reaches_retrieval_after_refresh(knowledge_session) ->
         _draft(card_id="family.e2e_card", trigger_rule_ids=["fs.urgency.deadline"]),
     )
     await knowledge_session.commit()
-    await refresh_knowledge_base(knowledge_session, FACE)
+    await refresh_knowledge_base(knowledge_session)
 
     result = await retrieve_knowledge(
-        face_id=FACE,
         minimized_text="срочно, только сегодня",
         rule_hits=[
             RuleHit(
@@ -282,8 +275,8 @@ async def test_stored_card_reaches_retrieval_after_refresh(knowledge_session) ->
 
 
 async def test_baseline_card_ids_are_unchanged_with_no_overrides(knowledge_session) -> None:
-    baseline_ids = [card.id for card in load_yaml_knowledge_base(FACE).cards]
+    baseline_ids = [card.id for card in load_yaml_knowledge_base().cards]
 
-    merged = await refresh_knowledge_base(knowledge_session, FACE)
+    merged = await refresh_knowledge_base(knowledge_session)
 
     assert [card.id for card in merged.cards] == baseline_ids

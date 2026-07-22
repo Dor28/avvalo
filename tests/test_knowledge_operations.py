@@ -1,4 +1,4 @@
-"""T-03/T-04 acceptance: metadata-only gaps, coverage, inventory, and alerts."""
+"""Knowledge-gap reporting, coverage, inventory, and alerting tests."""
 
 from __future__ import annotations
 
@@ -27,7 +27,6 @@ NOW = datetime(2026, 7, 19, 12, 0, tzinfo=UTC)
 
 def _event(
     *,
-    face: str = "family",
     language: str = "ru",
     cards: list[str] | None = None,
     rules: list[str] | None = None,
@@ -39,7 +38,6 @@ def _event(
     return CheckEvent(
         id=uuid4(),
         user_key=uuid4().hex,
-        face=face,
         ts=ts,
         input_type="text",
         language=language,
@@ -78,14 +76,12 @@ async def test_gap_report_separates_no_match_from_unavailable_and_groups_feedbac
         session,
         since=NOW - timedelta(days=1),
         until=NOW + timedelta(days=1),
-        face="family",
-    )
+            )
     rendered = render_knowledge_gaps(report)
 
     coverage = report["coverage"][0]
     assert coverage == {
-        "face": "family",
-        "language": "ru",
+                "language": "ru",
         "checks": 5,
         "found": 2,
         "coverage_rate": 0.4,
@@ -94,8 +90,7 @@ async def test_gap_report_separates_no_match_from_unavailable_and_groups_feedbac
     }
     assert report["gaps"] == [
         {
-            "face": "family",
-            "language": "ru",
+                        "language": "ru",
             "rule_ids": ["fs.credential.otp"],
             "count": 1,
         }
@@ -146,7 +141,7 @@ async def test_gap_cli_runs_read_only_against_seeded_database(session, capsys) -
 
     assert exit_code == 0
     assert "Avvalo knowledge-gap report" in output
-    assert "family/ru: 1/1 found" in output
+    assert "ru: 1/1 found" in output
     assert "submitted content is not stored" in output
 
 
@@ -176,13 +171,11 @@ async def test_daily_metrics_include_coverage_unavailable_and_card_inventory(ses
     assert summary["knowledge"]["coverage_rate"] == 0.3333
     assert summary["knowledge"]["unavailable_rate"] == 0.3333
     assert summary["knowledge"]["inventory"]["version"] == "2026-07-15-v1"
-    assert summary["knowledge"]["inventory"]["approved_cards"] == {
-        "family": 10,
-    }
+    assert summary["knowledge"]["inventory"]["approved_cards"] == 10
     assert "knowledge_coverage_rate=0.3333" in exported
     assert "knowledge_unavailable_rate=0.3333" in exported
     assert "kb_version=2026-07-15-v1" in exported
-    assert "kb_approved_cards_family=10" in exported
+    assert "kb_approved_cards=10" in exported
 
 
 async def test_knowledge_unavailable_alert_fires_above_and_stays_quiet_below(

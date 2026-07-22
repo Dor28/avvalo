@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b6e75">
-    <meta name="description" content="{{ face_copy.subhead }}">
-    <title>{{ copy.title }} — {{ face_copy.name }}</title>
+    <meta name="description" content="{{ check_copy.subhead }}">
+    <title>{{ copy.title }} — {{ check_copy.name }}</title>
     <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{ static_version }}">
     <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
@@ -22,11 +22,11 @@
       <section class="hero-layout" aria-labelledby="hero-title">
         <div class="hero-copy">
           <p class="eyebrow">{{ copy.hero_kicker }}</p>
-          <h1 id="hero-title">{{ face_copy.headline }}</h1>
-          <p class="lead">{{ face_copy.subhead }}</p>
+          <h1 id="hero-title">{{ check_copy.headline }}</h1>
+          <p class="lead">{{ check_copy.subhead }}</p>
 
           <div class="use-cases" aria-label="{{ copy.use_cases_label }}">
-            {% for use_case in face_copy.use_cases %}
+            {% for use_case in check_copy.use_cases %}
               <span>
                 <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
                   <path d="M4 8.2 6.7 11 12.2 5.4" fill="none" stroke="currentColor"
@@ -52,7 +52,7 @@
         </section>
 
         <ul class="trust-list" aria-label="{{ copy.trust_label }}">
-          {% for point in face_copy.trust %}
+          {% for point in check_copy.trust %}
             <li>
               <span class="trust-icon" aria-hidden="true"></span>
               <span>{{ point }}</span>

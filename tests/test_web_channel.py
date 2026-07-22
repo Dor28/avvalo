@@ -1,4 +1,4 @@
-"""T13 - web channel parity and abuse gates."""
+"""Web-channel parity, privacy boundaries, and abuse-gate tests."""
 
 import logging
 
@@ -120,10 +120,12 @@ def test_unified_checker_is_localized_and_old_merchants_url_redirects() -> None:
     assert family.status_code == 200
     assert merchants.status_code == 308
     assert merchants.headers["location"] == "/check?language=ru"
-    # Home and /check both post to the same fixed-face handler.
+    # Home and /check both post to the same single check handler.
     assert 'action="/check"' in landing.text
     assert 'name="face"' not in landing.text
     assert 'name="face"' not in family.text
+    assert 'name="caption"' not in landing.text
+    assert 'name="caption"' not in family.text
     assert "/merchants?language=uz_latn" not in landing.text
     assert "/merchants?language=uz_latn" not in family.text
     assert 'type="radio"' not in family.text
@@ -156,9 +158,6 @@ def test_web_reuses_the_shared_engine(monkeypatch) -> None:
     response = client.post(
         "/check",
         data={
-            # Retired clients may still send this obsolete field; the route
-            # ignores it and always builds the active consumer check.
-            "face": "merchants",
             "language": "uz_latn",
             "text": "Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
             "consent": "yes",
@@ -171,7 +170,6 @@ def test_web_reuses_the_shared_engine(monkeypatch) -> None:
     assert len(calls) == 1
     check_input, _args, kwargs = calls[0]
     assert check_input.input_type is InputType.text
-    assert check_input.face == "family"
     assert check_input.language is Language.uz_latn
     assert check_input.raw_text.startswith("Bank xavfsizlik")
     assert kwargs["rate_limit_override"] == 5
@@ -189,8 +187,7 @@ def test_web_rejects_cross_site_post_before_engine_or_database(monkeypatch) -> N
     response = client.post(
         "/check",
         data={
-            "face": "family",
-            "language": "ru",
+                        "language": "ru",
             "text": "SMS code",
             "consent": "yes",
         },
@@ -233,8 +230,7 @@ def test_web_accepts_matching_origin(monkeypatch) -> None:
     response = client.post(
         "/check",
         data={
-            "face": "family",
-            "language": "ru",
+                        "language": "ru",
             "text": "SMS code",
             "consent": "yes",
         },
@@ -267,8 +263,7 @@ def test_web_check_fails_closed_without_session_factory(monkeypatch) -> None:
     response = client.post(
         "/check",
         data={
-            "face": "family",
-            "language": "uz_latn",
+                        "language": "uz_latn",
             "text": "Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
             "consent": "yes",
         },
@@ -291,8 +286,7 @@ def test_image_upload_fails_without_turnstile(monkeypatch) -> None:
     response = client.post(
         "/check",
         data={
-            "face": "family",
-            "language": "uz_latn",
+                        "language": "uz_latn",
             "consent": "yes",
         },
         files={"image": ("check.png", b"not-empty", "image/png")},
@@ -315,8 +309,7 @@ def test_web_requires_consent_before_reading_upload(monkeypatch) -> None:
     response = client.post(
         "/check",
         data={
-            "face": "family",
-            "language": "uz_latn",
+                        "language": "uz_latn",
             "text": "Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
         },
         files={"image": ("check.png", b"not-empty", "image/png")},
@@ -344,8 +337,7 @@ def test_web_rejects_oversized_text_before_upload_or_engine(monkeypatch) -> None
     response = client.post(
         "/check",
         data={
-            "face": "family",
-            "language": "uz_latn",
+                        "language": "uz_latn",
             "text": "x" * (routes.WEB_MAX_TEXT_CHARS + 1),
             "consent": "yes",
         },
@@ -371,15 +363,17 @@ def test_web_ip_limit_survives_cookie_reset_and_spoofed_xff(monkeypatch) -> None
     async def fake_ensure_web_consent(*_args, **_kwargs) -> bool:
         return True
 
-    async def fake_increment_usage(_session, *, user_key: str, face: str, day=None) -> int:
+    async def fake_increment_usage(
+        _session, *, user_key: str, scope: str = "user", day=None
+    ) -> int:
         _ = day
-        key = (user_key, face)
+        key = (user_key, scope)
         counts[key] = counts.get(key, 0) + 1
         return counts[key]
 
-    async def fake_refund_usage(_session, *, user_key: str, face: str, day=None) -> None:
+    async def fake_refund_usage(_session, *, user_key: str, scope: str = "user", day=None) -> None:
         _ = day
-        key = (user_key, face)
+        key = (user_key, scope)
         counts[key] = max(0, counts.get(key, 0) - 1)
 
     monkeypatch.setattr(routes, "run_check", fake_run_check)
@@ -392,8 +386,7 @@ def test_web_ip_limit_survives_cookie_reset_and_spoofed_xff(monkeypatch) -> None
         session_factory=FakeSessionFactory(),
     )
     payload = {
-        "face": "family",
-        "language": "uz_latn",
+                "language": "uz_latn",
         "text": "Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
         "consent": "yes",
     }
@@ -412,7 +405,7 @@ def test_web_ip_limit_survives_cookie_reset_and_spoofed_xff(monkeypatch) -> None
     assert CheckStatus.rate_limited.value not in responses[-1].text
     assert len(calls) == 2
     assert len(counts) == 1
-    ((user_key, face), count) = next(iter(counts.items()))
-    assert face == "web_ip:family"
+    ((user_key, scope), count) = next(iter(counts.items()))
+    assert scope == "web_ip"
     assert "203.0.113" not in user_key
     assert count == 2

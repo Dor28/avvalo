@@ -29,27 +29,47 @@ All configuration comes from environment variables via [app/config.py](app/confi
 
 One process ([app/main.py](app/main.py)) runs everything: the aiogram Telegram bot (polling), the FastAPI anonymous web channel (when `WEB_ENABLED=true`), and the retention scheduler, sharing one async SQLAlchemy engine.
 
-**One public product, one active code face.** The internal compatibility ID is `family`; it selects
-the main rule pack, prompt template, and daily limit. Seller, payment-screenshot, courier, and
-refund situations use this same checker rather than a merchant product. The former `merchants`
-face, scam library, story-capture flow, and Scam Pulse are retired and must not be restored from
-git history. Keep persisted `face` values and legacy `fs.` / `sg.` IDs stable where they are needed
-for historical metadata or safety filtering; do not create another active face. Channels
-(`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` and call `run_check()` — new
-product behavior belongs in the engine, not in a channel handler.
+**One public product, one checker — and no product-face concept.** There is a single consumer
+checker with a single rule pack (`rules/`), prompt (`prompts/check.txt`), and daily limit
+(`DAILY_CHECK_LIMIT`). Seller, payment-screenshot, courier, and refund situations all use it.
+The former `merchants` face, scam library, story-capture flow, and Scam Pulse are retired and must
+not be restored from git history.
+
+The `face` discriminator that used to select between products is **gone** — from the code and from
+the database (migration `0007_drop_face`). Do not reintroduce it, and do not add a "mode" or
+"product" parameter in its place. Two names survive and mean something different:
+
+- `RuleHit.family` / `rules/families.yaml` — the **scam-family taxonomy** (`credential_theft`,
+  `urgency_secrecy`, …). Nothing to do with products.
+- `fs.` / `sg.` rule-ID prefixes and `family.*` knowledge-card IDs — frozen opaque identifiers kept
+  stable because they are persisted in `check_event.rule_ids` / `knowledge_card_ids` and matched by
+  the leak filter in `validate.py`. Never renamed; never parsed for meaning.
+
+Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` and call
+`run_check()` — new product behavior belongs in the engine, not in a channel handler.
 
 **The pipeline** ([app/engine/pipeline.py](app/engine/pipeline.py), `run_check`) is the core; every check from every channel flows through the same stages:
 
-1. Rate limit per (user, face, day); statuses that never reached the model refund the slot.
+1. Rate limit per (user, day); statuses that never reached the model refund the slot. The web
+   channel's per-IP guard shares `rate_limit` under `scope="web_ip"`.
 2. Content: text as-is, or image → OCR provider with a confidence gate (`low_ocr` below threshold).
 3. Language resolution — the reply language follows the content, not the UI.
-4. Deterministic rules (`app/engine/rules/`): keyword packs in `rules/<face>/*.yaml` (per-script keyword groups, matched on raw text) plus regex extractors → `RuleHit`s and `Signal`s.
+4. Deterministic rules (`app/engine/rules/`): keyword packs in `rules/*.yaml` (per-script keyword groups, matched on raw text) plus regex extractors → `RuleHit`s and `Signal`s. `rules/shared/` holds URL-reputation feed data and is deliberately *not* loaded as a rule pack.
 5. `minimize()` strips PII before anything is sent to the LLM.
-6. LLM call in JSON-schema mode via an OpenAI-compatible provider; prompt = `prompts/system_safety.txt` + `prompts/<face>.txt` with rule hits injected as grounded facts.
-7. Deterministic safety validator ([app/engine/validate.py](app/engine/validate.py)): bans verdict words in ru/uz_latn/uz_cyrl/English, strips contacts/links/card numbers/OTPs, caps list lengths; one corrective retry, then `safety_fallback`.
+6. LLM call in JSON-schema mode via an OpenAI-compatible provider; prompt = `prompts/system_safety.txt` + `prompts/check.txt` with rule hits injected as grounded facts.
+7. Deterministic safety validator ([app/engine/validate.py](app/engine/validate.py)): bans verdict words in ru/uz_latn/Cyrillic-Uzbek/English, strips contacts/links/card numbers/OTPs, caps list lengths; one corrective retry, then `safety_fallback`.
 8. `format_result` renders the reply in the resolved language.
 
 Boundary contracts are Pydantic models in [app/engine/types.py](app/engine/types.py) (`CheckInput`, `CheckResult`, `CheckStatus`, `DraftOutput`); extend those instead of passing loose dicts. New statuses must also be added to the allow-set in [app/data/repo.py](app/data/repo.py).
+
+**Detection assets are database-backed with a YAML fallback.** The repo is public, so new keyword
+and card work lives in `rule_override` / `knowledge_card_override` (`app/rules_store/`,
+`app/knowledge_store/`) rather than in git; `rules/*.yaml` and `knowledge/cards/` are the shipped
+fallback baseline. Overrides merge onto the baseline **by ID**, are served from process-level
+snapshots so `load_rule_pack()` / `KnowledgeStore.load()` stay synchronous, and fail *safe* — an
+unreachable database falls back to the shipped YAML, never to an empty pack. Operators edit them at
+`/admin/rules` and `/admin/cards` (needs `ADMIN_ACCESS_KEY`), each with a dry-run that calls the real
+matcher / real retrieval so a preview cannot drift from production.
 
 **Providers are injectable and env-selected.** LLM = any OpenAI-compatible host (`LLM_BASE_URL`/`LLM_MODEL`; OpenRouter Qwen in prod, Ollama locally). OCR = `OCR_PROVIDER` ∈ gcv | tesseract | paddleocr | local_stub behind `app/engine/ocr/base.py`. Tests pass fake providers directly into `run_check(..., llm_provider=, ocr_provider=)` — keep new external dependencies injectable the same way.
 
@@ -64,6 +84,8 @@ The legal posture depends on these; several are enforced by tests that will fail
   content-like persistence. The existing `story_submission.minimized_text` column is legacy
   stewardship only: no new writes or product reads, while `/delete_my_data` and retention continue
   to cover old rows until a separately authorized purge removes the table.
+- **`CheckInput` carries no product discriminator.** `tests/test_types_contract.py` asserts `face`
+  stays absent, so the retired concept can't creep back through the boundary type.
 - **Users are pseudonymous:** `user_key = HMAC_SHA256(APP_HMAC_SECRET, telegram_id)[:32]` ([app/privacy/user_key.py](app/privacy/user_key.py)); raw Telegram IDs are never stored or logged.
 - Retention ([app/data/retention.py](app/data/retention.py)) prunes aged rows; `/delete_my_data` is audited in `deletion_log`.
 - `tests/test_secret_scan.py` scans the tree for committed secrets.
@@ -75,15 +97,9 @@ The legal posture depends on these; several are enforced by tests that will fail
   [docs/V1_TECHNICAL_PLAN.md](docs/V1_TECHNICAL_PLAN.md) describes the retained core and clearly
   marks removed legacy surfaces as history. Module docstrings cite technical-plan sections
   (§5.1, §9, …) — keep those references in sync.
-- Tests named `test_tNN_*.py` map to the numbered build history in V1_TECHNICAL_PLAN §13; the
-  active golden end-to-end fixtures live in `tests/fixtures/golden/checker.json`.
-- **Asset paths are decoupled from the `family` face ID.** The rule pack, prompt, knowledge cards,
-  and golden fixtures live under `checker` names (`rules/checker/`, `prompts/checker.txt`,
-  `knowledge/checker/`); `Face` in [app/engine/faces.py](app/engine/faces.py) maps the frozen
-  `family` ID onto them. Do not rename the ID itself — `face` is part of the `consent` and
-  `rate_limit` primary keys. `checker` is also deliberately not `verify`, which is reserved for the
-  unbuilt Avvalo Verify evidence capability.
-- **Every user-facing string exists in all three languages** (`uz_latn`, `uz_cyrl`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
+- Test modules are named for current behavior and product boundaries, not historical milestones;
+  the active golden end-to-end fixtures live in `tests/fixtures/golden/checks.json`.
+- **Every user-facing string exists in both languages** (`uz_latn`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. Uzbek replies are Latin-script only. Cyrillic-Uzbek *input* is still supported: `app/engine/language.py` detects it and resolves it to `uz_latn`, the `uz_cyrl` keyword groups in `rules/` and `knowledge/` still match it, and `app/engine/validate.py` still bans Cyrillic verdict words. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
 - Async end-to-end; pytest runs with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed).
 - Style follows ruff config in [pyproject.toml](pyproject.toml): 100-char lines, import sorting (I), modern syntax (UP). Module docstrings state purpose and spec section; internal helpers use frozen dataclasses, boundary types use Pydantic.
-- `.claude/worktrees/` can hold stale checkouts with pre-rename names (family_shield/seller_guard) — exclude it when searching the repo.
+- `.claude/worktrees/` can hold stale checkouts with pre-rename names (family_shield/seller_guard, and the retired `face` plumbing) — exclude it when searching the repo.

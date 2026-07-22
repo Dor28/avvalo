@@ -1,22 +1,27 @@
-"""Prompt-asset tests (V1_TECHNICAL_PLAN §8, §9).
+"""Safety-critical prompt-asset and template-contract tests.
 
-The prompts are pre-authored safety-critical assets (§0.6). prompt.py (T6) will
-fill the face templates; until then these tests check the assets exist, expose
-the placeholders the builder fills, and still carry the non-negotiable safety
-contract — so an accidental edit that strips a constraint is caught.
+The prompt builder fills the single checker template at runtime. These tests pin
+its placeholders and non-negotiable safety constraints so an accidental asset
+edit cannot silently remove them.
 """
 
 from pathlib import Path
 
 import pytest
 
-from app.engine.faces import FACES
+from app.engine.llm.prompt import _CHECK_PROMPT, _SYSTEM_PROMPT
 from app.engine.types import DraftOutput
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROMPTS = REPO_ROOT / "prompts"
 
-FACE_TEMPLATE_PLACEHOLDERS = ("{language}", "{minimized_text}", "{rule_hits}", "{signals}")
+CHECK_TEMPLATE_PLACEHOLDERS = (
+    "{language}",
+    "{minimized_text}",
+    "{rule_hits}",
+    "{signals}",
+    "{knowledge}",
+)
 
 
 def _read(name: str) -> str:
@@ -28,7 +33,7 @@ def _read(name: str) -> str:
 
 
 def test_required_prompt_files_exist() -> None:
-    for name in ("system_safety.txt", "checker.txt"):
+    for name in ("system_safety.txt", "check.txt"):
         _read(name)
 
 
@@ -46,21 +51,19 @@ def test_system_prompt_keeps_the_core_prohibitions() -> None:
         assert token in system, f"system prompt should reference '{token}' (§8 constraints)"
 
 
-@pytest.mark.parametrize("name", ["checker.txt"])
-def test_face_templates_expose_builder_placeholders(name: str) -> None:
+@pytest.mark.parametrize("name", ["check.txt"])
+def test_check_template_exposes_builder_placeholders(name: str) -> None:
     template = _read(name)
-    for placeholder in FACE_TEMPLATE_PLACEHOLDERS:
+    for placeholder in CHECK_TEMPLATE_PLACEHOLDERS:
         assert placeholder in template, f"{name}: missing placeholder {placeholder}"
 
 
 def test_consumer_prompt_forbids_confirming_payment_from_a_screenshot() -> None:
-    prompt = _read("checker.txt").lower()
+    prompt = _read("check.txt").lower()
     assert "incoming payment arrived" in prompt
     assert "screenshot" in prompt
 
 
-def test_faces_reference_prompt_files_that_exist() -> None:
-    for face in FACES.values():
-        assert (REPO_ROOT / face.prompt_template).is_file(), (
-            f"{face.id}: prompt_template '{face.prompt_template}' does not exist"
-        )
+def test_engine_references_prompt_files_that_exist() -> None:
+    for template in (_SYSTEM_PROMPT, _CHECK_PROMPT):
+        assert template.is_file(), f"prompt template does not exist: {template}"

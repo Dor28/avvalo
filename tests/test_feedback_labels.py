@@ -24,7 +24,6 @@ async def test_feedback_labels_flag_low_usefulness_rules_against_baseline(sessio
             CheckEvent(
                 id=check_id,
                 user_key=user_key,
-                face="family",
                 ts=datetime(2026, 6, 10 + index, tzinfo=UTC),
                 input_type="text",
                 language="ru",
@@ -42,28 +41,6 @@ async def test_feedback_labels_flag_low_usefulness_rules_against_baseline(sessio
             )
         )
 
-    retired_check_id = uuid4()
-    session.add(
-        CheckEvent(
-            id=retired_check_id,
-            user_key="retired-merchant-user",
-            face="merchants",
-            ts=datetime(2026, 6, 20, tzinfo=UTC),
-            input_type="text",
-            language="ru",
-            rule_ids=["sg.amount.overpay"],
-            no_signal=False,
-            status="ok",
-        )
-    )
-    session.add(
-        Feedback(
-            check_id=retired_check_id,
-            usefulness="no",
-            next_action="continue",
-            ts=datetime(2026, 6, 20, tzinfo=UTC),
-        )
-    )
     await session.flush()
 
     report = await collect_labels(session, since=datetime(2026, 6, 1, tzinfo=UTC))
@@ -88,7 +65,6 @@ async def test_metrics_cli_prints_labels_without_private_values(session, capsys)
         CheckEvent(
             id=check_id,
             user_key="cli-private-user",
-            face="family",
             ts=datetime(2026, 6, 15, tzinfo=UTC),
             input_type="text",
             language="ru",

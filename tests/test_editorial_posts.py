@@ -47,9 +47,6 @@ def _post_data(*, state: str = "published", slug: str = "fake-payment-screenshot
         "title_uz_latn": "Soxta to‘lov skrinshoti",
         "summary_uz_latn": "Pul tushmasidan oldin tovarni berish so‘ralgan holat.",
         "article_uz_latn": "Skrinshot pul kelganini isbotlamaydi.\n\nBank ilovasini tekshiring.",
-        "title_uz_cyrl": "Сохта тўлов скриншоти",
-        "summary_uz_cyrl": "Пул тушмасидан олдин товарни бериш сўралган ҳолат.",
-        "article_uz_cyrl": "Скриншот пул келганини исботламайди.\n\nБанк иловасини текширинг.",
         "title_ru": "Когда скрин оплаты не подтверждает перевод",
         "summary_ru": "Покупатель просит отдать товар до фактического зачисления денег.",
         "article_ru": "<script>alert(1)</script>\n\nПроверьте поступление в приложении своего банка.",
@@ -201,7 +198,9 @@ def test_admin_can_publish_edit_and_unpublish_a_trilingual_case(editorial_client
     assert "Когда скрин оплаты не подтверждает перевод" in detail.text
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in detail.text
     assert "<script>alert(1)</script>" not in detail.text
-    assert "Сохта тўлов скриншоти" in uz_detail.text
+    # A retired uz_cyrl request falls back to Latin-script Uzbek rather than 404ing.
+    assert 'lang="uz-Latn"' in uz_detail.text
+    assert "Soxta to‘lov skrinshoti" in uz_detail.text
     assert "Опубликован" in admin_listing.text
 
     edit_match = re.search(r'/admin/posts/([0-9a-f-]+)/edit', admin_listing.text)

@@ -17,7 +17,6 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.engine.faces import FACES
 from app.engine.knowledge.types import KnowledgeCard
 from app.knowledge_store.models import KnowledgeCardOverride
 
@@ -37,7 +36,7 @@ MAX_ALIASES_PER_LANGUAGE = 40
 
 @dataclass(frozen=True)
 class LoadedOverrides:
-    """The result of reading one face's card overrides."""
+    """The result of reading the stored card overrides."""
 
     approved: tuple[KnowledgeCard, ...]
     suppressed_ids: frozenset[str]
@@ -49,7 +48,6 @@ class KnowledgeCardDraft(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    face: str
     card_id: str
     card_version: str
     status: str
@@ -66,8 +64,6 @@ class KnowledgeCardDraft(BaseModel):
     def normalized(self) -> KnowledgeCardDraft:
         """Strip whitespace and reject anything retrieval or the prompt cannot use."""
 
-        if self.face not in FACES:
-            raise ValueError("invalid_face")
         card_id = self.card_id.strip().casefold()
         if not CARD_ID_RE.fullmatch(card_id):
             raise ValueError("invalid_card_id")
@@ -92,7 +88,6 @@ class KnowledgeCardDraft(BaseModel):
         )
 
         return KnowledgeCardDraft(
-            face=self.face,
             card_id=card_id,
             card_version=card_version,
             status=self.status,
@@ -113,7 +108,6 @@ class KnowledgeCardDraft(BaseModel):
         values = self.normalized()
         return KnowledgeCard(
             id=values.card_id,
-            face=values.face,
             version=values.card_version,
             status=values.status,
             reviewer=values.reviewer,
@@ -211,25 +205,21 @@ async def delete_card(session: AsyncSession, override: KnowledgeCardOverride) ->
     await session.flush()
 
 
-async def list_cards(
-    session: AsyncSession, *, face: str | None = None
-) -> list[KnowledgeCardOverride]:
+async def list_cards(session: AsyncSession) -> list[KnowledgeCardOverride]:
     """Return card overrides for the editor, newest change first."""
 
     statement = select(KnowledgeCardOverride).order_by(KnowledgeCardOverride.updated_ts.desc())
-    if face is not None:
-        statement = statement.where(KnowledgeCardOverride.face == face)
     return list((await session.execute(statement)).scalars())
 
 
-async def load_overrides(session: AsyncSession, *, face: str) -> LoadedOverrides:
+async def load_overrides(session: AsyncSession) -> LoadedOverrides:
     """Return approved override cards, suppressed IDs, and the newest change time.
 
     A row that fails validation is skipped rather than raised, so one bad card
     cannot drop the whole base to its YAML baseline.
     """
 
-    rows = await list_cards(session, face=face)
+    rows = await list_cards(session)
     approved: list[KnowledgeCard] = []
     suppressed: set[str] = set()
     latest: datetime | None = None
@@ -255,7 +245,6 @@ async def load_overrides(session: AsyncSession, *, face: str) -> LoadedOverrides
 
 def _card_from_row(row: KnowledgeCardOverride) -> KnowledgeCard:
     draft = KnowledgeCardDraft(
-        face=row.face,
         card_id=row.card_id,
         card_version=row.card_version,
         status=row.status,

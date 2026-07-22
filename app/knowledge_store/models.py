@@ -7,14 +7,14 @@ data, never user content, and must stay outside the zero-content contract that
 ``tests/test_schema_privacy`` enforces over ``app.data.models.Base``.
 
 Keeping cards here rather than in the public repository means new card work is
-not published on push; ``knowledge/<face>/cards.yaml`` remains the fallback
+not published on push; ``knowledge/cards/cards.yaml`` remains the fallback
 baseline (AI_KNOWLEDGE_PIPELINE §6).
 """
 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Text, UniqueConstraint, Uuid
+from sqlalchemy import JSON, DateTime, Text, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -26,13 +26,9 @@ class KnowledgeCardOverride(KnowledgeStoreBase):
     """One card that overrides, adds to, or suppresses a YAML baseline card."""
 
     __tablename__ = "knowledge_card_override"
-    __table_args__ = (
-        UniqueConstraint("face", "card_id", name="uq_knowledge_card_override_face_card"),
-    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    face: Mapped[str] = mapped_column(Text, nullable=False, index=True)
-    card_id: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    card_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
 
     card_version: Mapped[str] = mapped_column(Text, nullable=False)
     # approved | draft | retired — only ``approved`` ever reaches retrieval.

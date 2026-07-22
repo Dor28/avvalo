@@ -522,7 +522,7 @@ textarea[aria-invalid="true"],
 .attachment-grid {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 13px;
   padding: 16px;
   border: 1px solid var(--line);
@@ -657,12 +657,6 @@ textarea[aria-invalid="true"],
 .file-clear:hover {
   color: #ffffff;
   background: var(--teal);
-}
-
-.context-field input {
-  min-height: 96px;
-  padding-top: 13px;
-  align-self: stretch;
 }
 
 .consent-panel {
@@ -1894,8 +1888,7 @@ textarea[aria-invalid="true"],
     padding: 13px;
   }
 
-  .file-drop,
-  .context-field input {
+  .file-drop {
     min-height: 78px;
   }
 

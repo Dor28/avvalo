@@ -23,17 +23,36 @@ from app.bot.keyboards import (
     telegram_share_url,
 )
 from app.bot.states import Onboarding
-from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGES, entry_text, t
+from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGES, entry_text, normalize_language, t
 from app.config import Settings
 from app.data import repo
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
-from app.engine.faces import Face
 from app.engine.format import share_summary
+from app.engine.types import MAX_IMAGE_BYTES, MAX_SUBMITTED_TEXT_CHARS
 from app.obs.events import log_event
 from app.privacy.consent import grant_consent, is_consent_current
 from app.privacy.user_key import derive_user_key
 
 _FEEDBACK_STATUSES = {CheckStatus.ok, CheckStatus.no_signal}
+
+
+class _UploadTooLargeError(Exception):
+    """Stop a Telegram download before an oversized photo fills memory."""
+
+
+class _BoundedBytesIO(BytesIO):
+    """In-memory destination that enforces the shared ephemeral image cap."""
+
+    def __init__(self, *, max_bytes: int = MAX_IMAGE_BYTES) -> None:
+        super().__init__()
+        self._max_bytes = max_bytes
+        self._written = 0
+
+    def write(self, data: bytes) -> int:
+        self._written += len(data)
+        if self._written > self._max_bytes:
+            raise _UploadTooLargeError
+        return super().write(data)
 
 router = Router()
 
@@ -44,22 +63,23 @@ def _user_key(user_id: int, settings: Settings) -> str:
 
 async def _language(state: FSMContext) -> str:
     data = await state.get_data()
-    return data.get("language", DEFAULT_LANGUAGE)
+    return normalize_language(data.get("language", DEFAULT_LANGUAGE))
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message, state: FSMContext, settings, session_factory, face) -> None:
+async def cmd_start(message: Message, state: FSMContext, settings, session_factory) -> None:
     user = message.from_user
     if user is None:
         return
     user_key = _user_key(user.id, settings)
     async with session_factory() as session:
-        consent = await repo.get_consent(session, user_key=user_key, face=face.id)
+        consent = await repo.get_consent(session, user_key=user_key)
 
     if is_consent_current(consent, settings.notice_version):
+        language = normalize_language(consent.language)
         await state.set_state(Onboarding.ready)
-        await state.update_data(language=consent.language)
-        await message.answer(entry_text(face.id, consent.language))
+        await state.update_data(language=language)
+        await message.answer(entry_text(language))
         return
 
     await state.set_state(Onboarding.choosing_language)
@@ -76,13 +96,13 @@ async def cmd_privacy(message: Message, state: FSMContext) -> None:
 
 @router.message(Command("delete_my_data"))
 async def cmd_delete_my_data(
-    message: Message, state: FSMContext, settings, session_factory, face
+    message: Message, state: FSMContext, settings, session_factory
 ) -> None:
     user = message.from_user
     if user is None:
         return
     user_key = _user_key(user.id, settings)
-    log_event("deletion_requested", face=face.id)
+    log_event("deletion_requested")
     async with session_factory() as session:
         await repo.delete_user_data(session, user_key=user_key)
         await session.commit()
@@ -90,7 +110,7 @@ async def cmd_delete_my_data(
     language = await _language(state)
     await state.clear()
     await message.answer(t("data_deleted", language))
-    log_event("deletion_completed", face=face.id)
+    log_event("deletion_completed")
 
 
 @router.callback_query(F.data.startswith("lang:"))
@@ -113,7 +133,7 @@ async def on_language_chosen(callback: CallbackQuery, state: FSMContext, setting
 
 @router.callback_query(F.data.startswith("consent:accept"))
 async def on_consent_accepted(
-    callback: CallbackQuery, state: FSMContext, settings, session_factory, face
+    callback: CallbackQuery, state: FSMContext, settings, session_factory
 ) -> None:
     stored_language = (await state.get_data()).get("language", DEFAULT_LANGUAGE)
     language = parse_consent_callback(callback.data) or stored_language
@@ -139,7 +159,6 @@ async def on_consent_accepted(
         await grant_consent(
             session,
             user_key=user_key,
-            face=face.id,
             language=language,
             notice_version=settings.notice_version,
         )
@@ -148,11 +167,11 @@ async def on_consent_accepted(
     await state.update_data(language=language)
     await state.set_state(Onboarding.ready)
     if isinstance(callback.message, Message):
-        await callback.message.edit_text(entry_text(face.id, language))
+        await callback.message.edit_text(entry_text(language))
     elif callback.bot is not None:
-        await callback.bot.send_message(callback.from_user.id, entry_text(face.id, language))
+        await callback.bot.send_message(callback.from_user.id, entry_text(language))
     await callback.answer()
-    log_event("consent_accepted", face=face.id, language=language)
+    log_event("consent_accepted", language=language)
 
 
 async def _replace_or_send_consent_prompt(
@@ -197,7 +216,7 @@ async def on_share(callback: CallbackQuery, state: FSMContext, settings, session
         return
 
     language = event.language if event.language in LANGUAGES else await _language(state)
-    summary = share_summary(list(event.rule_ids or []), language, event.face)
+    summary = share_summary(list(event.rule_ids or []), language)
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -208,7 +227,7 @@ async def on_share(callback: CallbackQuery, state: FSMContext, settings, session
             ]
         ]
     )
-    log_event("share_clicked", face=event.face, language=language)
+    log_event("share_clicked", language=language)
     await callback.answer()
 
     if isinstance(callback.message, Message):
@@ -219,7 +238,7 @@ async def on_share(callback: CallbackQuery, state: FSMContext, settings, session
 
 @router.callback_query(F.data.startswith("fb:") | F.data.startswith("feedback:"))
 async def on_feedback(
-    callback: CallbackQuery, state: FSMContext, settings, session_factory, face
+    callback: CallbackQuery, state: FSMContext, settings, session_factory
 ) -> None:
     language = await _language(state)
     parsed = parse_feedback_callback(callback.data)
@@ -233,7 +252,6 @@ async def on_feedback(
         event = await repo.get_check_event(session, check_id)
         authorized = (
             event is not None
-            and event.face == face.id
             and event.status in {status.value for status in _FEEDBACK_STATUSES}
             and hmac.compare_digest(event.user_key, expected_user_key)
         )
@@ -271,17 +289,17 @@ async def on_feedback(
             feedback_usefulness=value,
             feedback_check_id=str(check_id),
         )
-        log_event("usefulness_answered", face=face.id, usefulness=value)
+        log_event("usefulness_answered", usefulness=value)
         await callback.answer(t("fb_saved", language))
         return
 
-    log_event("decision_answered", face=face.id, next_action=value)
+    log_event("decision_answered", next_action=value)
     await callback.answer(t("fb_saved", language))
 
 
 @router.message()
 async def on_content(
-    message: Message, state: FSMContext, settings, session_factory, face
+    message: Message, state: FSMContext, settings, session_factory
 ) -> None:
     """Run one check through the shared engine after confirming current consent (§12).
 
@@ -298,17 +316,21 @@ async def on_content(
 
     user_key = _user_key(user.id, settings)
     async with session_factory() as session:
-        consent = await repo.get_consent(session, user_key=user_key, face=face.id)
+        consent = await repo.get_consent(session, user_key=user_key)
 
     if not is_consent_current(consent, settings.notice_version):
         # Prefer the language recorded on any prior (possibly outdated) consent
         # row; FSM state is lost on restart and would wrongly default to Uzbek.
-        language = consent.language if consent is not None else await _language(state)
+        language = (
+            normalize_language(consent.language)
+            if consent is not None
+            else await _language(state)
+        )
         await message.answer(t("need_consent", language))
         return
 
-    language = consent.language
-    check_input = await _build_check_input(message, face=face, user_key=user_key, language=language)
+    language = normalize_language(consent.language)
+    check_input = await _build_check_input(message, user_key=user_key, language=language)
     if check_input is None:
         await message.answer(t("unsupported_input", language))
         return
@@ -338,7 +360,7 @@ async def on_content(
 
 
 async def _build_check_input(
-    message: Message, *, face: Face, user_key: str, language: str
+    message: Message, *, user_key: str, language: str
 ) -> CheckInput | None:
     """Build a CheckInput from a photo or text message, or None if unsupported."""
 
@@ -348,7 +370,6 @@ async def _build_check_input(
         if not image_bytes:
             return None
         return CheckInput(
-            face=face.id,
             user_key=user_key,
             language=lang,
             input_type=InputType.image,
@@ -358,8 +379,9 @@ async def _build_check_input(
 
     text = message.text or message.caption
     if text and text.strip():
+        if len(text) > MAX_SUBMITTED_TEXT_CHARS:
+            return None
         return CheckInput(
-            face=face.id,
             user_key=user_key,
             language=lang,
             input_type=InputType.text,
@@ -369,10 +391,18 @@ async def _build_check_input(
 
 
 async def _download_photo(message: Message) -> bytes | None:
-    """Download the largest available photo size into memory."""
+    """Download the largest photo into bounded ephemeral memory."""
 
     if message.bot is None or not message.photo:
         return None
-    buffer = BytesIO()
-    await message.bot.download(message.photo[-1], destination=buffer)
+    photo = message.photo[-1]
+    declared_size = getattr(photo, "file_size", None)
+    if isinstance(declared_size, int) and declared_size > MAX_IMAGE_BYTES:
+        return None
+
+    buffer = _BoundedBytesIO()
+    try:
+        await message.bot.download(photo, destination=buffer)
+    except _UploadTooLargeError:
+        return None
     return buffer.getvalue() or None

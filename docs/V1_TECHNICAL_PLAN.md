@@ -16,8 +16,8 @@ Avvalo is one consumer product with two thin channels:
 - anonymous web checker.
 
 Both channels accept suspicious text or an image/screenshot and call the same `run_check()` engine.
-The internal face ID remains `family` for database and rule-ID compatibility. It is the only active
-face. Payment screenshots, seller situations, courier pressure, and refund requests use this same
+There is no internal product-face ID: it was removed from the code and the schema in migration
+`0007_drop_face`. Payment screenshots, seller situations, courier pressure, and refund requests use this same
 flow.
 
 The product does not provide accounts, history, person/entity lookup, accusations, verdicts, risk
@@ -43,11 +43,11 @@ Important modules:
 |---|---|---|
 | Engine | `app/engine/pipeline.py` | Orchestrates every check |
 | Types | `app/engine/types.py` | Boundary enums and Pydantic models |
-| Rules | `app/engine/rules/`, `rules/checker/` | Deterministic local signals |
+| Rules | `app/engine/rules/`, `rules/*.yaml` | Deterministic local signals |
 | Rule overrides | `app/rules_store/` | Operator-authored patterns merged onto the baseline |
 | Card overrides | `app/knowledge_store/` | Operator-authored cards merged onto the baseline |
 | Minimization | `app/engine/minimize.py` | Removes PII before model calls |
-| Knowledge | `app/engine/knowledge/`, `knowledge/checker/` | Reviewed explanatory guidance |
+| Knowledge | `app/engine/knowledge/`, `knowledge/cards/` | Reviewed explanatory guidance |
 | LLM | `app/engine/llm/` | OpenAI-compatible provider boundary and fallback |
 | Safety | `app/engine/validate.py` | Deterministic output validation |
 | Telegram | `app/bot/` | Consent, intake, result, feedback, Share |
@@ -61,7 +61,7 @@ Every accepted request follows this order:
 
 1. Confirm current consent and reserve the applicable daily limit.
 2. Read text, or preprocess the image and run OCR.
-3. Resolve the response language: `uz_latn`, `uz_cyrl`, or `ru`.
+3. Resolve the response language: `uz_latn` or `ru` (Cyrillic-Uzbek resolves to `uz_latn`).
 4. Run local rules and structural signal extraction on local text.
 5. Optionally check URL hashes against the local reputation table.
 6. Minimize PII and identifiers.
@@ -79,7 +79,6 @@ Non-billable failures refund the reserved limit. Channels do not duplicate engin
 
 `CheckInput` carries:
 
-- `face="family"`;
 - pseudonymous `user_key`;
 - `language`;
 - `input_type` (`text` or `image`);
@@ -108,7 +107,7 @@ Error classes are categorical identifiers, never exception messages.
 
 ## 5. Rules and payment protection
 
-`rules/checker/families.yaml` is the shipped baseline rule pack. Stable `fs.*` rule IDs must not be
+`rules/families.yaml` is the sole active rule pack. Stable `fs.*` rule IDs must not be
 renamed because events, knowledge cards, tests, and sanitized Share summaries reference them.
 
 The pack covers credential theft, urgency/secrecy, authority impersonation, upfront payment,
@@ -119,55 +118,45 @@ A screenshot, receipt, or message never proves that an incoming payment arrived.
 must tell the user to verify the matching transfer independently in the receiving bank/payment
 account before refunding money or releasing goods.
 
-### 5.1 Operator rule overrides
+### Operator overrides
 
-The repository is public, so its keyword lists are readable by the people they detect. New pattern
-work therefore lives in the `rule_override` table (`app/rules_store/`) rather than in git, on its
-own declarative base beside `EditorialBase` — patterns are operator-authored reference data, never
-user content, and must stay outside the zero-content contract enforced over `app.data.models.Base`.
+The repository is public, so shipped keyword lists and cards are readable by the people they
+describe. New pattern and card work therefore lives in the `rule_override` and
+`knowledge_card_override` tables (`app/rules_store/`, `app/knowledge_store/`), each on its own
+declarative base beside `EditorialBase` — operator-authored reference data, never user content, and
+so outside the zero-content contract enforced over `app.data.models.Base`.
 
-Overrides merge onto the baseline **by rule ID**: a matching ID replaces that rule, a new ID adds
-one, and a `disabled` row suppresses a baseline rule. Wholesale replacement was rejected because it
-would force an operator to re-enter the entire pack before adding one keyword.
+Both merge onto their shipped YAML baseline **by ID**: a matching ID replaces, a new ID adds, and a
+`disabled` rule row or a `draft`/`retired` card row suppresses the baseline entry. Wholesale
+replacement was rejected because it would force re-entering an entire pack before adding one entry.
 
-`load_rule_pack()` stays synchronous and is served from a process-level snapshot, because the pack
-is read several times per check and from inside the formatter and prompt builder.
-`app.rules_store.apply` refreshes that snapshot every `RULE_PACK_REFRESH_MINUTES` on the existing
-scheduler. Both failure paths are deliberately fail-safe: an unreachable database leaves the
-previously published pack in force and ultimately falls back to the shipped YAML baseline, and a
-single malformed row is skipped rather than taking the whole pack down. Patterns are validated on
-write — regexes must compile and literals must clear a minimum length — because a bad pattern
-degrades detection silently for every user.
+`load_rule_pack()` and `KnowledgeStore.load()` keep their synchronous signatures and are served from
+process-level snapshots refreshed every `RULE_PACK_REFRESH_MINUTES` / `KNOWLEDGE_REFRESH_MINUTES`.
+Both failure paths are fail-safe: an unreachable database leaves the previously published pack in
+force and ultimately falls back to the shipped YAML, and a single malformed row is skipped. Falling
+back to an *empty* knowledge base is specifically not acceptable — `retrieval_status` would read
+`empty` rather than `unavailable`, hiding the degradation.
 
-Moving patterns out of git does not retract what is already published; it only keeps future work
+Patterns are validated on write (regexes must compile, literals must clear a minimum length). When a
+card override contributes, `kb_version` becomes `<base-version>.db<YYYYMMDDHHMMSS>`, constrained by
+`VERSION_RE` in `app/data/repo.py`, which rejects a bad `kb_version` on every `check_event` write.
+
+Operators edit both through `/admin/rules` and `/admin/cards`, which reuse the existing
+`ADMIN_ACCESS_KEY` surface. Each screen carries a dry-run that drives the *real* matcher and the
+*real* retrieval path, so a preview cannot drift from production.
+
+Moving this work out of git does not retract what is already published; it only keeps future work
 unpublished.
 
 ## 6. Knowledge and model boundary
 
-Only approved, versioned cards from `knowledge/checker/cards.yaml` may be retrieved. Cards explain
+Only approved, versioned cards from `knowledge/cards/` may be retrieved. Cards explain
 patterns and verification steps; they are not official-source evidence and cannot establish
 identity, intent, or fraud.
 
 The semantic router is optional and receives minimized text plus a server-generated allowlist. It
 may select only allowed card IDs. Empty or unavailable knowledge must degrade safely to the rule and
 signal context.
-
-### 6.1 Operator card overrides
-
-Cards follow the same posture as rule patterns (§5.1): new card work lives in the
-`knowledge_card_override` table (`app/knowledge_store/`) rather than in the public repository, on
-its own declarative base, and merges onto the shipped `knowledge/<face>/cards.yaml` base **by card
-ID**. A `draft` or `retired` override suppresses the baseline card of that ID.
-
-`KnowledgeStore.load()` stays synchronous and is served from a process-level snapshot refreshed
-every `KNOWLEDGE_REFRESH_MINUTES`. An unreachable database leaves the previous base in force and
-ultimately falls back to the YAML baseline; a single malformed row is skipped. Degrading to an
-*empty* base is specifically not acceptable, because `retrieval_status` would then read `empty`
-rather than `unavailable` and the pipeline would look healthy while answering with no knowledge.
-
-When an override contributes, `kb_version` becomes `<base-version>.db<YYYYMMDDHHMMSS>`. The format
-is constrained by `app/data/repo.py`'s `VERSION_RE`, which rejects a bad `kb_version` on every
-`check_event` write — `+`, `:` and spaces are not permitted.
 
 The full knowledge contract lives in
 [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md).
@@ -205,7 +194,7 @@ available.
 ### Web
 
 `GET /` and `GET /check` render the same anonymous checker. `POST /check` always builds the active
-`family` input. Uploads are size/pixel limited, kept ephemeral, same-origin protected, and image
+check input. Uploads are size/pixel limited, kept ephemeral, same-origin protected, and image
 checks require Turnstile when configured. Session and IP-derived keys are pseudonymous.
 
 `GET /cases` and `GET /cases/{slug}` expose published editorial cases only. `/admin` is disabled
@@ -218,7 +207,7 @@ product routes. `/healthz` checks process liveness; `/readyz` also checks databa
 
 ## 9. Observability and operator tools
 
-Operational metrics and feedback-label reports read active `family` events only. They expose
+Operational metrics and feedback-label reports read `check_event` rows. They expose
 aggregate counts, statuses, languages, cost/latency, no-signal rate, safety fallback counts,
 knowledge coverage, and categorical feedback without user keys or check IDs.
 
@@ -228,7 +217,7 @@ Supported tools include:
 python -m app.tools.metrics
 python -m app.tools.metrics --days 30
 python -m app.tools.metrics labels --since 2026-07-01
-python -m app.tools.knowledge_gaps --days 7 --face family
+python -m app.tools.knowledge_gaps --days 7
 python tools/eval_models.py
 ```
 
@@ -271,5 +260,5 @@ The current baseline is acceptable only while:
 - all user-facing copy exists in all three languages;
 - no active path persists or logs submitted content;
 - outputs remain non-verdict, grounded, and independently verifiable;
-- the single active face and its deployed rules/knowledge assets load successfully;
+- the deployed rules/knowledge assets load successfully;
 - consent, deletion, retention, rate limits, Share, feedback, and readiness checks remain green.

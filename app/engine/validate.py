@@ -32,8 +32,11 @@ _BANNED_WORDS = {
         "законно",
     ),
     Language.uz_latn: ("xavfsiz", "firibgar", "firibgarlik", "ishonchli", "qonuniy"),
-    Language.uz_cyrl: ("хавфсиз", "фирибгар", "фирибгарлик", "ишончли", "қонуний"),
 }
+# Uzbek is only ever answered in Latin script, but a model can still emit
+# Cyrillic-Uzbek — often echoing Cyrillic input. These stay banned so a verdict
+# cannot slip through in the script we no longer reply in.
+_UZ_CYRL_BANNED = ("хавфсиз", "фирибгар", "фирибгарлик", "ишончли", "қонуний")
 _EN_BANNED = (
     "safe",
     "verified",
@@ -289,4 +292,5 @@ def _first_rejection_reason(
 
 
 def _all_banned_words() -> tuple[str, ...]:
-    return tuple(dict.fromkeys(word for words in _BANNED_WORDS.values() for word in words))
+    words = (*(w for words in _BANNED_WORDS.values() for w in words), *_UZ_CYRL_BANNED)
+    return tuple(dict.fromkeys(words))

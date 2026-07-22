@@ -26,7 +26,8 @@ The habit we want to create is simple:
 
 The user can submit pasted or forwarded text, a screenshot or photo, a link, a QR code, or a
 suspicious payment request, offer, document, or conversation. The channels are Telegram and the
-anonymous web checker. The supported language forms are `uz_latn`, `uz_cyrl`, and `ru`.
+anonymous web checker. The supported reply languages are `uz_latn` and `ru`. Cyrillic-Uzbek
+content is still understood and matched, but it is always answered in `uz_latn`.
 
 ### Understand
 
@@ -74,7 +75,7 @@ The repository already contains:
 - a founder-authored, trilingual Cases section with draft/publish administration;
 - local hash-based URL-reputation support that may remain disabled until production verification.
 
-The runtime exposes one active face, internally named `family`. Seller, payment-screenshot,
+The runtime exposes one checker with no internal product-face discriminator. Seller, payment-screenshot,
 courier, and refund situations enter this same checker; the relevant payment protections are part
 of the main rule and safety path. Avvalo Merchants, the scam library, story capture, and Scam Pulse
 are not dormant modes — they are retired surfaces.
@@ -82,7 +83,7 @@ are not dormant modes — they are retired surfaces.
 ### Editorial cases
 
 Cases are a supporting education and acquisition surface around the same checker, not another
-product. A founder writes each post manually in `uz_latn`, `uz_cyrl`, and `ru`, saves it as a draft,
+product. A founder writes each post manually in `uz_latn` and `ru`, saves it as a draft,
 and explicitly publishes it. A post explains a situation pattern, what deserves attention, and
 what a reader can verify independently; its call to action returns the reader to the checker.
 
@@ -177,7 +178,7 @@ failure must fail closed and produce `unavailable`.
 - Avvalo never claims to have checked every database.
 - Avvalo never outputs “safe,” “scammer,” “fraud confirmed,” a trust score, or a risk score.
 - Avvalo never contacts a counterparty or institution for the user.
-- Every user-facing string exists in `uz_latn`, `uz_cyrl`, and `ru`.
+- Every user-facing string exists in `uz_latn` and `ru`.
 
 ## 8. Validation gates
 

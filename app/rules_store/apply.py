@@ -14,7 +14,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.engine.faces import FACES
 from app.engine.rules import matching_patterns
 from app.engine.rules.loader import (
     RuleDefinition,
@@ -64,22 +63,20 @@ def merge_rule_pack(
     merged.extend(rule for rule in by_id.values() if rule.id not in disabled)
 
     return RulePack(
-        face_id=base.face_id,
         rules=tuple(merged),
         descriptions={rule.id: rule.desc for rule in merged},
     )
 
 
-async def refresh_rule_pack(session: AsyncSession, face_id: str) -> RulePack:
-    """Merge one face's overrides onto its YAML baseline and publish the result."""
+async def refresh_rule_pack(session: AsyncSession) -> RulePack:
+    """Merge the stored overrides onto the YAML baseline and publish the result."""
 
-    base = load_yaml_rule_pack(face_id)
-    overrides, disabled = await load_overrides(session, face=face_id)
+    base = load_yaml_rule_pack()
+    overrides, disabled = await load_overrides(session)
     merged = merge_rule_pack(base, overrides, disabled)
-    set_active_rule_pack(face_id, merged)
+    set_active_rule_pack(merged)
     log_event(
         "rule_pack_refreshed",
-        face=face_id,
         baseline_rules=len(base.rules),
         override_rules=len(overrides),
         disabled_rules=len(disabled),
@@ -91,20 +88,15 @@ async def refresh_rule_pack(session: AsyncSession, face_id: str) -> RulePack:
 async def run_rule_pack_refresh_job(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Refresh every face's pack, leaving the previous one in force on failure."""
+    """Refresh the pack, leaving the previous one in force on failure."""
 
-    for face_id in FACES:
-        try:
-            async with session_factory() as session:
-                await refresh_rule_pack(session, face_id)
-        except Exception as exc:
-            # Never propagate into the scheduler: the pack already in force
-            # (merged or YAML baseline) keeps serving checks.
-            log_error(
-                stage="rule_pack",
-                error_type=type(exc).__name__,
-                face=face_id,
-            )
+    try:
+        async with session_factory() as session:
+            await refresh_rule_pack(session)
+    except Exception as exc:
+        # Never propagate into the scheduler: the pack already in force
+        # (merged or YAML baseline) keeps serving checks.
+        log_error(stage="rule_pack", error_type=type(exc).__name__)
 
 
 def install_rule_pack_refresh_job(

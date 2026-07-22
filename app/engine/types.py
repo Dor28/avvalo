@@ -5,12 +5,19 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+MAX_SUBMITTED_TEXT_CHARS = 6_000
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+
 
 class Language(StrEnum):
-    """Supported output languages/scripts."""
+    """Supported reply languages.
+
+    Uzbek is answered in Latin script only. Cyrillic-Uzbek input is still read
+    and matched (see ``app.engine.language`` and the ``uz_cyrl`` keyword groups
+    in the rule packs), but it resolves to :attr:`uz_latn` for the reply.
+    """
 
     uz_latn = "uz_latn"
-    uz_cyrl = "uz_cyrl"
     ru = "ru"
 
 
@@ -43,13 +50,12 @@ class CheckInput(BaseModel):
     used during the request but must never be persisted.
     """
 
-    face: str
     user_key: str
     language: Language
     input_type: InputType
-    raw_text: str | None = None
-    image_bytes: bytes | None = None
-    caption: str | None = None
+    raw_text: str | None = Field(default=None, max_length=MAX_SUBMITTED_TEXT_CHARS)
+    image_bytes: bytes | None = Field(default=None, max_length=MAX_IMAGE_BYTES)
+    caption: str | None = Field(default=None, max_length=MAX_SUBMITTED_TEXT_CHARS)
 
 
 class Signal(BaseModel):
@@ -60,7 +66,11 @@ class Signal(BaseModel):
 
 
 class RuleHit(BaseModel):
-    """A deterministic rule hit."""
+    """A deterministic rule hit.
+
+    ``family`` names the scam-family taxonomy bucket (credential_theft,
+    urgency_secrecy, …), not any product identifier.
+    """
 
     rule_id: str
     family: str

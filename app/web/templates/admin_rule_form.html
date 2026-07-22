@@ -85,7 +85,7 @@
         {% for pattern_language in pattern_languages %}
           <section class="admin-settings-card">
             <label class="admin-field wide">
-              <span>{{ rules.patterns_label.format(language=language_labels[pattern_language]) }}</span>
+              <span>{{ rules.patterns_label.format(language=script_labels[pattern_language]) }}</span>
               <textarea name="patterns_{{ pattern_language }}" rows="6"
                         aria-describedby="patterns-hint-{{ pattern_language }}">{{ patterns[pattern_language] }}</textarea>
               <small id="patterns-hint-{{ pattern_language }}">{{ rules.patterns_hint }}</small>

@@ -7,37 +7,31 @@ from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
 
-from app.engine.faces import FACES
 from app.engine.knowledge import KnowledgeCard
 from app.engine.rules import load_rule_pack
 from app.engine.types import DraftOutput, Language, RuleHit, Signal
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SYSTEM_PROMPT = _REPO_ROOT / "prompts" / "system_safety.txt"
+_CHECK_PROMPT = _REPO_ROOT / "prompts" / "check.txt"
 
 
 def build_prompt(
     *,
-    face_id: str,
     language: Language,
     minimized_text: str,
     rule_hits: list[RuleHit],
     signals: list[Signal],
     knowledge_cards: Sequence[KnowledgeCard] = (),
 ) -> tuple[str, str]:
-    """Render the system and face prompt for one check."""
-
-    try:
-        face = FACES[face_id]
-    except KeyError as exc:
-        raise ValueError(f"Unknown face: {face_id}") from exc
+    """Render the system and check prompt for one check."""
 
     system = _read_prompt(_SYSTEM_PROMPT)
-    template = _read_prompt(_REPO_ROOT / face.prompt_template)
+    template = _read_prompt(_CHECK_PROMPT)
     user = template.format(
         language=language.value,
-        minimized_text=minimized_text,
-        rule_hits=_render_rule_hits(face_id, rule_hits),
+        minimized_text=json.dumps(minimized_text, ensure_ascii=False),
+        rule_hits=_render_rule_hits(rule_hits),
         signals=_render_signals(signals),
         knowledge=_render_knowledge(knowledge_cards),
     )
@@ -60,11 +54,11 @@ def _read_prompt(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def _render_rule_hits(face_id: str, rule_hits: list[RuleHit]) -> str:
+def _render_rule_hits(rule_hits: list[RuleHit]) -> str:
     if not rule_hits:
         return "- (none detected)"
 
-    descriptions = load_rule_pack(face_id).descriptions
+    descriptions = load_rule_pack().descriptions
     lines = []
     for hit in rule_hits:
         desc = descriptions.get(hit.rule_id, hit.message_key)

@@ -37,11 +37,9 @@ from app.web.admin_auth import is_admin_authenticated
 from app.web.editorial_copy import EDITORIAL_COPY
 from app.web.knowledge_copy import KNOWLEDGE_COPY
 from app.web.routes import WEB_COPY, templates
-from app.web.rules_copy import RULES_COPY
+from app.web.rules_copy import RULES_COPY, SCRIPT_LABELS
 
 router = APIRouter()
-
-FACE = "family"
 
 
 def _draft_from_form(
@@ -59,7 +57,6 @@ def _draft_from_form(
     """Build the typed boundary from flat browser form fields."""
 
     return RuleOverrideDraft(
-        face=FACE,
         rule_id=rule_id,
         family=family,
         description=description,
@@ -93,7 +90,7 @@ async def admin_rules(request: Request, language: str = DEFAULT_LANGUAGE) -> Res
 
     session_factory = _session_factory_or_error(request)
     async with session_factory() as session:
-        overrides = await list_overrides(session, face=FACE)
+        overrides = await list_overrides(session)
     return _no_store(
         templates.TemplateResponse(
             request,
@@ -102,8 +99,8 @@ async def admin_rules(request: Request, language: str = DEFAULT_LANGUAGE) -> Res
                 request,
                 language,
                 overrides=overrides,
-                baseline_count=len(load_yaml_rule_pack(FACE).rules),
-                active_count=len(load_rule_pack(FACE).rules),
+                baseline_count=len(load_yaml_rule_pack().rules),
+                active_count=len(load_rule_pack().rules),
             ),
         )
     )
@@ -214,7 +211,7 @@ async def admin_rule_save(
             await session.commit()
             # Republish immediately: waiting out the refresh interval would
             # leave the operator unable to tell whether the edit took effect.
-            await refresh_rule_pack(session, FACE)
+            await refresh_rule_pack(session)
     except IntegrityError:
         error = _error_text(language, "duplicate_rule")
     except ValueError as exc:
@@ -255,7 +252,7 @@ async def admin_rule_delete(
             raise HTTPException(status_code=404)
         await delete_override(session, override)
         await session.commit()
-        await refresh_rule_pack(session, FACE)
+        await refresh_rule_pack(session)
     return _no_store(RedirectResponse(f"/admin/rules?language={language}", status_code=303))
 
 
@@ -320,6 +317,7 @@ def _context(request: Request, language: str, **extra) -> dict:
         "language": language,
         "languages": LANGUAGES,
         "language_labels": LANGUAGE_LABELS,
+        "script_labels": SCRIPT_LABELS,
         "rules_nav_label": RULES_COPY[language]["title"],
         "cards_nav_label": KNOWLEDGE_COPY[language]["title"],
         **extra,

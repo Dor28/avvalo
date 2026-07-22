@@ -19,7 +19,7 @@ from app.engine.types import (
 
 
 def test_language_enum_values() -> None:
-    assert {lang.value for lang in Language} == {"uz_latn", "uz_cyrl", "ru"}
+    assert {lang.value for lang in Language} == {"uz_latn", "ru"}
 
 
 def test_input_type_enum_values() -> None:
@@ -43,7 +43,8 @@ def test_check_status_enum_values() -> None:
 
 def test_check_input_fields_and_ephemeral_defaults() -> None:
     fields = CheckInput.model_fields
-    assert {"face", "user_key", "language", "input_type"} <= fields.keys()
+    assert {"user_key", "language", "input_type"} <= fields.keys()
+    assert "face" not in fields, "the retired product-face discriminator must stay gone"
     # Ephemeral content is optional and defaults to None (§6 / §0.4).
     for ephemeral in ("raw_text", "image_bytes", "caption"):
         assert fields[ephemeral].default is None

@@ -14,7 +14,7 @@ from app.config import Settings
 from app.content import EditorialBase
 from app.data.models import Base
 from app.engine.knowledge import retrieve_knowledge
-from app.engine.knowledge.loader import clear_active_knowledge_bases
+from app.engine.knowledge.loader import clear_active_knowledge_base
 from app.engine.types import RuleHit
 from app.knowledge_store import KnowledgeStoreBase
 from app.rules_store import RuleStoreBase
@@ -70,9 +70,9 @@ def _form(**overrides) -> dict:
 
 @pytest.fixture(autouse=True)
 def _reset_active_bases():
-    clear_active_knowledge_bases()
+    clear_active_knowledge_base()
     yield
-    clear_active_knowledge_bases()
+    clear_active_knowledge_base()
 
 
 @pytest.fixture
@@ -108,7 +108,6 @@ def _login(client: TestClient) -> None:
 
 async def _retrieved_ids() -> list[str]:
     result = await retrieve_knowledge(
-        face_id="family",
         minimized_text=SAMPLE,
         rule_hits=[URGENCY_HIT],
         signals=[],
@@ -154,9 +153,11 @@ def test_all_three_admin_sections_are_reachable_from_the_shared_header(client) -
         assert "Карточки знаний" in body, path
 
 
-def test_every_copy_key_exists_in_all_three_languages() -> None:
+def test_every_copy_key_exists_in_both_reply_languages() -> None:
+    """Cyrillic-Uzbek is retired as a reply language; aliases still keep it."""
+
     reference = KNOWLEDGE_COPY["ru"]
-    for language in ("uz_latn", "uz_cyrl", "ru"):
+    for language in ("uz_latn", "ru"):
         assert set(KNOWLEDGE_COPY[language]) == set(reference), language
         assert set(KNOWLEDGE_COPY[language]["errors"]) == set(reference["errors"]), language
 

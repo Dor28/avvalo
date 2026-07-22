@@ -37,13 +37,11 @@ from app.knowledge_store.repo import STATUSES
 from app.web.abuse import require_same_origin
 from app.web.admin_auth import is_admin_authenticated
 from app.web.editorial_copy import EDITORIAL_COPY
-from app.web.knowledge_copy import KNOWLEDGE_COPY
+from app.web.knowledge_copy import KNOWLEDGE_COPY, SCRIPT_LABELS
 from app.web.routes import WEB_COPY, templates
 from app.web.rules_copy import RULES_COPY
 
 router = APIRouter()
-
-FACE = "family"
 
 
 def _draft_from_form(
@@ -65,7 +63,6 @@ def _draft_from_form(
     """Build the typed boundary from flat browser form fields."""
 
     return KnowledgeCardDraft(
-        face=FACE,
         card_id=card_id,
         card_version=card_version,
         status=status,
@@ -103,7 +100,7 @@ async def admin_cards(request: Request, language: str = DEFAULT_LANGUAGE) -> Res
 
     session_factory = _session_factory_or_error(request)
     async with session_factory() as session:
-        overrides = await list_cards(session, face=FACE)
+        overrides = await list_cards(session)
     return _no_store(
         templates.TemplateResponse(
             request,
@@ -112,8 +109,8 @@ async def admin_cards(request: Request, language: str = DEFAULT_LANGUAGE) -> Res
                 request,
                 language,
                 overrides=overrides,
-                baseline_count=len(load_yaml_knowledge_base(FACE).cards),
-                active_count=len(FileKnowledgeStore().load(FACE).cards),
+                baseline_count=len(load_yaml_knowledge_base().cards),
+                active_count=len(FileKnowledgeStore().load().cards),
             ),
         )
     )
@@ -176,7 +173,7 @@ async def admin_card_preview(
     preview: CardPreview | None = None
     error: str | None = None
     try:
-        preview = await preview_card(draft, sample, FileKnowledgeStore().load(FACE))
+        preview = await preview_card(draft, sample, FileKnowledgeStore().load())
     except ValueError as exc:
         error = _error_text(language, str(exc))
 
@@ -223,7 +220,7 @@ async def admin_card_save(
             await session.commit()
             # Republish immediately: waiting out the refresh interval would
             # leave the operator unable to tell whether the edit took effect.
-            await refresh_knowledge_base(session, FACE)
+            await refresh_knowledge_base(session)
     except IntegrityError:
         error = _error_text(language, "duplicate_card")
     except ValueError as exc:
@@ -264,7 +261,7 @@ async def admin_card_delete(
             raise HTTPException(status_code=404)
         await delete_card(session, override)
         await session.commit()
-        await refresh_knowledge_base(session, FACE)
+        await refresh_knowledge_base(session)
     return _no_store(RedirectResponse(f"/admin/cards?language={language}", status_code=303))
 
 
@@ -348,6 +345,7 @@ def _context(request: Request, language: str, **extra) -> dict:
         "language": language,
         "languages": LANGUAGES,
         "language_labels": LANGUAGE_LABELS,
+        "script_labels": SCRIPT_LABELS,
         "rules_nav_label": RULES_COPY[language]["title"],
         "cards_nav_label": KNOWLEDGE_COPY[language]["title"],
         **extra,

@@ -1,12 +1,5 @@
-"""T8 — OCR interface & provider selection (V1_TECHNICAL_PLAN §7).
+"""OCR boundary, preprocessing, provider selection, and pipeline failure tests."""
 
-Live acceptance specs that skip until the OCR providers land. The GCV/Tesseract
-calls need credentials or binaries, so the offline-checkable contract is tested:
-the OCRResult shape, the on-prem stub raising NotImplementedError, and how the
-pipeline maps each OCR failure class to a user-facing status.
-"""
-
-import inspect
 import logging
 from io import BytesIO
 
@@ -15,7 +8,14 @@ from PIL import Image
 
 from app.config import Settings
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
-from app.engine.ocr import OCRInvalidImageError, OCRProviderError, OCRResult
+from app.engine.ocr import (
+    LocalStubOCRProvider,
+    OCRInvalidImageError,
+    OCRProviderError,
+    OCRResult,
+    PaddleOCRProvider,
+    get_provider,
+)
 from app.engine.ocr.base import MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS, strip_image_metadata
 
 
@@ -65,22 +65,8 @@ def test_image_preprocessing_rejects_excessive_dimension() -> None:
 
 
 async def test_on_prem_stub_raises_not_implemented() -> None:
-    stub = pytest.importorskip("app.engine.ocr.local_stub")
-    providers = [
-        value
-        for value in vars(stub).values()
-        if inspect.isclass(value) and hasattr(value, "extract")
-    ]
-    if not providers:
-        pytest.skip("no OCR provider class in local_stub yet")
-
-    try:
-        provider = providers[0]()
-    except Exception as exc:  # construction needs args we can't supply
-        pytest.skip(f"cannot instantiate stub provider: {exc}")
-
     with pytest.raises(NotImplementedError):
-        await provider.extract(b"\x89PNG\r\n")
+        await LocalStubOCRProvider().extract(b"\x89PNG\r\n")
 
 
 class _FailingOCRProvider:
@@ -93,8 +79,7 @@ class _FailingOCRProvider:
 
 def _image_input(user_key: str) -> CheckInput:
     return CheckInput(
-        face="family",
-        user_key=user_key,
+                user_key=user_key,
         language=Language.ru,
         input_type=InputType.image,
         image_bytes=b"\x89PNG\r\n",
@@ -150,17 +135,11 @@ async def test_misconfigured_ocr_provider_maps_to_ocr_error(caplog) -> None:
     )
 
 
-def test_provider_selection_is_configurable(callable_or_skip) -> None:
-    select = callable_or_skip(
-        "app.engine.ocr", "get_provider", "get_ocr_provider", "build_provider", "provider_for"
-    )
-    provider = select(_settings(ocr_provider="local_stub"))
-    assert provider.__class__.__name__ == "LocalStubOCRProvider"
+def test_provider_selection_is_configurable() -> None:
+    provider = get_provider(_settings(ocr_provider="local_stub"))
+    assert isinstance(provider, LocalStubOCRProvider)
 
 
-def test_paddleocr_provider_selection(callable_or_skip) -> None:
-    select = callable_or_skip(
-        "app.engine.ocr", "get_provider", "get_ocr_provider", "build_provider", "provider_for"
-    )
-    provider = select(_settings(ocr_provider="paddleocr"))
-    assert provider.__class__.__name__ == "PaddleOCRProvider"
+def test_paddleocr_provider_selection() -> None:
+    provider = get_provider(_settings(ocr_provider="paddleocr"))
+    assert isinstance(provider, PaddleOCRProvider)

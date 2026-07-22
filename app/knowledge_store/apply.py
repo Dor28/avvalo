@@ -16,7 +16,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.engine.faces import FACES
 from app.engine.knowledge import retrieve_knowledge
 from app.engine.knowledge.loader import (
     load_yaml_knowledge_base,
@@ -63,7 +62,7 @@ class _StaticKnowledgeStore:
     def __init__(self, base: KnowledgeBase) -> None:
         self._base = base
 
-    def load(self, face_id: str) -> KnowledgeBase:
+    def load(self) -> KnowledgeBase:
         return self._base
 
 
@@ -85,15 +84,12 @@ async def preview_card(
     # preview shows what the operator would really get.
     candidate = (*without_card, card) if card.status == "approved" else without_card
 
-    rule_hits, signals = run_rules(sample, draft.face)
+    rule_hits, signals = run_rules(sample)
     result = await retrieve_knowledge(
-        face_id=draft.face,
         minimized_text=minimize(sample, signals),
         rule_hits=rule_hits,
         signals=signals,
-        store=_StaticKnowledgeStore(
-            KnowledgeBase(version=base.version, face=base.face, cards=candidate)
-        ),
+        store=_StaticKnowledgeStore(KnowledgeBase(version=base.version, cards=candidate)),
         router=None,
     )
 
@@ -121,21 +117,19 @@ def merge_knowledge_base(base: KnowledgeBase, overrides: LoadedOverrides) -> Kno
 
     return KnowledgeBase(
         version=derive_kb_version(base.version, overrides.latest_updated_ts),
-        face=base.face,
         cards=tuple(merged),
     )
 
 
-async def refresh_knowledge_base(session: AsyncSession, face_id: str) -> KnowledgeBase:
-    """Merge one face's card overrides onto its YAML baseline and publish it."""
+async def refresh_knowledge_base(session: AsyncSession) -> KnowledgeBase:
+    """Merge the stored card overrides onto the YAML baseline and publish it."""
 
-    base = load_yaml_knowledge_base(face_id)
-    overrides = await load_overrides(session, face=face_id)
+    base = load_yaml_knowledge_base()
+    overrides = await load_overrides(session)
     merged = merge_knowledge_base(base, overrides)
-    set_active_knowledge_base(face_id, merged)
+    set_active_knowledge_base(merged)
     log_event(
         "knowledge_base_refreshed",
-        face=face_id,
         baseline_cards=len(base.cards),
         override_cards=len(overrides.approved),
         suppressed_cards=len(overrides.suppressed_ids),
@@ -148,21 +142,16 @@ async def refresh_knowledge_base(session: AsyncSession, face_id: str) -> Knowled
 async def run_knowledge_refresh_job(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    """Refresh every face's base, leaving the previous one in force on failure."""
+    """Refresh the base, leaving the previous one in force on failure."""
 
-    for face_id in FACES:
-        try:
-            async with session_factory() as session:
-                await refresh_knowledge_base(session, face_id)
-        except Exception as exc:
-            # Never propagate into the scheduler. The base already in force
-            # (merged or YAML baseline) keeps answering checks; an empty base
-            # would look healthy while silently answering with no knowledge.
-            log_error(
-                stage="knowledge",
-                error_type=type(exc).__name__,
-                face=face_id,
-            )
+    try:
+        async with session_factory() as session:
+            await refresh_knowledge_base(session)
+    except Exception as exc:
+        # Never propagate into the scheduler. The base already in force
+        # (merged or YAML baseline) keeps answering checks; an empty base
+        # would look healthy while silently answering with no knowledge.
+        log_error(stage="knowledge", error_type=type(exc).__name__)
 
 
 def install_knowledge_refresh_job(

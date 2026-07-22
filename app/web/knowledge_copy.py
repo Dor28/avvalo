@@ -6,6 +6,15 @@ guidance and never shown to a user verbatim. Only this interface is trilingual.
 
 # ruff: noqa: E501, RUF001
 
+# Cyrillic-Uzbek is retired as a *reply* language but is still matched on input,
+# so pattern and alias groups keep it. ``LANGUAGE_LABELS`` covers reply languages
+# only, hence this local map.
+SCRIPT_LABELS = {
+    "uz_latn": "O'zbek (lotin)",
+    "uz_cyrl": "Ўзбек (кирилл)",
+    "ru": "Русский",
+}
+
 _ERRORS = {
     "uz_latn": {
         "invalid_face": "Noma'lum tekshiruv yuzasi.",
@@ -23,23 +32,6 @@ _ERRORS = {
         "invalid_verify_steps": "Tekshirish qadamlari ro'yxati noto'g'ri.",
         "invalid_questions": "Savollar ro'yxati noto'g'ri.",
         "duplicate_card": "Bu karta ID'si allaqachon mavjud.",
-    },
-    "uz_cyrl": {
-        "invalid_face": "Номаълум текширув юзаси.",
-        "invalid_card_id": "Карта ID'си `family.ном` кўринишида бўлиши керак.",
-        "invalid_card_version": "Версия нотўғри (масалан: 1.0.0).",
-        "invalid_status": "Ҳолат approved, draft ёки retired бўлиши керак.",
-        "invalid_reviewer": "Кўриб чиқувчи номи бўш бўлмасин.",
-        "invalid_mechanism": "Механизм бўш бўлмаслиги ва 600 белгидан ошмаслиги керак.",
-        "invalid_trigger_rule": "Қоида ID'си нотўғри (масалан: fs.credential.otp).",
-        "invalid_trigger_signal": "Сигнал тури нотўғри.",
-        "invalid_reviewed_case": "Кўриб чиқилган ҳолат ID'си нотўғри.",
-        "invalid_aliases": "Қидирув иборалари рўйхати нотўғри.",
-        "invalid_alias_language": "Фақат uz_latn, uz_cyrl ва ru тиллари қўллаб-қувватланади.",
-        "invalid_red_flags": "Белгилар рўйхати нотўғри (энг кўпи 12 та, ҳар бири 400 белгигача).",
-        "invalid_verify_steps": "Текшириш қадамлари рўйхати нотўғри.",
-        "invalid_questions": "Саволлар рўйхати нотўғри.",
-        "duplicate_card": "Бу карта ID'си аллақачон мавжуд.",
     },
     "ru": {
         "invalid_face": "Неизвестная поверхность проверки.",
@@ -107,53 +99,6 @@ KNOWLEDGE_COPY = {
         "preview_others": "Buning o'rniga tanlangan kartalar:",
         "preview_no_others": "Boshqa kartalar tanlanmadi.",
         "errors": _ERRORS["uz_latn"],
-    },
-    "uz_cyrl": {
-        "title": "Билим карталари",
-        "subtitle": (
-            "Карталар моделга тушунтириш учун берилади. Улар очиқ репозиторийда эмас, "
-            "маълумотлар базасида сақланади ва пакетдаги асосий карталар устига ID бўйича қўшилади."
-        ),
-        "new": "Янги карта",
-        "empty": "Ҳозирча қўшимча карта йўқ. Текширув пакетдаги асосий карталар билан ишлайди.",
-        "edit": "Таҳрирлаш",
-        "delete": "Ўчириш",
-        "delete_confirm": "Бу картани ўчирсангиз, пакетдаги асосий карта яна кучга киради.",
-        "back": "Рўйхатга қайтиш",
-        "save": "Сақлаш",
-        "test": "Синаб кўриш",
-        "updated": "Янгиланди:",
-        "baseline_note": "Пакетдаги асосий карталар: {count} та. Фаол карталар: {active} та.",
-        "body_note": "Карта матни инглиз тилида ёзилади — у моделга узатилади, фойдаланувчига кўрсатилмайди.",
-        "card_id_label": "Карта ID'си",
-        "card_id_hint": "Пакетдаги мавжуд ID киритилса, ўша карта алмаштирилади. Янги ID янги карта қўшади.",
-        "card_version_label": "Версия",
-        "status_label": "Ҳолат",
-        "status_hint": "Фақат `approved` карталар танланади. `draft` ва `retired` шу ID'ли асосий картани ҳам ўчиради.",
-        "reviewer_label": "Кўриб чиқувчи",
-        "mechanism_label": "Механизм (инглиз тилида)",
-        "trigger_rules_label": "Ишга туширувчи қоида ID'лари",
-        "trigger_signals_label": "Ишга туширувчи сигнал турлари",
-        "aliases_label": "Қидирув иборалари — {language}",
-        "aliases_hint": "Ҳар бир қаторда битта ибора. Матнда шу иборалар топилса, карта танланиши мумкин.",
-        "red_flags_label": "Белгилар (инглиз тилида)",
-        "verify_steps_label": "Текшириш қадамлари (инглиз тилида)",
-        "questions_label": "Саволлар (инглиз тилида)",
-        "reviewed_cases_label": "Кўриб чиқилган ҳолат ID'лари",
-        "list_hint": "Ҳар бир қаторда битта ёзув.",
-        "sample_title": "Синов матни",
-        "sample_hint": (
-            "Карта тўғри ёзилган бўлса ҳам танланмаслиги мумкин — танлаш қоида ID'лари ва "
-            "қидирув иборалари бўйича ишлайди, карта матни бўйича эмас."
-        ),
-        "sample_label": "Намуна матн",
-        "preview_title": "Синов натижаси",
-        "preview_selected": "Карта танланди. Танлаш усули: {mode}.",
-        "preview_not_selected": "Карта танланмади. Ишга туширувчи қоида ID'лари ёки қидирув ибораларини текширинг.",
-        "preview_not_approved": "Карта танланмади, чунки унинг ҳолати `approved` эмас ({status}). Фақат `approved` карталар танланади.",
-        "preview_others": "Бунинг ўрнига танланган карталар:",
-        "preview_no_others": "Бошқа карталар танланмади.",
-        "errors": _ERRORS["uz_cyrl"],
     },
     "ru": {
         "title": "Карточки знаний",

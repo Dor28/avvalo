@@ -1,6 +1,6 @@
-"""Regression tests for code-review fixes.
+"""Pipeline privacy, validation, and quota regression tests.
 
-Covers privacy and quota bugs found during review that the existing suite did not exercise:
+Covers privacy and quota bugs that must remain fixed:
 
 1. ``minimize`` left raw phone numbers with operator codes 50/55/88/20 in the
    text sent to the model (privacy leak).
@@ -10,6 +10,7 @@ Covers privacy and quota bugs found during review that the existing suite did no
 
 import pytest
 
+from app.config import Settings
 from app.data import repo
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.llm import LLMResponse
@@ -55,7 +56,7 @@ def test_high_severity_hit_still_requires_red_flags() -> None:
     # red_flags block is still rejected.
     hits = [
         RuleHit(rule_id="fs.payment.overpayment_refund", family="amount_mismatch",
-                message_key="amount_mismatch", severity=3),
+        message_key="amount_mismatch", severity=3),
     ]
     draft = DraftOutput(
         red_flags=[],
@@ -91,20 +92,20 @@ class _BoomLLM:
 async def test_empty_input_does_not_consume_quota(session) -> None:
     result = await run_check(
         CheckInput(
-            face="family", user_key="q-empty", language=Language.ru,
+            user_key="q-empty", language=Language.ru,
             input_type=InputType.text, raw_text="   ",
         ),
         session=session,
         llm_provider=_OkLLM(),
     )
     assert result.status == CheckStatus.empty_input
-    assert await repo.get_usage(session, user_key="q-empty", face="family") == 0
+    assert await repo.get_usage(session, user_key="q-empty", scope="user") == 0
 
 
 async def test_llm_error_does_not_consume_quota(session) -> None:
     result = await run_check(
         CheckInput(
-            face="family", user_key="q-err", language=Language.ru,
+            user_key="q-err", language=Language.ru,
             input_type=InputType.text,
             raw_text="Bank xavfsizlik xizmati. SMS kodni yuboring.",
         ),
@@ -112,28 +113,27 @@ async def test_llm_error_does_not_consume_quota(session) -> None:
         llm_provider=_BoomLLM(),
     )
     assert result.status == CheckStatus.llm_error
-    assert await repo.get_usage(session, user_key="q-err", face="family") == 0
+    assert await repo.get_usage(session, user_key="q-err", scope="user") == 0
 
 
 async def test_successful_check_consumes_quota(session) -> None:
     await run_check(
         CheckInput(
-            face="family", user_key="q-ok", language=Language.ru,
+            user_key="q-ok", language=Language.ru,
             input_type=InputType.text,
             raw_text="Bank xavfsizlik xizmati. SMS kodni yuboring.",
         ),
         session=session,
         llm_provider=_OkLLM(),
     )
-    assert await repo.get_usage(session, user_key="q-ok", face="family") == 1
+    assert await repo.get_usage(session, user_key="q-ok", scope="user") == 1
 
 
 async def test_rate_limited_attempts_do_not_grow_the_counter(session) -> None:
-    from app.engine.faces import FACES
-
-    limit = FACES["family"].daily_limit
+    
+    limit = Settings.model_fields["daily_check_limit"].default
     check_input = CheckInput(
-        face="family", user_key="q-cap", language=Language.ru,
+        user_key="q-cap", language=Language.ru,
         input_type=InputType.text,
         raw_text="Bank xavfsizlik xizmati. SMS kodni yuboring.",
     )
@@ -145,4 +145,4 @@ async def test_rate_limited_attempts_do_not_grow_the_counter(session) -> None:
     assert statuses[limit:] == [CheckStatus.rate_limited] * 3
     # Over-limit rejections are refunded, so the counter pins at the limit
     # instead of growing without bound.
-    assert await repo.get_usage(session, user_key="q-cap", face="family") == limit
+    assert await repo.get_usage(session, user_key="q-cap", scope="user") == limit

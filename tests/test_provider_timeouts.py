@@ -1,4 +1,4 @@
-"""T12 - hardening: provider timeouts and graceful failure."""
+"""Provider timeout and graceful pipeline-failure tests."""
 
 import asyncio
 import logging
@@ -48,8 +48,7 @@ async def test_llm_timeout_returns_timeout_without_safety_conclusion(caplog) -> 
     caplog.set_level(logging.ERROR, logger="app.obs.events")
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="timeout-user",
+                        user_key="timeout-user",
             language=Language.uz_latn,
             input_type=InputType.text,
             raw_text="Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
@@ -73,8 +72,7 @@ async def test_ocr_timeout_returns_timeout_before_llm_call(caplog) -> None:
     caplog.set_level(logging.ERROR, logger="app.obs.events")
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="ocr-timeout-user",
+                        user_key="ocr-timeout-user",
             language=Language.uz_latn,
             input_type=InputType.image,
             image_bytes=b"not-empty",

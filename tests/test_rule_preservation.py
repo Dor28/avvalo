@@ -1,4 +1,4 @@
-"""T-06 acceptance: every high-severity authoritative rule must be declared."""
+"""Detected high-severity rule preservation and retry tests."""
 
 from __future__ import annotations
 
@@ -63,8 +63,7 @@ async def test_missing_rule_ids_use_retry_then_succeed() -> None:
 
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="rule-retry",
+                        user_key="rule-retry",
             language=Language.uz_latn,
             input_type=InputType.text,
             raw_text=(
@@ -84,8 +83,7 @@ async def test_missing_rule_ids_twice_uses_existing_safety_fallback() -> None:
     provider = _SequenceProvider([_draft(["fs.authority.impersonation"])])
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="rule-fallback",
+                        user_key="rule-fallback",
             language=Language.ru,
             input_type=InputType.text,
             raw_text=(

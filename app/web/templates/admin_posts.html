@@ -36,7 +36,6 @@
                 </div>
                 <h2>
                   {% if language == 'uz_latn' %}{{ post.title_uz_latn }}
-                  {% elif language == 'uz_cyrl' %}{{ post.title_uz_cyrl }}
                   {% else %}{{ post.title_ru }}{% endif %}
                 </h2>
                 <p>{{ editorial.admin_updated }} {{ post.updated_ts.strftime('%d.%m.%Y · %H:%M') }}</p>

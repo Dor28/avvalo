@@ -1,4 +1,4 @@
-"""T2 — schema, privacy, and repository contract tests."""
+"""Schema, privacy, and repository contract tests."""
 
 import uuid
 from datetime import UTC, datetime
@@ -75,14 +75,12 @@ async def test_repo_creates_consent_and_event_rows(session) -> None:
     await repo.upsert_consent(
         session,
         user_key="u1",
-        face="family",
         notice_version="2026-06-24-v1",
         language="ru",
     )
     check_id = await repo.record_check_event(
         session,
         user_key="u1",
-        face="family",
         input_type="text",
         language="ru",
         status="ok",
@@ -91,7 +89,7 @@ async def test_repo_creates_consent_and_event_rows(session) -> None:
     )
     await session.commit()
 
-    consent = await repo.get_consent(session, user_key="u1", face="family")
+    consent = await repo.get_consent(session, user_key="u1")
     assert consent is not None
     assert consent.language == "ru"
     assert isinstance(check_id, uuid.UUID)
@@ -102,7 +100,6 @@ async def test_check_event_metadata_values_are_categorical(session) -> None:
         await repo.record_check_event(
             session,
             user_key="u1",
-            face="family",
             input_type="text",
             language="ru",
             status="ok",
@@ -113,7 +110,6 @@ async def test_check_event_metadata_values_are_categorical(session) -> None:
         await repo.record_check_event(
             session,
             user_key="u1",
-            face="family",
             input_type="text",
             language="ru",
             status="ok",
@@ -125,14 +121,12 @@ async def test_delete_user_data_removes_every_row(session) -> None:
     await repo.upsert_consent(
         session,
         user_key="u1",
-        face="family",
         notice_version="v",
         language="ru",
     )
     check_id = await repo.record_check_event(
         session,
         user_key="u1",
-        face="family",
         input_type="text",
         language="ru",
         status="ok",
@@ -142,21 +136,20 @@ async def test_delete_user_data_removes_every_row(session) -> None:
         StorySubmission(
             id=uuid.uuid4(),
             user_key="u1",
-            face="family",
             language="ru",
             minimized_text="Legacy minimized story",
             status="submitted",
             created_ts=datetime.now(UTC),
         )
     )
-    await repo.increment_usage(session, user_key="u1", face="family")
+    await repo.increment_usage(session, user_key="u1", scope="user")
     await session.commit()
 
     await repo.delete_user_data(session, user_key="u1")
     await session.commit()
 
-    assert await repo.get_consent(session, user_key="u1", face="family") is None
-    assert await repo.get_usage(session, user_key="u1", face="family") == 0
+    assert await repo.get_consent(session, user_key="u1") is None
+    assert await repo.get_usage(session, user_key="u1", scope="user") == 0
     stories = (await session.execute(select(StorySubmission))).scalars().all()
     assert stories == []
     deletion_log = (await session.execute(select(DeletionLog))).scalar_one()

@@ -7,6 +7,15 @@ user-facing string exists in all three language forms.
 
 # ruff: noqa: E501, RUF001
 
+# Cyrillic-Uzbek is retired as a *reply* language but is still matched on input,
+# so pattern and alias groups keep it. ``LANGUAGE_LABELS`` covers reply languages
+# only, hence this local map.
+SCRIPT_LABELS = {
+    "uz_latn": "O'zbek (lotin)",
+    "uz_cyrl": "Ўзбек (кирилл)",
+    "ru": "Русский",
+}
+
 _ERRORS = {
     "uz_latn": {
         "invalid_face": "Noma'lum tekshiruv yuzasi.",
@@ -24,23 +33,6 @@ _ERRORS = {
         "empty_regex": "`regex:` dan keyin ifoda yozilmagan.",
         "no_patterns": "Kamida bitta shablon kiriting yoki qoidani o'chirilgan deb belgilang.",
         "duplicate_rule": "Bu qoida ID'si allaqachon mavjud.",
-    },
-    "uz_cyrl": {
-        "invalid_face": "Номаълум текширув юзаси.",
-        "invalid_rule_id": "Қоида ID'си `fs.оила.ном` кўринишида бўлиши керак.",
-        "invalid_family": "Оила номи фақат кичик лотин ҳарфлари ва пастки чизиқдан иборат бўлсин.",
-        "invalid_message_key": "Хабар калити фақат кичик лотин ҳарфлари ва пастки чизиқдан иборат бўлсин.",
-        "invalid_description": "Изоҳ бўш бўлмаслиги ва 400 белгидан ошмаслиги керак.",
-        "invalid_severity": "Жиддийлик даражаси 1 ва 3 орасида бўлсин.",
-        "invalid_emits_signal": "Сигнал номи нотўғри.",
-        "invalid_patterns": "Шаблонлар рўйхати нотўғри.",
-        "invalid_pattern_language": "Фақат uz_latn, uz_cyrl ва ru тиллари қўллаб-қувватланади.",
-        "pattern_too_long": "Шаблон жуда узун (120 белгидан кўп).",
-        "pattern_too_short": "Шаблон жуда қисқа — камида 3 белги бўлсин, акс ҳолда ҳамма нарсага мос келади.",
-        "invalid_regex": "Regex хато: у компиляция қилинмади.",
-        "empty_regex": "`regex:` дан кейин ифода ёзилмаган.",
-        "no_patterns": "Камида битта шаблон киритинг ёки қоидани ўчирилган деб белгиланг.",
-        "duplicate_rule": "Бу қоида ID'си аллақачон мавжуд.",
     },
     "ru": {
         "invalid_face": "Неизвестная поверхность проверки.",
@@ -104,49 +96,6 @@ RULES_COPY = {
         "preview_no_match": "Qoida ishga tushmadi — bu matnda hech bir shablon mos kelmadi.",
         "baseline_note": "Paketdagi asosiy qoidalar: {count} ta. Faol qoidalar: {active} ta.",
         "errors": _ERRORS["uz_latn"],
-    },
-    "uz_cyrl": {
-        "title": "Қоида шаблонлари",
-        "subtitle": (
-            "Бу шаблонлар очиқ репозиторийда эмас, маълумотлар базасида сақланади. "
-            "Улар пакетдаги асосий қоидалар устига ID бўйича қўшилади."
-        ),
-        "new": "Янги қоида",
-        "empty": "Ҳозирча қўшимча қоида йўқ. Текширув пакетдаги асосий қоидалар бўйича ишлайди.",
-        "edit": "Таҳрирлаш",
-        "delete": "Ўчириш",
-        "delete_confirm": "Бу қоидани ўчирсангиз, пакетдаги асосий қоида яна кучга киради.",
-        "back": "Рўйхатга қайтиш",
-        "save": "Сақлаш",
-        "test": "Синаб кўриш",
-        "status_active": "Фаол",
-        "status_disabled": "Ўчирилган",
-        "updated": "Янгиланди:",
-        "rule_id_label": "Қоида ID'си",
-        "rule_id_hint": "Пакетдаги мавжуд ID киритилса, ўша қоида алмаштирилади. Янги ID янги қоида қўшади.",
-        "family_label": "Оила",
-        "description_label": "Изоҳ (инглиз тилида, моделга факт сифатида узатилади)",
-        "message_key_label": "Хабар калити",
-        "severity_label": "Жиддийлик (1–3)",
-        "emits_signal_label": "Сигнал (ихтиёрий)",
-        "disabled_label": "Бу қоидани ўчириш",
-        "disabled_hint": "Белгиланса, шу ID'ли асосий қоида ишламайди.",
-        "patterns_label": "Шаблонлар — {language}",
-        "patterns_hint": (
-            "Ҳар бир қаторда битта шаблон. Оддий матн кичик ҳарфга келтирилиб қидирилади. "
-            "Regex учун қаторни `regex:` билан бошланг."
-        ),
-        "sample_title": "Синов матни",
-        "sample_hint": (
-            "Сақлашдан олдин синаб кўринг. Хато шаблон барча фойдаланувчилар учун "
-            "аниқлашни сездирмасдан бузади."
-        ),
-        "sample_label": "Намуна матн",
-        "preview_title": "Синов натижаси",
-        "preview_match": "Қоида ишга тушди. Мос келган шаблонлар:",
-        "preview_no_match": "Қоида ишга тушмади — бу матнда ҳеч бир шаблон мос келмади.",
-        "baseline_note": "Пакетдаги асосий қоидалар: {count} та. Фаол қоидалар: {active} та.",
-        "errors": _ERRORS["uz_cyrl"],
     },
     "ru": {
         "title": "Шаблоны правил",

@@ -15,7 +15,6 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.engine.faces import FACES
 from app.engine.rules.loader import RuleDefinition
 from app.rules_store.models import RuleOverride
 
@@ -37,7 +36,6 @@ class RuleOverrideDraft(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    face: str
     rule_id: str
     family: str
     description: str
@@ -50,8 +48,6 @@ class RuleOverrideDraft(BaseModel):
     def normalized(self) -> RuleOverrideDraft:
         """Strip whitespace and reject anything that would break the matcher."""
 
-        if self.face not in FACES:
-            raise ValueError("invalid_face")
         rule_id = self.rule_id.strip().casefold()
         if not RULE_ID_RE.fullmatch(rule_id):
             raise ValueError("invalid_rule_id")
@@ -78,7 +74,6 @@ class RuleOverrideDraft(BaseModel):
             raise ValueError("no_patterns")
 
         return RuleOverrideDraft(
-            face=self.face,
             rule_id=rule_id,
             family=family,
             description=description,
@@ -166,17 +161,15 @@ async def delete_override(session: AsyncSession, override: RuleOverride) -> None
     await session.flush()
 
 
-async def list_overrides(session: AsyncSession, *, face: str | None = None) -> list[RuleOverride]:
+async def list_overrides(session: AsyncSession) -> list[RuleOverride]:
     """Return overrides for the editor, newest change first."""
 
     statement = select(RuleOverride).order_by(RuleOverride.updated_ts.desc())
-    if face is not None:
-        statement = statement.where(RuleOverride.face == face)
     return list((await session.execute(statement)).scalars())
 
 
 async def load_overrides(
-    session: AsyncSession, *, face: str
+    session: AsyncSession,
 ) -> tuple[tuple[RuleDefinition, ...], frozenset[str]]:
     """Return active override definitions and the rule IDs to suppress.
 
@@ -184,7 +177,7 @@ async def load_overrides(
     not take the whole pack down to its YAML baseline.
     """
 
-    rows = await list_overrides(session, face=face)
+    rows = await list_overrides(session)
     definitions: list[RuleDefinition] = []
     disabled: set[str] = set()
     for row in rows:

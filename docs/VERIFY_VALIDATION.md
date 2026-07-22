@@ -100,7 +100,7 @@ The implementation must:
 - fail closed when a source is stale, down, or malformed;
 - keep submitted artifacts ephemeral;
 - prevent the LLM from inventing or altering evidence;
-- render all output in `uz_latn`, `uz_cyrl`, and `ru`;
+- render all output in `uz_latn` and `ru`;
 - pass adversarial tests for lookalike domains, punycode, deceptive subdomains, stale snapshots,
   missing records, source outages, and prompts that demand a verdict.
 

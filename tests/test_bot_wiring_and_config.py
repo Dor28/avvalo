@@ -18,10 +18,9 @@ from app.config import Settings
 from app.data import repo
 from app.data.models import Feedback
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
-from app.engine.faces import FACES
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput
-from app.main import PLACEHOLDER_TOKEN, configured_bot_specs
+from app.main import PLACEHOLDER_TOKEN, configured_bot_token
 from app.web.session import WebSession, set_web_session_cookie
 from tests.support import addressed_rule_ids
 
@@ -56,10 +55,10 @@ class _OkLLM:
 
 # --- #4: configured daily limit drives enforcement -------------------------
 
-async def test_configured_daily_limit_overrides_face_default(session) -> None:
-    settings = _settings(daily_limit_family=2)  # default would be 5
+async def test_configured_daily_limit_overrides_default(session) -> None:
+    settings = _settings(daily_check_limit=2)  # default would be 5
     check_input = CheckInput(
-        face="family", user_key="cfg", language=Language.ru,
+        user_key="cfg", language=Language.ru,
         input_type=InputType.text, raw_text="Bank xavfsizlik xizmati. SMS kodni yuboring.",
     )
     statuses = []
@@ -69,13 +68,6 @@ async def test_configured_daily_limit_overrides_face_default(session) -> None:
         )
         statuses.append(result.status)
     assert statuses == [CheckStatus.ok, CheckStatus.ok, CheckStatus.rate_limited]
-
-
-def test_settings_daily_limit_for_maps_active_face() -> None:
-    settings = _settings(daily_limit_family=7)
-    assert settings.daily_limit_for("family") == 7
-    assert settings.daily_limit_for("merchants") is None
-    assert settings.daily_limit_for("unknown") is None
 
 
 # --- #5: content handler input building + localized keyboard ----------------
@@ -91,7 +83,7 @@ class _FakeMessage:
 async def test_build_check_input_from_text() -> None:
     result = await _build_check_input(
         _FakeMessage(text="Salom, bu xabarni tekshiring"),
-        face=FACES["family"], user_key="u", language="ru",
+        user_key="u", language="ru",
     )
     assert result is not None
     assert result.input_type is InputType.text
@@ -102,7 +94,7 @@ async def test_build_check_input_from_text() -> None:
 async def test_build_check_input_rejects_unsupported_message() -> None:
     result = await _build_check_input(
         _FakeMessage(),  # no text, no caption, no photo (e.g. a sticker)
-        face=FACES["family"], user_key="u", language="uz_latn",
+        user_key="u", language="uz_latn",
     )
     assert result is None
 
@@ -148,7 +140,7 @@ def test_session_cookie_secure_flag_is_configurable() -> None:
 
 async def test_record_feedback_is_idempotent(session) -> None:
     check_id = await repo.record_check_event(
-        session, user_key="fb", face="family", input_type="text", language="ru", status="ok"
+        session, user_key="fb", input_type="text", language="ru", status="ok"
     )
     await repo.record_feedback(session, check_id=check_id, usefulness="yes", next_action="verify")
     # Re-answering must not raise a duplicate-key error; last answer wins.
@@ -165,8 +157,7 @@ async def test_record_feedback_is_idempotent(session) -> None:
 
 async def test_record_feedback_accepts_usefulness_before_next_action(session) -> None:
     check_id = await repo.record_check_event(
-        session, user_key="fb-partial", face="family",
-        input_type="text", language="ru", status="ok",
+        session, user_key="fb-partial",         input_type="text", language="ru", status="ok",
     )
     await repo.record_feedback(session, check_id=check_id, usefulness="yes")
     await repo.record_feedback(session, check_id=check_id, usefulness="yes", next_action="verify")
@@ -180,8 +171,7 @@ async def test_record_feedback_accepts_usefulness_before_next_action(session) ->
 
 async def test_usefulness_update_does_not_clear_next_action(session) -> None:
     check_id = await repo.record_check_event(
-        session, user_key="fb-preserve", face="family",
-        input_type="text", language="ru", status="ok",
+        session, user_key="fb-preserve",         input_type="text", language="ru", status="ok",
     )
     await repo.record_feedback(session, check_id=check_id, usefulness="yes", next_action="verify")
     await repo.record_feedback(session, check_id=check_id, usefulness="partly")
@@ -193,15 +183,12 @@ async def test_usefulness_update_does_not_clear_next_action(session) -> None:
     assert row.next_action == "verify"
 
 
-def test_process_uses_single_telegram_token_for_family() -> None:
+def test_process_uses_the_single_configured_telegram_token() -> None:
     settings = _settings(telegram_token="bot-token")
 
-    specs = configured_bot_specs(settings)
-
-    assert [spec.face_id for spec in specs] == ["family"]
-    assert [spec.token for spec in specs] == ["bot-token"]
+    assert configured_bot_token(settings) == "bot-token"
 
 
 def test_process_ignores_placeholder_or_empty_telegram_token() -> None:
-    assert configured_bot_specs(_settings(telegram_token=PLACEHOLDER_TOKEN)) == []
-    assert configured_bot_specs(_settings(telegram_token="")) == []
+    assert configured_bot_token(_settings(telegram_token=PLACEHOLDER_TOKEN)) is None
+    assert configured_bot_token(_settings(telegram_token="")) is None

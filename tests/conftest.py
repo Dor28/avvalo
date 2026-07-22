@@ -40,32 +40,9 @@ async def session():
 
 @pytest.fixture
 def golden():
-    """Return a loader for the golden fixtures (``golden()``).
+    """Return a loader for the end-to-end golden fixtures (``golden()``)."""
 
-    The file is named for the asset set it exercises, not for the frozen
-    ``family`` face ID the fixtures carry in their ``face`` field.
-    """
-
-    def _load(name: str = "checker") -> list[dict]:
+    def _load(name: str = "checks") -> list[dict]:
         return json.loads((GOLDEN_DIR / f"{name}.json").read_text(encoding="utf-8"))
 
     return _load
-
-
-@pytest.fixture
-def callable_or_skip():
-    """Import a module and return the first named callable, else skip the test.
-
-    Lets the not-yet-built tasks (T6-T13) ship as live acceptance specs: each
-    skips cleanly until its module lands, then runs for real.
-    """
-
-    def _get(module_path: str, *names: str):
-        module = pytest.importorskip(module_path)
-        for name in names:
-            candidate = getattr(module, name, None)
-            if callable(candidate):
-                return candidate
-        pytest.skip(f"{module_path}: none of {names} implemented yet")
-
-    return _get

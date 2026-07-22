@@ -1,4 +1,4 @@
-"""T-01/T-05 acceptance: knowledge ceilings, router recall, health, and cost."""
+"""Allowlisted knowledge routing, health, recall, and cost tests."""
 
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ class _Store:
     def __init__(self, cards: list[KnowledgeCard]) -> None:
         self.cards = cards
 
-    def load(self, face_id: str) -> KnowledgeBase:
-        return KnowledgeBase(version="test-v1", face=face_id, cards=tuple(self.cards))
+    def load(self) -> KnowledgeBase:
+        return KnowledgeBase(version="test-v1", cards=tuple(self.cards))
 
 
 class _Router:
@@ -65,7 +65,6 @@ class _AnswerProvider:
 def _card(index: int, *, alias: str = "shared cue") -> KnowledgeCard:
     return KnowledgeCard(
         id=f"family.test_{index}",
-        face="family",
         version="v1",
         status="approved",
         reviewer="reviewer",
@@ -95,8 +94,7 @@ def _settings(**overrides) -> Settings:
 async def test_router_is_not_called_when_deterministic_retrieval_already_succeeded() -> None:
     router = _Router(AssertionError("router call would be discarded"))
     result = await retrieve_knowledge(
-        face_id="family",
-        minimized_text="shared cue",
+                minimized_text="shared cue",
         rule_hits=[],
         signals=[],
         store=_Store([_card(index) for index in range(4)]),
@@ -111,16 +109,14 @@ async def test_router_is_not_called_when_deterministic_retrieval_already_succeed
 
 async def test_router_failure_and_invalid_ids_do_not_overwrite_retrieval_status() -> None:
     unavailable = await retrieve_knowledge(
-        face_id="family",
-        minimized_text="no cue",
+                minimized_text="no cue",
         rule_hits=[],
         signals=[],
         store=_Store([_card(1)]),
         router=_Router(RuntimeError("down")),
     )
     invalid = await retrieve_knowledge(
-        face_id="family",
-        minimized_text="no cue",
+                minimized_text="no cue",
         rule_hits=[],
         signals=[],
         store=_Store([_card(1)]),
@@ -137,8 +133,7 @@ async def test_signal_only_retrieval_selects_mandatory_card() -> None:
     card = _card(1, alias="never present")
     card.trigger_signal_kinds = ["link"]
     result = await retrieve_knowledge(
-        face_id="family",
-        minimized_text="no cue",
+                minimized_text="no cue",
         rule_hits=[],
         signals=[Signal(kind="link")],
         store=_Store([card]),
@@ -163,8 +158,7 @@ async def test_real_router_class_routes_inflected_russian_end_to_end_and_counts_
     router = OpenAICompatibleKnowledgeRouter(json_provider)  # type: ignore[arg-type]
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="router-inflection",
+                        user_key="router-inflection",
             language=Language.ru,
             input_type=InputType.text,
             raw_text="Мне звонили, представились прокуратурой.",
@@ -191,8 +185,7 @@ async def test_router_receives_minimized_text_only() -> None:
     raw_phone = "+998 90 123 45 67"
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="router-minimized",
+                        user_key="router-minimized",
             language=Language.ru,
             input_type=InputType.text,
             raw_text=f"A general situation; contact was {raw_phone}.",
@@ -217,8 +210,7 @@ def test_router_is_off_by_default_and_has_separate_provider_config() -> None:
 async def test_enabled_but_incomplete_router_config_degrades_to_answer_model() -> None:
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="router-config-down",
+                        user_key="router-config-down",
             language=Language.ru,
             input_type=InputType.text,
             raw_text="A general in-scope situation with no known cue.",

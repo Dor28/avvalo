@@ -26,6 +26,7 @@ from app.engine import (
     run_check,
 )
 from app.engine.format import format_status_message
+from app.engine.types import MAX_SUBMITTED_TEXT_CHARS
 from app.privacy.consent import is_consent_current
 from app.web.abuse import (
     pseudonymous_ip_key,
@@ -62,17 +63,14 @@ def _static_version() -> str:
 
 templates.env.globals["static_version"] = _static_version()
 DEV_WEB_SESSION_SECRET = "development-web-session-secret"
-WEB_MAX_TEXT_CHARS = 6000
-WEB_MAX_CAPTION_CHARS = 500
-WEB_IP_FACE_PREFIX = "web_ip:"
+WEB_MAX_TEXT_CHARS = MAX_SUBMITTED_TEXT_CHARS
+WEB_IP_SCOPE = "web_ip"
 
 # The form's own maxlength attributes come from the same constants the POST
 # handler validates against, so the browser can never invite an oversized body.
 templates.env.globals["max_text_chars"] = WEB_MAX_TEXT_CHARS
-templates.env.globals["max_caption_chars"] = WEB_MAX_CAPTION_CHARS
 templates.env.globals["short_language_labels"] = {
     "uz_latn": "O‘z",
-    "uz_cyrl": "Ўз",
     "ru": "RU",
 }
 # The per-IP web limit refunds exactly the statuses the engine's per-user
@@ -88,25 +86,25 @@ WEB_COPY = {
         "nav_check": "Tekshiruv",
         "nav_cases": "Holatlar",
         "trust_label": "Ishonch",
-        "skip_to_check": "Tekshiruvga o'tish",
+        "skip_to_check": "Tekshiruvga o‘tish",
         "brand_tagline": "Avval tekshiring, keyin harakat qiling",
         "hero_kicker": "Shubha tug‘ildimi?",
         "use_cases_label": "Avvalo'ga nimalarni yuborish mumkin",
         "composer_kicker": "Anonim tekshiruv",
-        "composer_title": "Vaziyatni Avvalo'ga yuboring",
+        "composer_title": "Vaziyatni tasvirlab bering",
         "composer_body": (
-            "Matn yoki havolani kiriting, skrinshot yoki rasm yuklang. Bu to‘lov "
-            "so‘rovi, taklif, hujjat yoki suhbat bo‘lishi mumkin."
+            "Matn yoki havolani kiriting. Kerak bo‘lsa, skrinshot yoki rasm qo‘shing. "
+            "Bu to‘lov so‘rovi, taklif, hujjat yoki yozishma bo‘lishi mumkin."
         ),
         "input_hint": "SMS kod, parol va karta ma’lumotlarini yashiring.",
-        "outcome_title": "Javobda nima bo‘ladi",
+        "outcome_title": "Javobda nimalar bo‘ladi",
         "outcome_body": (
-            "Avvalo hukm chiqarmaydi va rasmiy manba tekshirilganini aytmaydi. "
-            "Javob mustaqil harakat rejasini beradi."
+            "Avvalo yakuniy hukm chiqarmaydi va rasmiy manbani tekshirganini da’vo qilmaydi. "
+            "Javobda vaziyatni mustaqil tekshirish uchun aniq qadamlar bo‘ladi."
         ),
         "outcomes": [
             {
-                "title": "Nima e’tibor talab qiladi",
+                "title": "Nimaga e’tibor berish kerak",
                 "body": "Bosim, shoshiltirish va vaziyatdagi nomuvofiqliklar.",
             },
             {
@@ -114,162 +112,62 @@ WEB_COPY = {
                 "body": "Manbani mustaqil tekshirish uchun aniq qadamlar.",
             },
             {
-                "title": "Nima noma’lum qoladi",
-                "body": "Tasdiqlanmagan da’volar va bajarilmagan tashqi tekshiruvlar.",
+                "title": "Nima noaniq qoladi",
+                "body": "Tasdiqlanmagan ma’lumotlar va o‘tkazilmagan tashqi tekshiruvlar.",
             },
             {
-                "title": "Nima deb so‘rash kerak",
-                "body": "Qarshi tomonga yoki rasmiy tashkilotga beriladigan qisqa savollar.",
+                "title": "Qanday savollar berish kerak",
+                "body": "Suhbatdoshga yoki rasmiy tashkilotga berish mumkin bo‘lgan qisqa savollar.",
             },
         ],
         "boundary_title": "Vaziyatni tekshiring, odamni emas",
         "boundary_body": (
-            "Avvalo vaziyat, material, jarayon yoki manbadagi belgilarni ko‘rib chiqadi. "
-            "U odamning obro‘sini baholamaydi, qilinmagan tashqi tekshiruvni qilgandek "
-            "ko‘rsatmaydi va yakuniy hukm chiqarmaydi."
+            "Avvalo vaziyat, material, jarayon yoki manbadagi belgilarni tahlil qiladi. "
+            "U odamning obro‘siga baho bermaydi, o‘tkazilmagan tashqi tekshiruvni "
+            "o‘tkazilgandek ko‘rsatmaydi va yakuniy hukm chiqarmaydi."
         ),
         "footer_note": "Shoshilmang. Avval tekshiring, keyin harakat qiling.",
         "result_ready": "Javob tayyor",
         "result_title": "Vaziyat bo‘yicha qadamlar",
         "title": "Avvalo",
         "privacy_title": "Maxfiylik",
-        "consent_label": "Maxfiylik shartlarini o'qidim va roziman",
-        "caption_label": "Qo'shimcha izoh",
+        "consent_label": "Maxfiylik shartlarini o‘qidim va roziman",
         "image_label": "Skrinshot yoki rasm",
         "optional_label": "ixtiyoriy",
         "choose_file": "Rasm tanlash",
         "clear_file": "Faylni olib tashlash",
         "submit": "Tekshirish",
         "checking": "Tekshirilmoqda...",
-        "result_error_title": "Hozir tekshirib bo'lmadi",
-        "empty_error": "Tekshirish uchun xabar yozing yoki matni ko'rinadigan rasm yuklang.",
-        "too_long_error": "Matn biroz uzun. Qisqartirib, qayta yuboring.",
+        "result_error_title": "Hozir tekshira olmadik",
+        "empty_error": "Matn kiriting yoki matni aniq ko‘rinadigan rasm yuklang.",
+        "too_long_error": "Matn juda uzun. Uni qisqartirib, qayta yuboring.",
         "consent_error": "Avval maxfiylik shartlariga rozilik bering.",
-        "faces": {
-            "family": {
-                "name": "Vaziyat tekshiruvi",
-                "headline": "Avval Avvalo'ga yuboring.",
-                "subhead": (
-                    "Javob berish, pul to‘lash, ilova o‘rnatish, hujjat imzolash yoki "
-                    "shaxsiy ma’lumot yuborishdan oldin nimaga e’tibor berish va nimani "
-                    "mustaqil tekshirishni ko‘ring."
-                ),
-                "prompt": "Matn, havola yoki vaziyat tavsifi",
-                "textarea_placeholder": (
-                    "Masalan: to‘lov skrinshotini yuborib, pul tushmasidan oldin "
-                    "tovarni berishimni so‘rashyapti..."
-                ),
-                "caption_placeholder": "Kerak bo'lsa: kim yubordi, nima so'rayapti?",
-                "image_hint": "Yozishma, chek, QR-kod yoki hujjat aniq ko‘rinsin.",
-                "use_cases": [
-                    "Xabar yoki suhbat",
-                    "Havola yoki QR-kod",
-                    "To‘lov skrinshoti yoki so‘rovi",
-                    "Ish yoki savdo taklifi",
-                    "Hujjat yoki so‘rov",
-                ],
-                "trust": [
-                    "Odamni emas, vaziyatni tekshiradi",
-                    "Hukm emas, aniq tekshiruv qadamlari",
-                    "Matn, rasm va javob saqlanmaydi, logga yozilmaydi",
-                ],
-            },
-        },
-    },
-    "uz_cyrl": {
-        "html_lang": "uz-Cyrl",
-        "privacy_link": "Махфийлик",
-        "language_label": "Тил",
-        "nav_label": "Асосий бўлимлар",
-        "nav_check": "Текширув",
-        "nav_cases": "Ҳолатлар",
-        "trust_label": "Ишонч",
-        "skip_to_check": "Текширувга ўтиш",
-        "brand_tagline": "Аввал текширинг, кейин ҳаракат қилинг",
-        "hero_kicker": "Шубҳа туғилдими?",
-        "use_cases_label": "Avvalo'га нималарни юбориш мумкин",
-        "composer_kicker": "Аноним текширув",
-        "composer_title": "Вазиятни Avvalo'га юборинг",
-        "composer_body": (
-            "Матн ёки ҳаволани киритинг, скриншот ёки расм юкланг. Бу тўлов "
-            "сўрови, таклиф, ҳужжат ёки суҳбат бўлиши мумкин."
-        ),
-        "input_hint": "SMS-код, пароль ва карта маълумотларини яширинг.",
-        "outcome_title": "Жавобда нима бўлади",
-        "outcome_body": (
-            "Avvalo ҳукм чиқармайди ва расмий манба текширилганини айтмайди. "
-            "Жавоб мустақил ҳаракат режасини беради."
-        ),
-        "outcomes": [
-            {
-                "title": "Нима эътибор талаб қилади",
-                "body": "Босим, шошилтириш ва вазиятдаги номувофиқликлар.",
-            },
-            {
-                "title": "Ҳозир нима қилиш керак",
-                "body": "Манбани мустақил текшириш учун аниқ қадамлар.",
-            },
-            {
-                "title": "Нима номаълум қолади",
-                "body": "Тасдиқланмаган даъволар ва бажарилмаган ташқи текширувлар.",
-            },
-            {
-                "title": "Нима деб сўраш керак",
-                "body": "Қарши томонга ёки расмий ташкилотга бериладиган қисқа саволлар.",
-            },
-        ],
-        "boundary_title": "Вазиятни текширинг, одамни эмас",
-        "boundary_body": (
-            "Avvalo вазият, материал, жараён ёки манбадаги белгиларни кўриб чиқади. "
-            "У одамнинг обрўсини баҳоламайди, қилинмаган ташқи текширувни қилгандек "
-            "кўрсатмайди ва якуний ҳукм чиқармайди."
-        ),
-        "footer_note": "Шошилманг. Аввал текширинг, кейин ҳаракат қилинг.",
-        "result_ready": "Жавоб тайёр",
-        "result_title": "Вазият бўйича қадамлар",
-        "title": "Avvalo",
-        "privacy_title": "Махфийлик",
-        "consent_label": "Махфийлик шартларини ўқидим ва розиман",
-        "caption_label": "Қўшимча изоҳ",
-        "image_label": "Скриншот ёки расм",
-        "optional_label": "ихтиёрий",
-        "choose_file": "Расм танлаш",
-        "clear_file": "Файлни олиб ташлаш",
-        "submit": "Текшириш",
-        "checking": "Текширилмоқда...",
-        "result_error_title": "Ҳозир текшириб бўлмади",
-        "empty_error": "Текшириш учун хабар ёзинг ёки матни кўринадиган расм юкланг.",
-        "too_long_error": "Матн бироз узун. Қисқартириб, қайта юборинг.",
-        "consent_error": "Аввал махфийлик шартларига розилик беринг.",
-        "faces": {
-            "family": {
-                "name": "Вазият текшируви",
-                "headline": "Аввал Avvalo'га юборинг.",
-                "subhead": (
-                    "Жавоб бериш, пул тўлаш, илова ўрнатиш, ҳужжат имзолаш ёки "
-                    "шахсий маълумот юборишдан олдин нимага эътибор бериш ва нимани "
-                    "мустақил текширишни кўринг."
-                ),
-                "prompt": "Матн, ҳавола ёки вазият тавсифи",
-                "textarea_placeholder": (
-                    "Масалан: тўлов скриншотини юбориб, пул тушмасидан олдин "
-                    "товарни беришимни сўрашяпти..."
-                ),
-                "caption_placeholder": "Керак бўлса: ким юборди, нима сўраяпти?",
-                "image_hint": "Ёзишма, чек, QR-код ёки ҳужжат аниқ кўринсин.",
-                "use_cases": [
-                    "Хабар ёки суҳбат",
-                    "Ҳавола ёки QR-код",
-                    "Тўлов скриншоти ёки сўрови",
-                    "Иш ёки савдо таклифи",
-                    "Ҳужжат ёки сўров",
-                ],
-                "trust": [
-                    "Одамни эмас, вазиятни текширади",
-                    "Ҳукм эмас, аниқ текширув қадамлари",
-                    "Матн, расм ва жавоб сақланмайди, логга ёзилмайди",
-                ],
-            },
+        "check": {
+            "name": "Vaziyat tekshiruvi",
+            "headline": "Vaziyatni Avvalo bilan tekshiring.",
+            "subhead": (
+                "Biror qaror qilishdan oldin nimaga e’tibor berish va vaziyatni "
+                "qanday tekshirishni bilib oling."
+            ),
+            "prompt": "Matn, havola yoki vaziyat tavsifi",
+            "textarea_placeholder": (
+                "Masalan: menga to‘lov skrinshotini yuborib, pul tushmasidan oldin "
+                "tovarni berishimni so‘rashyapti..."
+            ),
+            "image_hint": "Yozishma, chek, QR-kod yoki hujjat rasmda aniq ko‘rinsin.",
+            "use_cases": [
+                "Xabar yoki yozishma",
+                "Havola yoki QR-kod",
+                "To‘lov skrinshoti yoki so‘rovi",
+                "Ish yoki hamkorlik taklifi",
+                "Hujjat yoki so‘rov",
+            ],
+            "trust": [
+                "Odamni emas, vaziyatni tekshiradi",
+                "Hukm chiqarmaydi, tekshiruv qadamlarini ko‘rsatadi",
+                "Tavsiya beradi, natijani kafolatlamaydi",
+                "Matn, rasm va javob saqlanmaydi",
+            ],
         },
     },
     "ru": {
@@ -285,29 +183,29 @@ WEB_COPY = {
         "hero_kicker": "Возникли сомнения?",
         "use_cases_label": "Что можно отправить в Avvalo",
         "composer_kicker": "Анонимная проверка",
-        "composer_title": "Отправьте ситуацию в Avvalo",
+        "composer_title": "Опишите ситуацию",
         "composer_body": (
-            "Вставьте текст или ссылку, загрузите скриншот или фото. Это может быть "
-            "запрос на оплату, предложение, документ или переписка."
+            "Вставьте текст или ссылку. При необходимости добавьте скриншот или фото. "
+            "Это может быть запрос на оплату, предложение, документ или переписка."
         ),
         "input_hint": "Скройте SMS-коды, пароли и полные данные карты.",
         "outcome_title": "Что будет в ответе",
         "outcome_body": (
-            "Avvalo не выносит вердикт и не говорит, что проверил официальный источник. "
-            "В ответе будет план самостоятельных действий."
+            "Avvalo не выносит окончательных вердиктов и не утверждает, что проверил "
+            "официальный источник. В ответе будут понятные шаги для самостоятельной проверки."
         ),
         "outcomes": [
             {
-                "title": "Что требует внимания",
+                "title": "На что обратить внимание",
                 "body": "Давление, спешка и несостыковки в ситуации.",
             },
             {
                 "title": "Что сделать сейчас",
-                "body": "Конкретные шаги для независимой проверки источника.",
+                "body": "Конкретные шаги для самостоятельной проверки источника.",
             },
             {
                 "title": "Что останется неизвестным",
-                "body": "Неподтверждённые заявления и внешние проверки, которые не проводились.",
+                "body": "Неподтверждённые сведения и внешние проверки, которые не проводились.",
             },
             {
                 "title": "Что спросить",
@@ -316,9 +214,9 @@ WEB_COPY = {
         ],
         "boundary_title": "Проверяйте ситуацию, а не человека",
         "boundary_body": (
-            "Avvalo разбирает признаки в ситуации, материале, процессе или источнике. "
-            "Он не оценивает репутацию человека, не говорит, что провёл внешнюю проверку, "
-            "если её не было, и не выносит окончательный вердикт."
+            "Avvalo анализирует признаки в ситуации, материале, процессе или источнике. "
+            "Он не оценивает репутацию человека, не заявляет о внешних проверках, "
+            "которых не было, и не выносит окончательных вердиктов."
         ),
         "footer_note": "Не спешите. Сначала проверьте, потом действуйте.",
         "result_ready": "Ответ готов",
@@ -326,46 +224,42 @@ WEB_COPY = {
         "title": "Avvalo",
         "privacy_title": "Конфиденциальность",
         "consent_label": "Я прочитал условия конфиденциальности и согласен",
-        "caption_label": "Короткий контекст",
         "image_label": "Скриншот или фото",
         "optional_label": "необязательно",
         "choose_file": "Выбрать фото",
         "clear_file": "Убрать файл",
         "submit": "Проверить",
         "checking": "Проверяем...",
-        "result_error_title": "Сейчас проверить не получилось",
-        "empty_error": "Вставьте текст или загрузите читаемое изображение.",
+        "result_error_title": "Сейчас не удалось проверить",
+        "empty_error": "Вставьте текст или загрузите изображение с читаемым текстом.",
         "too_long_error": "Текст получился слишком длинным. Сократите его и отправьте ещё раз.",
         "consent_error": "Сначала примите условия конфиденциальности.",
-        "faces": {
-            "family": {
-                "name": "Проверка ситуации",
-                "headline": "Сначала отправьте это в Avvalo.",
-                "subhead": (
-                    "До ответа, оплаты, установки приложения, подписания документа или "
-                    "передачи личных данных "
-                    "посмотрите, на что обратить внимание и что проверить самостоятельно."
-                ),
-                "prompt": "Текст, ссылка или описание ситуации",
-                "textarea_placeholder": (
-                    "Например: прислали скрин оплаты и просят отдать товар до "
-                    "зачисления денег..."
-                ),
-                "caption_placeholder": "Если нужно: кто написал и чего просит?",
-                "image_hint": "Подойдёт читаемый скриншот переписки, чека, QR-кода или документа.",
-                "use_cases": [
-                    "Сообщение или переписка",
-                    "Ссылка или QR-код",
-                    "Скрин оплаты или запрос на оплату",
-                    "Работа или сделка",
-                    "Документ или запрос",
-                ],
-                "trust": [
-                    "Проверяем ситуацию, а не человека",
-                    "Конкретные шаги проверки вместо вердикта",
-                    "Текст, изображения и ответ не сохраняются и не записываются в журналы",
-                ],
-            },
+        "check": {
+            "name": "Проверка ситуации",
+            "headline": "Проверьте ситуацию с Avvalo.",
+            "subhead": (
+                "Перед тем как принять решение, узнайте, на что обратить внимание "
+                "и как самостоятельно проверить ситуацию."
+            ),
+            "prompt": "Текст, ссылка или описание ситуации",
+            "textarea_placeholder": (
+                "Например: мне прислали скрин оплаты и просят отдать товар до "
+                "зачисления денег..."
+            ),
+            "image_hint": "На изображении должны быть хорошо видны переписка, чек, QR-код или документ.",
+            "use_cases": [
+                "Сообщение или переписка",
+                "Ссылка или QR-код",
+                "Скрин оплаты или запрос на оплату",
+                "Предложение о работе или сотрудничестве",
+                "Документ или запрос",
+            ],
+            "trust": [
+                "Проверяет ситуацию, а не человека",
+                "Не выносит вердиктов, а подсказывает шаги проверки",
+                "Даёт рекомендации, но не гарантирует результат",
+                "Текст, изображения и ответ не сохраняются",
+            ],
         },
     },
 }
@@ -410,7 +304,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
             "checker.html",
         {
             "copy": copy,
-            "face_copy": copy["faces"]["family"],
+            "check_copy": copy["check"],
             "language_path": "/",
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
@@ -424,7 +318,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
 
 
 @router.get("/check", response_class=HTMLResponse)
-async def family_check(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
+async def check_page(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
     """Render the consumer checker and its result surface."""
 
     return await _check_page(request, language=language)
@@ -455,7 +349,7 @@ async def _check_page(request: Request, *, language: str) -> HTMLResponse:
             "checker.html",
         {
             "copy": copy,
-            "face_copy": copy["faces"]["family"],
+            "check_copy": copy["check"],
             "language_path": "/check",
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
@@ -501,7 +395,6 @@ async def check(
     request: Request,
     language: Annotated[str, Form()] = DEFAULT_LANGUAGE,
     text: Annotated[str, Form()] = "",
-    caption: Annotated[str, Form()] = "",
     consent: Annotated[str | None, Form()] = None,
     turnstile_token: Annotated[str | None, Form(alias="cf-turnstile-response")] = None,
     image: Annotated[UploadFile | None, File()] = None,
@@ -512,7 +405,6 @@ async def check(
     settings = _settings_or_error(request)
     language = _normalize_language(language)
     copy = WEB_COPY[language]
-    face = "family"
 
     web_session = get_or_create_web_session(request, secret=_web_secret(settings))
     session_factory = _session_factory_or_none(request)
@@ -523,7 +415,6 @@ async def check(
         if not await _ensure_web_consent(
             session,
             user_key=web_session.user_key,
-            face=face,
             language=language,
             settings=settings,
             accepted=consent == "yes",
@@ -536,7 +427,7 @@ async def check(
                 web_session=web_session,
             )
 
-        limit_error = _form_limit_error(copy, text=text, caption=caption)
+        limit_error = _form_limit_error(copy, text=text)
         if limit_error is not None:
             return _partial(
                 request,
@@ -565,20 +456,17 @@ async def check(
 
         input_type = InputType.image if image_bytes else InputType.text
         check_input = CheckInput(
-            face=face,
             user_key=web_session.user_key,
             language=Language(language),
             input_type=input_type,
             raw_text=text or None,
             image_bytes=image_bytes,
-            caption=caption or None,
         )
 
         ip_limit = await _reserve_web_ip_limit(
             session,
             request=request,
             settings=settings,
-            face=face,
             language=Language(language),
             input_type=input_type,
         )
@@ -601,11 +489,11 @@ async def check(
             )
         except Exception:
             if isinstance(ip_limit, str):
-                await repo.refund_usage(session, user_key=ip_limit, face=_web_ip_face(face))
+                await repo.refund_usage(session, user_key=ip_limit, scope=WEB_IP_SCOPE)
                 await session.commit()
             raise
         if isinstance(ip_limit, str) and result.status not in WEB_BILLABLE_STATUSES:
-            await repo.refund_usage(session, user_key=ip_limit, face=_web_ip_face(face))
+            await repo.refund_usage(session, user_key=ip_limit, scope=WEB_IP_SCOPE)
         await session.commit()
 
     return _partial(request, result=result, copy=copy, web_session=web_session)
@@ -615,12 +503,11 @@ async def _ensure_web_consent(
     session: AsyncSession,
     *,
     user_key: str,
-    face: str,
     language: str,
     settings: Settings,
     accepted: bool,
 ) -> bool:
-    consent = await repo.get_consent(session, user_key=user_key, face=face)
+    consent = await repo.get_consent(session, user_key=user_key)
     if is_consent_current(consent, settings.notice_version):
         return True
     if not accepted:
@@ -628,15 +515,14 @@ async def _ensure_web_consent(
     await repo.upsert_consent(
         session,
         user_key=user_key,
-        face=face,
         notice_version=settings.notice_version,
         language=language,
     )
     return True
 
 
-def _form_limit_error(copy: dict, *, text: str, caption: str) -> str | None:
-    if len(text) > WEB_MAX_TEXT_CHARS or len(caption) > WEB_MAX_CAPTION_CHARS:
+def _form_limit_error(copy: dict, *, text: str) -> str | None:
+    if len(text) > WEB_MAX_TEXT_CHARS:
         return copy["too_long_error"]
     return None
 
@@ -646,7 +532,6 @@ async def _reserve_web_ip_limit(
     *,
     request: Request,
     settings: Settings,
-    face: str,
     language: Language,
     input_type: InputType,
 ) -> str | CheckResult | None:
@@ -654,12 +539,11 @@ async def _reserve_web_ip_limit(
     if ip_key is None:
         return None
 
-    ip_face = _web_ip_face(face)
-    count = await repo.increment_usage(session, user_key=ip_key, face=ip_face)
+    count = await repo.increment_usage(session, user_key=ip_key, scope=WEB_IP_SCOPE)
     if count <= settings.web_daily_limit:
         return ip_key
 
-    await repo.refund_usage(session, user_key=ip_key, face=ip_face)
+    await repo.refund_usage(session, user_key=ip_key, scope=WEB_IP_SCOPE)
     return CheckResult(
         status=CheckStatus.rate_limited,
         text=format_status_message(CheckStatus.rate_limited, language),
@@ -667,10 +551,6 @@ async def _reserve_web_ip_limit(
         input_type=input_type,
         error_class="WebIpDailyLimitExceeded",
     )
-
-
-def _web_ip_face(face: str) -> str:
-    return f"{WEB_IP_FACE_PREFIX}{face}"
 
 
 def _partial(

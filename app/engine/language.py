@@ -41,11 +41,15 @@ _UZ_CYRL_WORDS = (
 
 
 def resolve_content_language(text: str, *, fallback: Language) -> Language:
-    """Return the dominant supported language/script for *text*.
+    """Return the dominant supported reply language for *text*.
 
     The detector is intentionally conservative and local: script majority wins
-    first, Uzbek-specific markers split Uzbek Cyrillic from Russian, and
-    ``langdetect`` is used only as an optional extra signal.
+    first, Uzbek-specific markers split Uzbek from Russian, and ``langdetect``
+    is used only as an optional extra signal.
+
+    Cyrillic-Uzbek is still detected — it must not be mistaken for Russian —
+    but Uzbek is only ever answered in Latin script, so it resolves to
+    :attr:`Language.uz_latn`.
     """
 
     normalized = f" {text.casefold()} "
@@ -61,12 +65,12 @@ def resolve_content_language(text: str, *, fallback: Language) -> Language:
 
 def _resolve_cyrillic(text: str, *, fallback: Language) -> Language:
     if _UZ_CYRL_MARKER_RE.search(text) or any(marker in text for marker in _UZ_CYRL_WORDS):
-        return Language.uz_cyrl
+        return Language.uz_latn
     detected = _langdetect(text)
     if detected == "ru":
         return Language.ru
     if detected == "uz":
-        return Language.uz_cyrl
+        return Language.uz_latn
     return Language.ru if fallback is Language.uz_latn else fallback
 
 

@@ -14,7 +14,7 @@ from app.config import Settings
 from app.content import EditorialBase
 from app.data.models import Base
 from app.engine.rules import run_rules
-from app.engine.rules.loader import clear_active_rule_packs
+from app.engine.rules.loader import clear_active_rule_pack
 from app.rules_store import RuleStoreBase
 from app.web.app import create_app
 
@@ -56,9 +56,9 @@ def _form(**overrides) -> dict:
 
 @pytest.fixture(autouse=True)
 def _reset_active_packs():
-    clear_active_rule_packs()
+    clear_active_rule_pack()
     yield
-    clear_active_rule_packs()
+    clear_active_rule_pack()
 
 
 @pytest.fixture
@@ -166,14 +166,14 @@ def test_preview_surfaces_an_uncompilable_regex_instead_of_saving_it(client) -> 
 
 def test_saving_an_override_republishes_the_pack_immediately(client) -> None:
     _login(client)
-    baseline, _ = run_rules(SAMPLE, "family")
+    baseline, _ = run_rules(SAMPLE)
     assert "fs.test.adminrule" not in {hit.rule_id for hit in baseline}
 
     response = client.post("/admin/rules", data=_form(), follow_redirects=False)
     assert response.status_code == 303
 
     # No waiting for the refresh interval: the edit is in force now.
-    hits, _ = run_rules(SAMPLE, "family")
+    hits, _ = run_rules(SAMPLE)
     assert "fs.test.adminrule" in {hit.rule_id for hit in hits}
     assert "fs.test.adminrule" in client.get("/admin/rules").text
 
@@ -204,7 +204,7 @@ def test_deleting_an_override_restores_the_baseline_rule(client) -> None:
         data=_form(rule_id="fs.credential.otp", disabled="true", patterns_ru=""),
         follow_redirects=False,
     )
-    hits, _ = run_rules("Пришлите код из смс", "family")
+    hits, _ = run_rules("Пришлите код из смс")
     assert "fs.credential.otp" not in {hit.rule_id for hit in hits}
 
     listing = client.get("/admin/rules").text
@@ -216,5 +216,5 @@ def test_deleting_an_override_restores_the_baseline_rule(client) -> None:
     )
 
     assert response.status_code == 303
-    restored, _ = run_rules("Пришлите код из смс", "family")
+    restored, _ = run_rules("Пришлите код из смс")
     assert "fs.credential.otp" in {hit.rule_id for hit in restored}
