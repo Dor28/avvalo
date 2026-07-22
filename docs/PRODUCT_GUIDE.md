@@ -200,14 +200,13 @@ Definitions and the procedure live in [VERIFY_VALIDATION.md](VERIFY_VALIDATION.m
 
 ## 9. Current sequence
 
-1. Finish and record production smoke verification for the built baseline.
-2. Publish and review the first small set of founder-authored educational cases.
-3. Produce the 30-scenario Avvalo Verify validation packet.
-4. Run paired advice-only versus evidence-backed sessions.
-5. Make one explicit `go`, `revise once`, or `stop` decision.
-6. Only after `go`, write one executor-ready task for the three-family MVP.
-7. Build and audit the narrow MVP.
-8. Run the measured alpha before expanding scope.
+1. Publish and review the first small set of founder-authored educational cases.
+2. Produce the 30-scenario Avvalo Verify validation packet.
+3. Run paired advice-only versus evidence-backed sessions.
+4. Make one explicit `go`, `revise once`, or `stop` decision.
+5. Only after `go`, write one executor-ready task for the three-family MVP.
+6. Build and audit the narrow MVP.
+7. Run the measured alpha before expanding scope.
 
 The executable order is maintained in [ROADMAP.md](ROADMAP.md).
 
