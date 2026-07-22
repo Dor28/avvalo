@@ -57,10 +57,6 @@ class Settings(BaseSettings):
     # intake is disabled and this setting does not authorize new writes.
     story_rejected_retention_days: int = Field(default=30, ge=1)
 
-    # Unset disables Sentry entirely — log_error() falls back to the local log only.
-    sentry_dsn: SecretStr | None = None
-    sentry_environment: str = "production"
-
     web_enabled: bool = False
     web_host: str = "0.0.0.0"
     web_port: int = Field(default=8000, ge=1, le=65535)

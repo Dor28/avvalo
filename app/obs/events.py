@@ -17,8 +17,6 @@ import re
 from enum import Enum
 from typing import Any
 
-import sentry_sdk
-
 LOGGER = logging.getLogger(__name__)
 
 ALLOWED_EVENT_NAMES = {
@@ -166,13 +164,6 @@ def log_error(stage: str, error_type: str, **fields: Any) -> dict[str, Any]:
     # `extra` exposes the structured fields to logging.Handler subclasses (e.g.
     # OperatorAlertHandler in app/obs/alerts.py) without them re-parsing the message.
     LOGGER.error("event=app_error fields=%s", normalized, extra={"avvalo_error": normalized})
-    # A no-op unless init_sentry() has run (SENTRY_DSN configured) — see app/obs/sentry.py.
-    sentry_sdk.capture_message(
-        f"app_error stage={stage} error_type={error_type}",
-        level="error",
-        tags={key: str(value) for key, value in normalized.items()},
-        fingerprint=["app_error", stage, error_type],
-    )
     return payload
 
 

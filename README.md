@@ -271,8 +271,6 @@ Runtime config is loaded from environment variables through
 | `DAILY_CHECK_LIMIT` | Daily Telegram checks for the Avvalo checker. |
 | `OPERATOR_ALERT_CHAT_ID` | Founder chat for debounced technical alerts. |
 | `OPERATOR_ALERT_DEBOUNCE_S` | Minimum interval between duplicate technical alerts. |
-| `SENTRY_DSN` | Optional Sentry DSN; blank disables external error tracking. |
-| `SENTRY_ENVIRONMENT` | Environment tag for privacy-safe Sentry error events. |
 | `WEB_ENABLED` | Starts the FastAPI web app in the shared process. |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | Gates web image uploads. |
 | `WEB_COOKIE_SECURE` | Must be `true` behind HTTPS in production. |
