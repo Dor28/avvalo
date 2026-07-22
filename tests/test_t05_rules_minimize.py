@@ -30,7 +30,7 @@ def test_unknown_face_is_rejected() -> None:
 
 
 def test_family_goldens_fire_expected_families(golden) -> None:
-    for fixture in golden("family"):
+    for fixture in golden():
         hits, _ = run_rules(fixture["input"], "family")
         assert hits, f"{fixture['id']}: expected at least one rule hit"
         families = {hit.family for hit in hits}

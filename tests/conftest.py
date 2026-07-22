@@ -40,10 +40,14 @@ async def session():
 
 @pytest.fixture
 def golden():
-    """Return a loader for a face's golden fixtures (``golden("family")``)."""
+    """Return a loader for the golden fixtures (``golden()``).
 
-    def _load(face: str) -> list[dict]:
-        return json.loads((GOLDEN_DIR / f"{face}.json").read_text(encoding="utf-8"))
+    The file is named for the asset set it exercises, not for the frozen
+    ``family`` face ID the fixtures carry in their ``face`` field.
+    """
+
+    def _load(name: str = "checker") -> list[dict]:
+        return json.loads((GOLDEN_DIR / f"{name}.json").read_text(encoding="utf-8"))
 
     return _load
 

@@ -7,7 +7,7 @@ from app.engine.minimize import minimize
 from app.engine.rules import load_rule_pack, run_rules
 
 _ROOT = Path(__file__).resolve().parents[1]
-_FAMILY_GOLDEN_PATH = _ROOT / "tests" / "fixtures" / "golden" / "family.json"
+_FAMILY_GOLDEN_PATH = _ROOT / "tests" / "fixtures" / "golden" / "checker.json"
 
 _EXPECTED_FS_RULE_IDS = {
     "fs_01_fake_bank_support": {

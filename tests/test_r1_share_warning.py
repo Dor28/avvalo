@@ -21,7 +21,7 @@ _SETTINGS = SimpleNamespace(app_hmac_secret=SecretStr("test-share-hmac-secret"))
 
 
 def test_share_summary_is_content_free_for_all_golden_fixtures(golden) -> None:
-    for case in golden("family"):
+    for case in golden():
         rule_hits, _signals = run_rules(case["input"], case["face"])
         rule_ids = [hit.rule_id for hit in rule_hits]
         for language in Language:

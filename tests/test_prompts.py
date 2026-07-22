@@ -28,7 +28,7 @@ def _read(name: str) -> str:
 
 
 def test_required_prompt_files_exist() -> None:
-    for name in ("system_safety.txt", "family.txt"):
+    for name in ("system_safety.txt", "checker.txt"):
         _read(name)
 
 
@@ -46,7 +46,7 @@ def test_system_prompt_keeps_the_core_prohibitions() -> None:
         assert token in system, f"system prompt should reference '{token}' (§8 constraints)"
 
 
-@pytest.mark.parametrize("name", ["family.txt"])
+@pytest.mark.parametrize("name", ["checker.txt"])
 def test_face_templates_expose_builder_placeholders(name: str) -> None:
     template = _read(name)
     for placeholder in FACE_TEMPLATE_PLACEHOLDERS:
@@ -54,7 +54,7 @@ def test_face_templates_expose_builder_placeholders(name: str) -> None:
 
 
 def test_consumer_prompt_forbids_confirming_payment_from_a_screenshot() -> None:
-    prompt = _read("family.txt").lower()
+    prompt = _read("checker.txt").lower()
     assert "incoming payment arrived" in prompt
     assert "screenshot" in prompt
 

@@ -15,6 +15,9 @@ from app.engine.types import InputType, Language
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GOLDEN_DIR = REPO_ROOT / "tests" / "fixtures" / "golden"
+# The fixture file is named for the asset set it exercises; the ``face`` value
+# it asserts against stays "family", which is frozen for database compatibility.
+GOLDEN_FILE = "checker"
 
 REQUIRED_KEYS = {
     "id",
@@ -50,9 +53,9 @@ def _norm(text: str) -> str:
     return text.lower()
 
 
-def _load(face: str) -> list[dict]:
-    data = json.loads((GOLDEN_DIR / f"{face}.json").read_text(encoding="utf-8"))
-    assert isinstance(data, list), f"{face}.json must be a JSON array"
+def _load(name: str = GOLDEN_FILE) -> list[dict]:
+    data = json.loads((GOLDEN_DIR / f"{name}.json").read_text(encoding="utf-8"))
+    assert isinstance(data, list), f"{name}.json must be a JSON array"
     return data
 
 
@@ -65,7 +68,7 @@ def _families_for(face: str) -> set[str]:
 
 
 def test_minimum_golden_counts() -> None:
-    assert len(_load("family")) >= 8
+    assert len(_load()) >= 8
 
 
 @pytest.mark.parametrize("face", ["family"])
@@ -74,7 +77,7 @@ def test_fixture_shape_and_values(face: str) -> None:
     valid_input_types = {it.value for it in InputType}
     seen_ids: set[str] = set()
 
-    for fixture in _load(face):
+    for fixture in _load():
         fid = fixture.get("id", "<no-id>")
         missing = REQUIRED_KEYS - fixture.keys()
         assert not missing, f"{fid}: missing keys {missing}"
@@ -101,7 +104,7 @@ def test_expected_families_exist_in_the_rule_pack(face: str) -> None:
     """Every expected family must be modeled by the face's rule pack (else it can never fire)."""
     pack_families = _families_for(face)
     problems: list[str] = []
-    for fixture in _load(face):
+    for fixture in _load():
         unknown = set(fixture["expected_rule_families"]) - pack_families
         if unknown:
             problems.append(f"{fixture['id']}: families not in {face} pack: {sorted(unknown)}")
@@ -110,7 +113,7 @@ def test_expected_families_exist_in_the_rule_pack(face: str) -> None:
 
 def test_payment_fixtures_forbid_claiming_money_arrived() -> None:
     confirmed = {_norm(phrase) for phrase in SG_MONEY_CONFIRMED}
-    payment_fixtures = [fixture for fixture in _load("family") if fixture["id"] >= "fs_06"]
+    payment_fixtures = [fixture for fixture in _load() if fixture["id"] >= "fs_06"]
     for fixture in payment_fixtures:
         forbidden = {_norm(item) for item in fixture["must_not_contain"]}
         assert forbidden & confirmed, (

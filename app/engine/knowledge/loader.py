@@ -39,7 +39,7 @@ def _load_knowledge_base(root: Path, face_id: str) -> KnowledgeBase:
         if not isinstance(version, str) or not _VERSION_RE.fullmatch(version):
             raise KnowledgeLookupError("knowledge/version.yaml has an invalid version")
 
-        face_dir = root / face_id
+        face_dir = root / FACES[face_id].knowledge_subdir
         if not face_dir.is_dir():
             raise KnowledgeLookupError(f"knowledge directory is missing for face: {face_id}")
 

@@ -43,9 +43,9 @@ Important modules:
 |---|---|---|
 | Engine | `app/engine/pipeline.py` | Orchestrates every check |
 | Types | `app/engine/types.py` | Boundary enums and Pydantic models |
-| Rules | `app/engine/rules/`, `rules/family/` | Deterministic local signals |
+| Rules | `app/engine/rules/`, `rules/checker/` | Deterministic local signals |
 | Minimization | `app/engine/minimize.py` | Removes PII before model calls |
-| Knowledge | `app/engine/knowledge/`, `knowledge/family/` | Reviewed explanatory guidance |
+| Knowledge | `app/engine/knowledge/`, `knowledge/checker/` | Reviewed explanatory guidance |
 | LLM | `app/engine/llm/` | OpenAI-compatible provider boundary and fallback |
 | Safety | `app/engine/validate.py` | Deterministic output validation |
 | Telegram | `app/bot/` | Consent, intake, result, feedback, Share |
@@ -106,7 +106,7 @@ Error classes are categorical identifiers, never exception messages.
 
 ## 5. Rules and payment protection
 
-`rules/family/families.yaml` is the sole active rule pack. Stable `fs.*` rule IDs must not be
+`rules/checker/families.yaml` is the sole active rule pack. Stable `fs.*` rule IDs must not be
 renamed because events, knowledge cards, tests, and sanitized Share summaries reference them.
 
 The pack covers credential theft, urgency/secrecy, authority impersonation, upfront payment,
@@ -119,7 +119,7 @@ account before refunding money or releasing goods.
 
 ## 6. Knowledge and model boundary
 
-Only approved, versioned cards from `knowledge/family/cards.yaml` may be retrieved. Cards explain
+Only approved, versioned cards from `knowledge/checker/cards.yaml` may be retrieved. Cards explain
 patterns and verification steps; they are not official-source evidence and cannot establish
 identity, intent, or fraud.
 

@@ -76,7 +76,13 @@ The legal posture depends on these; several are enforced by tests that will fail
   marks removed legacy surfaces as history. Module docstrings cite technical-plan sections
   (§5.1, §9, …) — keep those references in sync.
 - Tests named `test_tNN_*.py` map to the numbered build history in V1_TECHNICAL_PLAN §13; the
-  active golden end-to-end fixtures live in `tests/fixtures/golden/family.json`.
+  active golden end-to-end fixtures live in `tests/fixtures/golden/checker.json`.
+- **Asset paths are decoupled from the `family` face ID.** The rule pack, prompt, knowledge cards,
+  and golden fixtures live under `checker` names (`rules/checker/`, `prompts/checker.txt`,
+  `knowledge/checker/`); `Face` in [app/engine/faces.py](app/engine/faces.py) maps the frozen
+  `family` ID onto them. Do not rename the ID itself — `face` is part of the `consent` and
+  `rate_limit` primary keys. `checker` is also deliberately not `verify`, which is reserved for the
+  unbuilt Avvalo Verify evidence capability.
 - **Every user-facing string exists in all three languages** (`uz_latn`, `uz_cyrl`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
 - Async end-to-end; pytest runs with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed).
 - Style follows ruff config in [pyproject.toml](pyproject.toml): 100-char lines, import sorting (I), modern syntax (UP). Module docstrings state purpose and spec section; internal helpers use frozen dataclasses, boundary types use Pydantic.

@@ -189,7 +189,7 @@ def build_providers():
 def main():
     system = load(PROMPTS / "system_safety.txt")
     templates = {
-        "family": load(PROMPTS / "family.txt"),
+        "family": load(PROMPTS / "checker.txt"),
     }
     fixtures = []
     for f in sorted(glob.glob(str(FIXTURES / "*.json"))):
