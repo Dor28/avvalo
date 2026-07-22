@@ -1,5 +1,8 @@
 # Avvalo — v1 Build Scope (one engine, two faces) for the IT Park grant demo
 
+> **ARCHIVED — IMPLEMENTED LEGACY SCOPE, NOT THE CURRENT PRODUCT PLAN.** Current direction:
+> [PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md). Current work: [ROADMAP.md](../ROADMAP.md).
+
 > **Status:** Build scope (pre-implementation) · 2026-06-24
 > **Goal of this build:** A working demo that wins an **IT Park Uzbekistan** residency/grant — i.e. a credible *platform*, not a single bot.
 > **Decision context:** Founder chose **"build the shared engine, demo both faces"** (Avvalo + Avvalo Merchants), targeting **IT Park / grants**. See the strategic discussion that led here and the critique in `V1_MVP_PRODUCT_REVIEW.md`*(removed from repo — see git history)*.

@@ -1,5 +1,8 @@
 # Avvalo — Executor Handoff Prompt
 
+> **ARCHIVED — DO NOT EXECUTE.** This prompt describes the completed legacy build. Use
+> [ROADMAP.md](../ROADMAP.md) and an approved task under `docs/tasks/` for current work.
+
 > Copy everything in the box below and give it to the coding model/agent that will build Avvalo. It assumes that model has access to this repository.
 
 ---

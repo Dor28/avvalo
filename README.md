@@ -1,54 +1,50 @@
 # Avvalo
 
-Avvalo is a privacy-first AI safety assistant for Uzbekistan. It helps people
-check suspicious messages, screenshots, payment claims, links, and deals before
-they reply, send money, share personal details, or act on a claim.
+Avvalo is a privacy-first safety assistant for Uzbekistan. It helps people check
+suspicious messages, screenshots, links, QR codes, payment requests, offers, and
+documents before they reply, pay, install, sign, or share personal information.
 
 The product rule is simple:
 
-> Verify the situation, document, or process. Never rate the reputation of a
-> person.
+> Verify the situation, artifact, process, or source. Never rate the reputation
+> of a person.
 
-Avvalo is Telegram-first, works in Uzbek Latin, Uzbek Cyrillic, and Russian, and
-is built around one shared checking engine used by multiple faces:
+Avvalo is one consumer product, Telegram-first, and available in Uzbek Latin,
+Uzbek Cyrillic, and Russian. Telegram and the anonymous web checker are two
+channels over one shared engine.
 
-- **Avvalo consumer checker**: checks suspicious messages and returns risk
-  signs, verification steps, and questions to ask before the user acts.
-- **Avvalo Merchants**: seller-side checks for payment screenshots, order chats,
-  courier/refund pressure, and "verify in your real bank app" workflows.
-- **Anonymous web channel**: a thin server-rendered surface over the same engine,
-  with Turnstile-gated image uploads and session/IP limits.
+The product loop is:
+
+> **Send → Understand → Verify → Act → Share**
 
 Live Telegram bot: [@Avvalo_official_bot](https://t.me/Avvalo_official_bot)
 
 ## Status
 
-The v1 codebase contains the production-shaped checker: Telegram bot, anonymous
-web app, rule packs, OCR providers, OpenAI-compatible LLM adapter, safety
-validator, consent/deletion flows, privacy-safe metrics, Docker deployment, and
-tests. The knowledge-grounding layer now includes versioned reviewed cards,
-deterministic and optional semantic retrieval, provider fallback, structural
-rule-preservation validation, and privacy-safe coverage/health reporting.
+The v1 codebase contains the explanation baseline: Telegram bot, anonymous web
+app, rule packs, OCR providers, an OpenAI-compatible LLM adapter, reviewed
+knowledge retrieval, a safety validator, consent/deletion flows, privacy-safe
+metrics, Docker deployment, and tests.
 
-The current product direction is **Check, Learn, Share**:
-
-1. **Check** suspicious content through the bot or web app.
-2. **Learn** from public scam-library and education content.
-3. **Share** opt-in, reviewed, de-identified stories later.
-
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the current launch-phase tasks. The
-first step there is production smoke verification before adding the next growth
-features.
+The next product capability is **Avvalo Verify**: bounded, source-backed facts
+for official identity, links/QR codes, and regulated-organization/license
+routing. It is not considered built or live yet. The manual validation gate in
+[docs/VERIFY_VALIDATION.md](docs/VERIFY_VALIDATION.md) comes before feature code.
 
 ## What Avvalo Returns
 
-Every successful check returns a fixed, non-verdict structure:
+Every successful baseline check returns a fixed, non-verdict structure:
 
 - Red flags found in the submitted situation.
 - What the user should verify independently.
 - Questions to ask before paying, replying, or sending information.
 - A limitation line making clear Avvalo did not certify safety and did not judge
   a person.
+
+After Avvalo Verify passes validation and is implemented, a result may also
+include up to three typed source facts, each with a named source, observation
+time, and explicit limitation. Source failure stays `unavailable`; absence from
+one source never becomes a verdict.
 
 The system must never say "safe", "scammer", "fraud confirmed", or provide a
 person-level accusation.
@@ -108,7 +104,7 @@ app/
   obs/          privacy-safe events, metrics, cost accounting
   privacy/      consent and pseudonymous user-key helpers
   tools/        operator CLI modules
-rules/          YAML rule packs for family and merchant faces
+rules/          YAML rule packs; merchant files are legacy compatibility code
 knowledge/      versioned knowledge cards and reviewed case references
 prompts/        safety and face-specific prompt templates
 tests/          unit/integration tests and golden fixtures
@@ -166,9 +162,8 @@ docker compose up --build
 ```
 
 Open `http://localhost:8000` for the public landing page and
-`http://localhost:8000/check` for the consumer checker. The merchant checker
-remains available by direct URL at `http://localhost:8000/merchants`, but is not
-linked from the public navigation.
+`http://localhost:8000/check` for Avvalo. The legacy `/merchants` compatibility
+route may still exist in the baseline but is not an active product surface.
 
 Text checks require a reachable LLM endpoint. Image checks also require an OCR
 provider and, on the web, Turnstile configuration unless tests/mocks bypass it.
@@ -268,7 +263,7 @@ Runtime config is loaded from environment variables through
 | `GOOGLE_APPLICATION_CREDENTIALS` | Cloud Vision service-account path when using GCV. |
 | `NOTICE_VERSION` | Consent notice version; bump to force re-consent. |
 | `DAILY_LIMIT_FAMILY` | Daily Telegram checks for family face. |
-| `DAILY_LIMIT_MERCHANTS` | Daily Telegram checks for merchant face. |
+| `DAILY_LIMIT_MERCHANTS` | Legacy merchant-face compatibility limit. |
 | `OPERATOR_ALERT_CHAT_ID` | Founder chat for minimized story review and debounced technical alerts. |
 | `OPERATOR_ALERT_DEBOUNCE_S` | Minimum interval between duplicate technical alerts. |
 | `SENTRY_DSN` | Optional Sentry DSN; blank disables external error tracking. |
@@ -309,8 +304,9 @@ python tools/secret_scan.py --all
 
 ## Engineering Guardrails
 
-- Do not store submitted content unless a future task explicitly creates a
-  consented, minimized, reviewed story-capture exception.
+- Do not store submitted content. The existing, explicit-consent
+  `story_submission.minimized_text` field is the only sanctioned exception and
+  must not be expanded into a content strategy.
 - Do not add person, phone, card, or "reported N times" lookup features.
 - Do not weaken the safety prompts, validator, or output contract casually.
 - Do not put analysis logic in Telegram handlers or web routes; call the shared
@@ -322,20 +318,15 @@ python tools/secret_scan.py --all
 
 ## Key Documentation
 
-Start here:
+Read in this order:
 
-- [docs/ROADMAP.md](docs/ROADMAP.md) - current launch-phase work and next tasks.
-- [docs/AI_KNOWLEDGE_PIPELINE.md](docs/AI_KNOWLEDGE_PIPELINE.md) - rules +
-  knowledge + LLM retrieval and safety contract.
-- [docs/PRODUCT_VISION.md](docs/PRODUCT_VISION.md) - Check, Learn, Share vision.
-- [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) - authoritative product and
-  safety direction.
-- [docs/V1_TECHNICAL_PLAN.md](docs/V1_TECHNICAL_PLAN.md) - executable
-  architecture and engineering contract.
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - production deployment guide.
-- [docs/V1_CURRENT_PM_REVIEW.md](docs/V1_CURRENT_PM_REVIEW.md) - current product
-  risks and backlog.
-- [docs/PRODUCT_HORIZONS.md](docs/PRODUCT_HORIZONS.md) - future option map.
+- [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) — canonical product and safety.
+- [docs/ROADMAP.md](docs/ROADMAP.md) — the only active order of work.
+- [docs/VERIFY_VALIDATION.md](docs/VERIFY_VALIDATION.md) — experiment and gates.
+- [docs/V1_TECHNICAL_PLAN.md](docs/V1_TECHNICAL_PLAN.md) — implemented baseline.
+- [docs/AI_KNOWLEDGE_PIPELINE.md](docs/AI_KNOWLEDGE_PIPELINE.md) — explanation
+  knowledge and LLM safety contract.
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — production operations.
 
 For the full docs index, see [docs/README.md](docs/README.md).
 

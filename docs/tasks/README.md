@@ -17,6 +17,9 @@ work equally for Claude Code, Codex, or a human.
 |---|---|---|---|---|---|
 | — | _no open tasks yet_ | | | | |
 
+Do not create an Avvalo Verify implementation task until Phase B in
+[ROADMAP.md](../ROADMAP.md) records a `go` decision.
+
 Statuses: `open` · `in_progress` · `blocked` · `done` · `cancelled`.
 The frontmatter in each file is the source of truth; this table is a convenience view — update
 both in the same commit.
@@ -42,11 +45,9 @@ not decorative — each one prevents a specific failure:
 | **PROHIBITIONS** | The shortcut that makes tests pass while defeating the point of the task |
 | **DONE WHEN** | "Works well" as an acceptance criterion. Commands and expected results only |
 
-`PROHIBITIONS` is the section that earns its keep. [IMPROVEMENT_BACKLOG.md](../IMPROVEMENT_BACKLOG.md)
-T-01 is the reference example: it records a known retrieval gap as a deliberate `xfail` and
-**forbids** widening the YAML alias list to make it pass — because that shortcut would hide the
-exact problem the suite exists to expose. Write prohibitions like that: name the cheat you can
-foresee.
+`PROHIBITIONS` is the section that earns its keep. Name the shortcut that could make tests pass
+while defeating the product or safety goal — for example, widening a keyword list to hide a
+retrieval failure, weakening the validator, or persisting content for easier debugging.
 
 ## Generating a task
 
@@ -57,10 +58,9 @@ to an executor; the generator can be wrong about scope in a way the executor wil
 
 ## Related
 
-- [IMPROVEMENT_BACKLOG.md](../IMPROVEMENT_BACKLOG.md) — T-01…T-07, all implemented. Kept as the
-  historical record and as the reference for prompt quality. New tasks go here instead.
-- [ROADMAP.md](../ROADMAP.md) — the phase plan (Phase A verification, features R0–R6). It says
-  *what* to do and in what order; this directory holds the *executable prompts*. The roadmap
-  stays authoritative on priority.
-- Founder-only work (marked 👤 in the roadmap) can live here as a task file with
-  `owner: founder` — an agent may prepare materials for it but must never fake the result.
+- [IMPROVEMENT_BACKLOG.md](../IMPROVEMENT_BACKLOG.md) — historical summary of T-01…T-07.
+- [ROADMAP.md](../ROADMAP.md) — the only active order of work.
+- [VERIFY_VALIDATION.md](../VERIFY_VALIDATION.md) — the gate that must pass before the first
+  Avvalo Verify implementation task is written.
+- Founder-owned research or validation may use `owner: founder`; an agent may prepare materials
+  but must never fabricate results.

@@ -1,5 +1,8 @@
 # Avvalo — Session Decision Log (2026-06-17)
 
+> **ARCHIVED — HISTORICAL CONTEXT ONLY.** Current decisions live in
+> [PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md) and [ROADMAP.md](../ROADMAP.md).
+
 > A chronological record of the founding PM session — the decisions and *why*. This is the "how we got here" companion to [PRODUCT_DESIGN.md](PRODUCT_DESIGN.md) (the "what we decided").
 
 ## Origin

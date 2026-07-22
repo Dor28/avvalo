@@ -1,15 +1,19 @@
-# Avvalo — v1 Technical Plan & Architecture (executable build spec)
+# Avvalo — v1 Baseline Technical Plan & Architecture
 
-> **Status:** Implemented v1 baseline plus required knowledge-grounding revision · 2026-07-15
+> **Status:** Implemented baseline architecture; not the current product roadmap · 2026-07-22
 > **Audience:** The implementing engineer / coding model. **This document makes the decisions so you don't have to.** Where it says "MUST," do exactly that. Where it says "verify," check current external docs before coding (APIs change). Do not introduce new dependencies, services, or patterns not listed here without flagging it.
-> **Implements:** [V1_BUILD_SCOPE.md](archive/V1_BUILD_SCOPE.md) — one engine, two faces (Avvalo + Avvalo Merchants). Safety/vision authority: [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). Engine behaviour & golden examples: [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md).
+> **Scope note:** This document records the built one-engine/two-code-face baseline. The merchant
+> face is legacy compatibility code, not an active product. Safety and product authority:
+> [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md). Current priority: [ROADMAP.md](ROADMAP.md). Existing behavior
+> examples live in `tests/fixtures/golden/`.
 
 ---
 
 ## 0. How to use this document
 
-1. Read §1–§4 to understand the system, then build in the order of §13 (numbered tasks).
-2. Each §13 task has **explicit acceptance criteria** — do not move on until they pass.
+1. Read §1–§4 to understand the built system. Section §13 is implementation history, not the
+   current task order.
+2. For new work, follow [ROADMAP.md](ROADMAP.md) and an approved task under `docs/tasks/`.
 3. The contracts in §6–§9 are the source of truth for function signatures and data shapes. Match them exactly so modules compose.
 4. **Golden rule:** submitted content (text, images, OCR text, model output) is *ephemeral* — it must **never** be written to a database, log, analytics event, or backup. If you are about to persist a string that came from the user, stop.
 5. If a requirement here conflicts with [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md)'s safety rules, the guide wins — flag the conflict.
@@ -110,7 +114,7 @@ Postgres, the bot, and the web app already run locally via `docker compose`, so 
 
 ```
         ┌─────────── Telegram (aiogram) ───────────┐   ┌──── Web (FastAPI + HTMX) ────┐
-        │ Avvalo face      Avvalo Merchants face    │   │ anonymous check; Turnstile-  │
+        │ Avvalo face      legacy merchants face    │   │ anonymous check; Turnstile-  │
         │ (handlers, FSM, Telegram identity)        │   │ gated image upload           │
         └─────────────────────┬─────────────────────┘   └──────────────┬───────────────┘
                               │       same CheckInput → run_check()      │
@@ -146,7 +150,9 @@ Postgres, the bot, and the web app already run locally via `docker compose`, so 
 
 The complete rules/knowledge/LLM contract is [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md). That document is the authority for retrieval, reviewed-case handling, zero-rule behavior, failure degradation, and knowledge/version metadata.
 
-**The two faces share 100% of this pipeline.** A `Face` value (`family` | `merchants`) selects (a) which rule pack loads and (b) which output template/prompt is used. Nothing else differs.
+**The two code faces share 100% of this pipeline.** A `Face` value (`family` | `merchants`)
+selects the rule pack and output prompt. The `merchants` value is retained for compatibility and
+must not be interpreted as current product scope.
 
 **Both channels (Telegram, Web) share 100% of the engine too.** Each channel builds the same `CheckInput` and calls the same `run_check()`. No analysis logic ever lives in a channel — the web layer only adds anonymous identity (a signed-cookie pseudonymous key instead of a Telegram ID) and the abuse controls Telegram provides for free (captcha, IP rate-limit, upload caps).
 
@@ -404,7 +410,7 @@ class LLMProvider(Protocol):
 - NEVER repeat a full card/OTP/password/passport/secret.
 - NEVER tell the user to open the link, scan the QR, call the number in the message, or reply to "test" the sender.
 - NEVER invent facts, policies, contact details, prices, or legal conclusions.
-- (Avvalo Merchants) NEVER state that money arrived/was received based on a screenshot.
+- (legacy merchants face) NEVER state that money arrived/was received based on a screenshot.
 
 ### 8.1 Knowledge retrieval contract
 
@@ -515,8 +521,8 @@ rules:
 - **Authoritative:** a rule hit is a fact. The LLM may explain/dedupe but may not erase or invent one (enforced by passing hits as grounded input and by the validator not removing them).
 
 ### Required rule families
-- **Avvalo (5):** `credential_theft`, `urgency_secrecy`, `authority_impersonation`, `upfront_payment`, `verification_avoidance` (+ `implausible_promise`, `suspicious_link_qr` from the guide's 7 — include all 7 if cheap). Source: [FAMILY_VALIDATION.md](FAMILY_VALIDATION.md) §8.
-- **Avvalo Merchants (~5):** `receipt_inconsistency` (amount/date/bank fields don't line up), `amount_mismatch` (order total ≠ claimed paid), `edited_screenshot_hint` (textual signs only — font/spacing claims; do NOT do image forensics in v1), `fake_courier_refund` (chat patterns), `verify_in_bank_app` (always-emit reminder family).
+- **Avvalo (5):** `credential_theft`, `urgency_secrecy`, `authority_impersonation`, `upfront_payment`, `verification_avoidance` (+ `implausible_promise`, `suspicious_link_qr`). Existing behavior is locked by `rules/family/families.yaml` and `tests/fixtures/golden/family.json`.
+- **Legacy merchants face (~5):** `receipt_inconsistency` (amount/date/bank fields don't line up), `amount_mismatch` (order total ≠ claimed paid), `edited_screenshot_hint` (textual signs only — font/spacing claims; do NOT do image forensics in v1), `fake_courier_refund` (chat patterns), `verify_in_bank_app` (always-emit reminder family).
 
 ---
 
@@ -531,7 +537,7 @@ rules:
 
 ---
 
-## 13. Build sequence (numbered tasks with acceptance criteria)
+## 13. Implemented build sequence (historical acceptance record)
 
 Build in this order. Each task is independently testable.
 
@@ -586,7 +592,7 @@ volumes: { pg: {}, ollama_models: {} }
 **T9 — Limits, feedback, share, events.** Daily limit per face; post-check feedback buttons → `feedback` rows; share button (link only); wire all privacy-safe events.
 *Accept:* 6th family check same day is refused with a reset message; feedback recorded categorically; events emitted for the full happy path; logger rejects a content field (test).
 
-**T10 — Avvalo Merchants face.** Merchants rule pack (§11), `prompts/merchants.txt`, merchants entry copy, and shared engine wiring.
+**T10 — legacy merchants face (implemented history).** Merchants rule pack (§11), `prompts/merchants.txt`, merchants entry copy, and shared engine wiring.
 *Accept:* ≥3 merchants golden examples (author them in `tests/fixtures/golden`) pass end-to-end; merchants output **never** says money arrived; same engine path used (assert pipeline code is unchanged).
 
 **T11 — Retention jobs & metrics export.** APScheduler TTL jobs; a protected `metrics` query/CLI that returns event counts, activation, completion, cost, no-signal fire-rate.
@@ -629,10 +635,11 @@ volumes: { pg: {}, ollama_models: {} }
 **Demo script (rehearse this for the grant panel):**
 1. *Avvalo:* forward the fake-bank-support message (UZ-Latn) → instant 🚩/✅/❓ in Uzbek. Show it never says "scammer."
 2. Send a screenshot of the seller-prepayment scam (UZ-Cyrl image) → OCR → same structured read in Cyrillic.
-3. *Avvalo Merchants:* forward a payment-screenshot order → merchant checklist; point out it says **"verify in your bank app,"** never "money received."
+3. *Legacy compatibility demo:* forward a payment-screenshot order → merchant checklist; point out it says **"verify in your bank app,"** never "money received."
 4. *Web app:* open the URL, run the same Avvalo check anonymously → identical output; show the Turnstile-gated image upload. (One engine, two channels.)
 5. Show `/privacy` + `/delete_my_data`, then the **metrics export** (checks, languages, cost/check).
-6. Close on the platform story: one engine, two faces, two channels — roadmap = on-prem OCR + self-hosted model + payment-provider API + more faces.
+6. Close on the engineering story: one shared engine and two channels. Do not present legacy faces
+   or old integration ideas as the current roadmap.
 
 ---
 

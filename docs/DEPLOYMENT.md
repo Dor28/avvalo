@@ -1,9 +1,11 @@
 # Avvalo — MVP Deployment Guide (Hetzner)
 
-> **Status:** Operational guide · 2026-06-27
+> **Status:** Operational guide for the implemented baseline · 2026-07-22
 > **Audience:** The operator (you) deploying the v1 build to a single Hetzner VM.
 > **Scope:** Get the bot + (optional) web channel running in production, securely, on infrastructure that **starts small but scales without a rewrite.**
 > **Companions:** Architecture is [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md); scope is [archive/V1_BUILD_SCOPE.md](archive/V1_BUILD_SCOPE.md) (historical); current work queue is [ROADMAP.md](ROADMAP.md). Safety/privacy rules in [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) **win on any conflict** — nothing in this guide may weaken the "no submitted content is ever persisted or logged" guarantee.
+> **Product note:** Merchant tokens, limits, rules, and routes below document legacy compatibility
+> surfaces in the deployed code. They are not an active Avvalo product or roadmap item.
 
 ---
 
@@ -84,7 +86,7 @@ You will use two files added for production:
 |---|---|---|
 | Hetzner Cloud account | console.hetzner.cloud | Project + payment method. |
 | SSH keypair | your laptop | `ssh-keygen -t ed25519 -C "avvalo-deploy"` if you don't have one. **Never** put the private key on the server. |
-| Telegram bot token(s) | @BotFather | One per face. Avvalo (family) is required; Avvalo Merchants optional. The production Avvalo bot is **[@Avvalo_official_bot](https://t.me/Avvalo_official_bot)**. |
+| Telegram bot token(s) | @BotFather | The Avvalo token is required. A second token exists only for the legacy merchant code face and is not needed for the current product. The production Avvalo bot is **[@Avvalo_official_bot](https://t.me/Avvalo_official_bot)**. |
 | LLM host + API key | OpenRouter / Together / Fireworks | Pick one with a **DPA + no-retention/no-training** clause. |
 | Google Cloud Vision key | console.cloud.google.com | Service-account JSON with the *Cloud Vision API* enabled. Only if OCR is on. |
 | Cloudflare Turnstile keys | dash.cloudflare.com → Turnstile | **Web only** — gates image upload. |

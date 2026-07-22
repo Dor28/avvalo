@@ -1,5 +1,8 @@
 # Avvalo — Product Design Document
 
+> **ARCHIVED — DO NOT USE FOR PRODUCT SCOPE OR PRIORITY.** It contains the retired accusation-graph
+> era. Current direction: [PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md).
+
 > **Status:** MVP definition (pre-build). Living document.
 > **Last updated:** 2026-06-20
 > **Owner:** Solo technical founder (Uzbekistan)

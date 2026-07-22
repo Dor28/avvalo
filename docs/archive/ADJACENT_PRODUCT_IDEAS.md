@@ -1,5 +1,8 @@
 # Avvalo — Adjacent Product Ideas
 
+> **ARCHIVED — DO NOT USE FOR PRODUCT SCOPE OR PRIORITY.** Current direction:
+> [PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md). Current work: [ROADMAP.md](../ROADMAP.md).
+
 > **Working strategy note**  
 > **Created:** 2026-06-21  
 > **Theme:** Community-first products that help ordinary people check before they commit money, identity, or trust.

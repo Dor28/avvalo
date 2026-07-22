@@ -1,8 +1,11 @@
 # Avvalo — AI + Knowledge Pipeline Contract
 
-> **Status:** Authoritative target contract for every check · 2026-07-15
+> **Status:** Authoritative contract for the built explanation pipeline · 2026-07-22
 > **Authority:** [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) remains the product and safety authority. This document defines how the shared engine must combine local rules, curated knowledge, reviewed cases, and the LLM.
 > **Scope:** Questions and submitted content about suspicious messages, calls, payments, documents, links, deals, and related situations. Avvalo is not a general-purpose assistant for unrelated topics.
+> **Evidence boundary:** A knowledge card or reviewed case is explanatory guidance, never an
+> official-source fact. Avvalo Verify requires a separate typed adapter result with source,
+> observation time, status, and limitations. Do not relabel knowledge retrieval as verification.
 
 ## 1. Required outcome
 

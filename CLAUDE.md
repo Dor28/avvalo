@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Avvalo — an AI "check before you commit" assistant for Uzbekistan. Users send a suspicious message, screenshot, payment, or deal (Uzbek Latin/Cyrillic or Russian) via Telegram or an anonymous web page; one shared checking engine returns red flags and verification steps. Two product rules shape the whole codebase: it verifies the **situation, never the person**, and it never issues "safe"/"scam" **verdicts** — both are enforced in code (rules + validator), not just in docs.
+Avvalo — a "check before you commit" assistant for Uzbekistan. Users send a suspicious message, screenshot, link, QR code, payment request, offer, or document (Uzbek Latin/Cyrillic or Russian) through Telegram or an anonymous web page. One shared engine explains red flags and next actions. The next product capability, Avvalo Verify, may add typed source facts only after the validation gate in `docs/VERIFY_VALIDATION.md`. Two rules shape the whole codebase: verify the **situation, never the person**, and never issue "safe"/"scam" **verdicts**.
 
 ## Commands
 
@@ -29,7 +29,7 @@ All configuration comes from environment variables via [app/config.py](app/confi
 
 One process ([app/main.py](app/main.py)) runs everything: the aiogram Telegram bot (polling), the FastAPI anonymous web channel (when `WEB_ENABLED=true`), and the retention scheduler, sharing one async SQLAlchemy engine.
 
-**One engine, two faces.** A face ([app/engine/faces.py](app/engine/faces.py)) is just a rule-pack directory + prompt template + daily limit: `family` and `merchants` (product names "Avvalo" / "Avvalo Merchants"; rule IDs keep legacy `fs.` / `sg.` prefixes). Everything else is shared. Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` and call `run_check()` — new product behavior belongs in the engine or a face's rule pack/prompt, not in a channel handler.
+**One public product, two legacy code faces.** A face ([app/engine/faces.py](app/engine/faces.py)) is a rule-pack directory + prompt template + daily limit: `family` and `merchants`. The `merchants` face and legacy `fs.` / `sg.` rule prefixes remain technical compatibility surfaces, not active product direction. Everything else is shared. Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` and call `run_check()` — new product behavior belongs in the engine, not in a channel handler. Do not extend the merchant face unless an explicit task changes the product decision.
 
 **The pipeline** ([app/engine/pipeline.py](app/engine/pipeline.py), `run_check`) is the core; every check from every channel flows through the same stages:
 
@@ -60,7 +60,7 @@ The legal posture depends on these; several are enforced by tests that will fail
 
 ## Conventions
 
-- **Spec-driven:** [docs/V1_TECHNICAL_PLAN.md](docs/V1_TECHNICAL_PLAN.md) is the build spec; module docstrings cite its section numbers (§5.1, §9, …) — keep the code and those references in sync. [docs/README.md](docs/README.md) indexes all product docs; [docs/ROADMAP.md](docs/ROADMAP.md) is the current work queue.
+- **Spec-driven:** [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) defines product scope; [docs/ROADMAP.md](docs/ROADMAP.md) is the only current work queue; [docs/V1_TECHNICAL_PLAN.md](docs/V1_TECHNICAL_PLAN.md) describes the built baseline. Module docstrings cite technical-plan sections (§5.1, §9, …) — keep those references in sync.
 - Tests named `test_tNN_*.py` map to the numbered build tasks in V1_TECHNICAL_PLAN §13; golden end-to-end fixtures live in `tests/fixtures/golden/<face>.json`.
 - **Every user-facing string exists in all three languages** (`uz_latn`, `uz_cyrl`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
 - Async end-to-end; pytest runs with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed).
