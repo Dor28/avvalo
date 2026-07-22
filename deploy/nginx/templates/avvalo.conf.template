@@ -22,7 +22,12 @@ map $request_method $check_limit_key {
     default "";
     POST $binary_remote_addr;
 }
+map $request_method $admin_login_limit_key {
+    default "";
+    POST $binary_remote_addr;
+}
 limit_req_zone $check_limit_key zone=web_check_posts:10m rate=12r/m;
+limit_req_zone $admin_login_limit_key zone=admin_login_posts:10m rate=5r/m;
 limit_conn_zone $binary_remote_addr zone=web_clients:10m;
 
 # Access logs carry client IPs and request paths; Avvalo keeps only
@@ -139,6 +144,15 @@ server {
     # ordinary GET navigation remains unaffected.
     location = /check {
         limit_req zone=web_check_posts burst=4 nodelay;
+        limit_req_status 429;
+        limit_conn web_clients 5;
+        proxy_pass http://$avvalo_upstream:8000;
+    }
+
+    # Slow password guessing while leaving the authenticated editor unaffected.
+    # The map above gives GET requests an empty key, so only login submissions count.
+    location = /admin/login {
+        limit_req zone=admin_login_posts burst=3 nodelay;
         limit_req_status 429;
         limit_conn web_clients 5;
         proxy_pass http://$avvalo_upstream:8000;

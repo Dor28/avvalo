@@ -1,6 +1,3 @@
-{# Shared check form. Included by landing.html (home) and index.html (/check).
-   Set `form_steps = true` to show the inline 1/2/3 chips on surfaces that have no
-   separate workflow explainer above the form. #}
 <form
   class="check-form"
   action="/check"
@@ -9,75 +6,86 @@
   novalidate
   data-busy-label="{{ copy.checking }}"
   data-empty-error="{{ copy.empty_error }}"
+  data-consent-error="{{ copy.consent_error }}"
   data-error-title="{{ copy.result_error_title }}"
 >
   <input type="hidden" name="language" value="{{ language }}">
 
-  <div class="field primary-field">
-    <label class="field-head" for="check-text">
-      {% if form_steps %}<span class="field-step" aria-hidden="true">1</span>{% endif %}
-      <span class="field-label">{{ face_copy.prompt }}</span>
-    </label>
+  <div class="field composer-field">
+    <label class="field-label" for="check-text">{{ face_copy.prompt }}</label>
     <textarea
       id="check-text"
       name="text"
-      rows="8"
+      rows="7"
       maxlength="{{ max_text_chars }}"
+      aria-describedby="input-hint text-counter"
       placeholder="{{ face_copy.textarea_placeholder }}"
     ></textarea>
-    <p class="char-counter" data-max="{{ max_text_chars }}" hidden>
-      <span class="char-counter-value">0</span> / {{ max_text_chars }}
-    </p>
+    <div class="input-meta">
+      <small id="input-hint">{{ copy.input_hint }}</small>
+      <p id="text-counter" class="char-counter" data-max="{{ max_text_chars }}" hidden>
+        <span class="char-counter-value">0</span> / {{ max_text_chars }}
+      </p>
+    </div>
   </div>
 
-  <div class="attachment-panel">
-    <p class="field-head">
-      {% if form_steps %}<span class="field-step" aria-hidden="true">2</span>{% endif %}
-      <span class="field-label">{{ copy.image_label }}</span>
-      <span class="optional-tag">{{ copy.optional_label }}</span>
-    </p>
-    <div class="form-grid">
-      <div class="field file-field">
-        <input id="check-image" class="file-input" name="image" type="file" accept="image/*">
-        <label class="file-drop" for="check-image">
-          <svg class="file-drop-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <div class="attachment-grid">
+    <div class="field file-field">
+      <span class="field-label">
+        {{ copy.image_label }}
+        <span class="optional-tag">{{ copy.optional_label }}</span>
+      </span>
+      <input id="check-image" class="file-input" name="image" type="file" accept="image/*">
+      <label class="file-drop" for="check-image">
+        <span class="file-drop-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
             <path d="M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5M12 15V4m0 0L8 8m4-4 4 4"
                   fill="none" stroke="currentColor" stroke-width="1.7"
                   stroke-linecap="round" stroke-linejoin="round"></path>
           </svg>
-          <span class="file-drop-label">{{ copy.choose_file }}</span>
-        </label>
-        <p class="file-chosen" hidden>
-          <span class="file-chosen-name"></span>
-          <button type="button" class="file-clear" aria-label="{{ copy.clear_file }}">&times;</button>
-        </p>
-      </div>
-      <label class="field">
-        <span class="field-label">{{ copy.caption_label }}</span>
-        <input name="caption" type="text" maxlength="{{ max_caption_chars }}"
-               placeholder="{{ face_copy.caption_placeholder }}">
+        </span>
+        <span class="file-drop-copy">
+          <strong>{{ copy.choose_file }}</strong>
+          <small>{{ face_copy.image_hint }}</small>
+        </span>
       </label>
+      <p class="file-chosen" hidden>
+        <span class="file-chosen-name"></span>
+        <button type="button" class="file-clear" aria-label="{{ copy.clear_file }}">&times;</button>
+      </p>
     </div>
-    <small>{{ face_copy.image_hint }}</small>
+
+    <label class="field context-field">
+      <span class="field-label">
+        {{ copy.caption_label }}
+        <span class="optional-tag">{{ copy.optional_label }}</span>
+      </span>
+      <input name="caption" type="text" maxlength="{{ max_caption_chars }}"
+             placeholder="{{ face_copy.caption_placeholder }}">
+    </label>
   </div>
 
   {% if turnstile_site_key %}
     <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
   {% endif %}
 
-  <details class="privacy-details">
-    <summary>{{ copy.privacy_link }}</summary>
-    <p>{{ privacy_text }}</p>
-  </details>
-
-  <label class="consent">
-    <input type="checkbox" name="consent" value="yes">
-    <span>{{ copy.consent_label }}</span>
-  </label>
+  <div class="consent-panel">
+    <label class="consent">
+      <input type="checkbox" name="consent" value="yes">
+      <span>{{ copy.consent_label }}</span>
+    </label>
+    <details class="privacy-details">
+      <summary>{{ copy.privacy_link }}</summary>
+      <p>{{ privacy_text }}</p>
+    </details>
+  </div>
 
   <button type="submit" class="submit-button">
-    {% if form_steps %}<span class="field-step" aria-hidden="true">3</span>{% endif %}
     <span class="submit-label">{{ copy.submit }}</span>
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+    </svg>
   </button>
 </form>
 

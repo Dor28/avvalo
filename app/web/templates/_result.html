@@ -1,10 +1,20 @@
 {% if error %}
-  <div class="result-block error">
-    <strong>{{ copy.result_error_title }}</strong>
-    <p>{{ error }}</p>
+  <div class="result-block error" role="alert">
+    <span class="result-icon" aria-hidden="true">!</span>
+    <div>
+      <strong>{{ copy.result_error_title }}</strong>
+      <p>{{ error }}</p>
+    </div>
   </div>
 {% elif result %}
   <div class="result-block">
-    <pre>{{ result.text or copy.result_empty }}</pre>
+    <header class="result-header">
+      <span class="result-icon" aria-hidden="true">✓</span>
+      <div>
+        <small>{{ copy.result_ready }}</small>
+        <strong>{{ copy.result_title }}</strong>
+      </div>
+    </header>
+    <div class="result-copy">{{ result.text | replace('**', '') }}</div>
   </div>
 {% endif %}

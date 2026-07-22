@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="{{ copy.html_lang }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b6e75">
+    <meta name="description" content="{{ post.summary }}">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{{ post.title }}">
+    <meta property="og:description" content="{{ post.summary }}">
+    <title>{{ post.title }} — Avvalo</title>
+    <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{ static_version }}">
+    <link rel="stylesheet" href="/static/styles.css?v={{ static_version }}">
+  </head>
+  <body class="case-detail-page">
+    {% set active_section = 'cases' %}
+    {% include "_header.html" %}
+
+    <main class="article-shell">
+      <a class="article-back" href="/cases?language={{ language }}">← {{ editorial.back_to_cases }}</a>
+      <article class="article-card">
+        <header class="article-header">
+          <div class="case-card-meta">
+            <span class="category-pill">{{ editorial.categories[post.category] }}</span>
+            <time datetime="{{ post.published_ts.date().isoformat() }}">
+              {{ post.published_ts.strftime('%d.%m.%Y') }}
+            </time>
+            <span>{{ editorial.read_time.format(minutes=post.reading_minutes) }}</span>
+          </div>
+          <h1>{{ post.title }}</h1>
+          <p>{{ post.summary }}</p>
+        </header>
+        <div class="article-body">{{ post.article }}</div>
+        <aside class="article-note">{{ editorial.article_note }}</aside>
+      </article>
+
+      <aside class="article-cta">
+        <div>
+          <p class="eyebrow">Avvalo</p>
+          <h2>{{ editorial.case_cta_title }}</h2>
+          <p>{{ editorial.case_cta_body }}</p>
+        </div>
+        <a class="submit-button" href="/?language={{ language }}#check-text">
+          {{ editorial.case_cta_button }}
+          <span aria-hidden="true">→</span>
+        </a>
+      </aside>
+    </main>
+
+    {% include "_footer.html" %}
+  </body>
+</html>

@@ -1,13 +1,31 @@
 <header class="topbar">
-  <a class="brand" href="/?language={{ language }}" aria-label="Avvalo">
-    <span class="brand-mark" aria-hidden="true">
-      <img src="/static/icon-192.png?v={{ static_version }}" alt="">
-    </span>
-    <span>Avvalo</span>
-  </a>
-  <nav class="language-nav compact" aria-label="{{ copy.language_label }}">
-    {% for option in languages %}
-      <a class="{% if option == language %}active{% endif %}" {% if option == language %}aria-current="page"{% endif %} href="{{ language_path }}?language={{ option }}">{{ language_labels[option] }}</a>
-    {% endfor %}
-  </nav>
+  <div class="topbar-inner">
+    <a class="brand" href="/?language={{ language }}" aria-label="Avvalo">
+      <span class="brand-mark" aria-hidden="true">
+        <img src="/static/icon-192.png?v={{ static_version }}" alt="">
+      </span>
+      <span class="brand-copy">
+        <strong>Avvalo</strong>
+        <small>{{ copy.brand_tagline }}</small>
+      </span>
+    </a>
+    <div class="topbar-actions">
+      <nav class="primary-nav" aria-label="{{ copy.nav_label }}">
+        <a class="{% if active_section == 'check' %}active{% endif %}"
+           {% if active_section == 'check' %}aria-current="page"{% endif %}
+           href="/?language={{ language }}">{{ copy.nav_check }}</a>
+        <a class="{% if active_section == 'cases' %}active{% endif %}"
+           {% if active_section == 'cases' %}aria-current="page"{% endif %}
+           href="/cases?language={{ language }}">{{ copy.nav_cases }}</a>
+      </nav>
+      <nav class="language-nav" aria-label="{{ copy.language_label }}">
+        {% for option in languages %}
+          <a class="{% if option == language %}active{% endif %}"
+             {% if option == language %}aria-current="page"{% endif %}
+             aria-label="{{ language_labels[option] }}"
+             href="{{ language_path }}?language={{ option }}">{{ short_language_labels[option] }}</a>
+        {% endfor %}
+      </nav>
+    </div>
+  </div>
 </header>

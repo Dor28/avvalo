@@ -24,7 +24,20 @@ def test_settings_load_required_values() -> None:
     assert settings.daily_limit_family == 5
     assert settings.daily_limit_for("merchants") is None
     assert settings.web_enabled is False
+    assert settings.admin_access_key is None
     assert "test-api-key" not in repr(settings)
+
+
+def test_admin_access_key_is_optional_and_secret() -> None:
+    settings = Settings(
+        _env_file=None,
+        admin_access_key="test-admin-editor-key",
+        **REQUIRED_SETTINGS,
+    )
+
+    assert settings.admin_access_key is not None
+    assert settings.admin_access_key.get_secret_value() == "test-admin-editor-key"
+    assert "test-admin-editor-key" not in repr(settings)
 
 
 def test_output_token_limit_cannot_exceed_safety_budget() -> None:

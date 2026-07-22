@@ -4,8 +4,8 @@
 > **Last updated:** 2026-07-22
 > **Product authority:** [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md)
 
-This roadmap contains one product path only. Older launch-feature lists, merchant-first gates,
-content plans, voice work, group monitoring, and horizon ideas are not active work.
+This roadmap contains one product path only. Founder-authored educational cases support discovery
+and teach the checking habit, but do not create another product or reuse submitted checks.
 
 ## 0. Rules for every work session
 
@@ -16,6 +16,19 @@ content plans, voice work, group monitoring, and horizon ideas are not active wo
 5. Never claim an official source was checked without a typed Avvalo Verify result.
 6. Do not create an implementation task for a feature that has not passed its product gate.
 7. `main` deploys to production; do not push without explicit authorization and smoke evidence.
+
+## Editorial cases — Implemented, content rollout pending
+
+- [x] Public trilingual list and individual case pages.
+- [x] Founder-only login and trilingual draft/publish editor.
+- [x] Editorial content stored separately from user-check data.
+- [x] Published cases link readers back to the unified checker.
+- [ ] Founder configures `ADMIN_ACCESS_KEY` in production.
+- [ ] Founder writes, reviews, and publishes the first three to five cases in all language forms.
+- [ ] Add the public cases and admin login/editor paths to production smoke verification.
+
+Cases are manually authored education. They are not Avvalo Verify evidence, a public allegation
+database, public submissions, comments, ratings, or automatic derivatives of user checks.
 
 ## Phase A — Close baseline production verification
 
@@ -83,7 +96,7 @@ source/time attribution, and zero privacy incidents.
 ## Not on the roadmap
 
 - Avvalo Merchants;
-- content library, story flywheel, or aggregate trend feed;
+- user-generated stories, comments, ratings, accusation feeds, or aggregate trend feeds;
 - voice, group monitoring, family accounts, or new product faces;
 - pattern similarity, classifiers, or training on submissions;
 - autonomous browsing, reverse-image search, or authenticity verdicts;
