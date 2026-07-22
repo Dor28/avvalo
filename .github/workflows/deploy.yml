@@ -102,6 +102,29 @@ jobs:
           chmod 600 ~/.ssh/id_deploy
           chmod 600 ~/.ssh/known_hosts
 
+          # Old immutable sha-* tags are not dangling, so the previous cleanup
+          # did not remove them. Prune only images unused by any container before
+          # rsync, then require enough headroom to pull and unpack the next image.
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE_PREFLIGHT'
+            set -euo pipefail
+            minimum_free_kb=$((3 * 1024 * 1024))
+
+            docker image prune -a -f
+
+            available_kb="$(df -Pk / | awk 'NR == 2 {print $4}')"
+            case "$available_kb" in
+              ""|*[!0-9]*)
+                echo "Unable to determine free disk space on /." >&2
+                exit 1
+                ;;
+            esac
+            if [ "$available_kb" -lt "$minimum_free_kb" ]; then
+              available_gb="$(awk -v kb="$available_kb" 'BEGIN {printf "%.1f", kb / 1024 / 1024}')"
+              echo "Deployment needs at least 3 GiB free on /; only ${available_gb} GiB remains." >&2
+              exit 1
+            fi
+          REMOTE_PREFLIGHT
+
           # Sync repo config to the server. The image is pulled from GHCR, so the
           # app source on the box is inert — but compose / nginx / deploy scripts
           # must stay current. .env and secrets/ are excluded so server secrets
