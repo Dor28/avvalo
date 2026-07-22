@@ -1,9 +1,11 @@
 """Operator-authored knowledge cards layered onto the shipped YAML base."""
 
 from app.knowledge_store.apply import (
+    CardPreview,
     derive_kb_version,
     install_knowledge_refresh_job,
     merge_knowledge_base,
+    preview_card,
     refresh_knowledge_base,
     run_knowledge_refresh_job,
 )
@@ -24,6 +26,7 @@ from app.knowledge_store.repo import (
 __all__ = [
     "LANGUAGES",
     "STATUSES",
+    "CardPreview",
     "KnowledgeCardDraft",
     "KnowledgeCardOverride",
     "KnowledgeStoreBase",
@@ -36,6 +39,7 @@ __all__ = [
     "list_cards",
     "load_overrides",
     "merge_knowledge_base",
+    "preview_card",
     "refresh_knowledge_base",
     "run_knowledge_refresh_job",
     "update_card",

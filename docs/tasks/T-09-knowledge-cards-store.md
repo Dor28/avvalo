@@ -1,8 +1,8 @@
 ---
 id: T-09
 title: Move knowledge cards into the database behind the existing sync store protocol
-status: open
-owner: unassigned
+status: done
+owner: claude
 branch: claude/knowledge-cards-store
 size: 1d
 depends_on: []

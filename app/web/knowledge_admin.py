@@ -1,10 +1,10 @@
-"""Operator-only editor for the rule overrides layered onto the shipped pack.
+"""Operator-only editor for the knowledge cards layered onto the shipped base.
 
-Editing detection patterns through a form is safety-critical: a bad pattern
-degrades detection silently for every user, and this box deploys from ``main``.
-Every route therefore forces a dry-run affordance and republishes the merged
-pack immediately on save, so an operator sees the real effect rather than
-waiting out the refresh interval.
+A card can be well formed, save cleanly, and still never be retrieved, because
+selection runs on ``trigger_rule_ids``, ``trigger_signal_kinds``, and
+``retrieval_aliases`` rather than on the card body. The dry-run exists to make
+that visible, and it drives the real ``retrieve_knowledge`` so it cannot drift
+from production.
 """
 
 from __future__ import annotations
@@ -19,19 +19,21 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES
 from app.config import Settings
-from app.engine.rules.loader import load_rule_pack, load_yaml_rule_pack
-from app.rules_store import (
-    RuleOverride,
-    RuleOverrideDraft,
-    create_override,
-    delete_override,
-    get_override,
-    list_overrides,
-    preview_rule,
-    refresh_rule_pack,
-    update_override,
+from app.engine.knowledge.loader import FileKnowledgeStore, load_yaml_knowledge_base
+from app.knowledge_store import (
+    CardPreview,
+    KnowledgeCardDraft,
+    KnowledgeCardOverride,
+    create_card,
+    delete_card,
+    get_card,
+    list_cards,
+    preview_card,
+    refresh_knowledge_base,
+    update_card,
 )
-from app.rules_store.repo import LANGUAGES as PATTERN_LANGUAGES
+from app.knowledge_store.repo import LANGUAGES as ALIAS_LANGUAGES
+from app.knowledge_store.repo import STATUSES
 from app.web.abuse import require_same_origin
 from app.web.admin_auth import is_admin_authenticated
 from app.web.editorial_copy import EDITORIAL_COPY
@@ -45,45 +47,53 @@ FACE = "family"
 
 
 def _draft_from_form(
-    rule_id: Annotated[str, Form()] = "",
-    family: Annotated[str, Form()] = "",
-    description: Annotated[str, Form()] = "",
-    message_key: Annotated[str, Form()] = "",
-    severity: Annotated[int, Form()] = 2,
-    emits_signal: Annotated[str, Form()] = "",
-    disabled: Annotated[bool, Form()] = False,
-    patterns_uz_latn: Annotated[str, Form()] = "",
-    patterns_uz_cyrl: Annotated[str, Form()] = "",
-    patterns_ru: Annotated[str, Form()] = "",
-) -> RuleOverrideDraft:
+    card_id: Annotated[str, Form()] = "",
+    card_version: Annotated[str, Form()] = "",
+    status: Annotated[str, Form()] = "approved",
+    reviewer: Annotated[str, Form()] = "",
+    mechanism: Annotated[str, Form()] = "",
+    trigger_rule_ids: Annotated[str, Form()] = "",
+    trigger_signal_kinds: Annotated[str, Form()] = "",
+    red_flags: Annotated[str, Form()] = "",
+    verify_steps: Annotated[str, Form()] = "",
+    questions: Annotated[str, Form()] = "",
+    reviewed_case_ids: Annotated[str, Form()] = "",
+    aliases_uz_latn: Annotated[str, Form()] = "",
+    aliases_uz_cyrl: Annotated[str, Form()] = "",
+    aliases_ru: Annotated[str, Form()] = "",
+) -> KnowledgeCardDraft:
     """Build the typed boundary from flat browser form fields."""
 
-    return RuleOverrideDraft(
+    return KnowledgeCardDraft(
         face=FACE,
-        rule_id=rule_id,
-        family=family,
-        description=description,
-        message_key=message_key,
-        severity=severity,
-        emits_signal=emits_signal or None,
-        disabled=disabled,
-        patterns={
-            "uz_latn": _split_patterns(patterns_uz_latn),
-            "uz_cyrl": _split_patterns(patterns_uz_cyrl),
-            "ru": _split_patterns(patterns_ru),
+        card_id=card_id,
+        card_version=card_version,
+        status=status,
+        reviewer=reviewer,
+        mechanism=mechanism,
+        trigger_rule_ids=_split(trigger_rule_ids),
+        trigger_signal_kinds=_split(trigger_signal_kinds),
+        red_flags=_split(red_flags),
+        verify_steps=_split(verify_steps),
+        questions=_split(questions),
+        reviewed_case_ids=_split(reviewed_case_ids),
+        retrieval_aliases={
+            "uz_latn": _split(aliases_uz_latn),
+            "uz_cyrl": _split(aliases_uz_cyrl),
+            "ru": _split(aliases_ru),
         },
     )
 
 
-def _split_patterns(raw: str) -> list[str]:
-    """One pattern per line; blank lines are ignored rather than rejected."""
+def _split(raw: str) -> list[str]:
+    """One entry per line; blank lines are ignored rather than rejected."""
 
     return [line.strip() for line in raw.splitlines() if line.strip()]
 
 
-@router.get("/admin/rules", response_class=HTMLResponse, include_in_schema=False)
-async def admin_rules(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
-    """List every override alongside the baseline pack size."""
+@router.get("/admin/cards", response_class=HTMLResponse, include_in_schema=False)
+async def admin_cards(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
+    """List every card override alongside the baseline size."""
 
     settings = _admin_settings(request)
     language = _normalize_language(language)
@@ -93,25 +103,25 @@ async def admin_rules(request: Request, language: str = DEFAULT_LANGUAGE) -> Res
 
     session_factory = _session_factory_or_error(request)
     async with session_factory() as session:
-        overrides = await list_overrides(session, face=FACE)
+        overrides = await list_cards(session, face=FACE)
     return _no_store(
         templates.TemplateResponse(
             request,
-            "admin_rules.html",
+            "admin_cards.html",
             _context(
                 request,
                 language,
                 overrides=overrides,
-                baseline_count=len(load_yaml_rule_pack(FACE).rules),
-                active_count=len(load_rule_pack(FACE).rules),
+                baseline_count=len(load_yaml_knowledge_base(FACE).cards),
+                active_count=len(FileKnowledgeStore().load(FACE).cards),
             ),
         )
     )
 
 
-@router.get("/admin/rules/new", response_class=HTMLResponse, include_in_schema=False)
-async def admin_rule_new(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
-    """Render an empty rule editor."""
+@router.get("/admin/cards/new", response_class=HTMLResponse, include_in_schema=False)
+async def admin_card_new(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
+    """Render an empty card editor."""
 
     settings = _admin_settings(request)
     language = _normalize_language(language)
@@ -122,16 +132,16 @@ async def admin_rule_new(request: Request, language: str = DEFAULT_LANGUAGE) -> 
 
 
 @router.get(
-    "/admin/rules/{override_id}/edit",
+    "/admin/cards/{override_id}/edit",
     response_class=HTMLResponse,
     include_in_schema=False,
 )
-async def admin_rule_edit(
+async def admin_card_edit(
     request: Request,
     override_id: uuid.UUID,
     language: str = DEFAULT_LANGUAGE,
 ) -> Response:
-    """Render an existing override in the editor."""
+    """Render an existing card override in the editor."""
 
     settings = _admin_settings(request)
     language = _normalize_language(language)
@@ -140,21 +150,21 @@ async def admin_rule_edit(
         return redirect
     session_factory = _session_factory_or_error(request)
     async with session_factory() as session:
-        override = await get_override(session, override_id)
+        override = await get_card(session, override_id)
     if override is None:
         raise HTTPException(status_code=404)
     return _form_response(request, language, override=override)
 
 
-@router.post("/admin/rules/preview", response_class=HTMLResponse, include_in_schema=False)
-async def admin_rule_preview(
+@router.post("/admin/cards/preview", response_class=HTMLResponse, include_in_schema=False)
+async def admin_card_preview(
     request: Request,
-    draft: Annotated[RuleOverrideDraft, Depends(_draft_from_form)],
+    draft: Annotated[KnowledgeCardDraft, Depends(_draft_from_form)],
     sample: Annotated[str, Form()] = "",
     override_id: Annotated[str, Form()] = "",
     language: Annotated[str, Form()] = DEFAULT_LANGUAGE,
 ) -> Response:
-    """Dry-run the edited rule against sample text without saving anything."""
+    """Dry-run retrieval for the edited card without saving anything."""
 
     require_same_origin(request)
     settings = _admin_settings(request)
@@ -163,10 +173,10 @@ async def admin_rule_preview(
     if redirect is not None:
         return redirect
 
-    matched: tuple[str, ...] = ()
+    preview: CardPreview | None = None
     error: str | None = None
     try:
-        matched = preview_rule(draft, sample)
+        preview = await preview_card(draft, sample, FileKnowledgeStore().load(FACE))
     except ValueError as exc:
         error = _error_text(language, str(exc))
 
@@ -177,21 +187,20 @@ async def admin_rule_preview(
         override_id=override_id or None,
         error=error,
         sample=sample,
-        # Distinguish "ran and matched nothing" from "never ran".
-        preview_ran=error is None and bool(sample.strip()),
-        matched=matched,
+        # Distinguish "ran and selected nothing" from "never ran".
+        preview=preview if error is None and sample.strip() else None,
     )
 
 
-@router.post("/admin/rules", response_class=HTMLResponse, include_in_schema=False)
-async def admin_rule_save(
+@router.post("/admin/cards", response_class=HTMLResponse, include_in_schema=False)
+async def admin_card_save(
     request: Request,
-    draft: Annotated[RuleOverrideDraft, Depends(_draft_from_form)],
+    draft: Annotated[KnowledgeCardDraft, Depends(_draft_from_form)],
     override_id: Annotated[str, Form()] = "",
     sample: Annotated[str, Form()] = "",
     language: Annotated[str, Form()] = DEFAULT_LANGUAGE,
 ) -> Response:
-    """Create or update one override, then republish the merged pack."""
+    """Create or update one card override, then republish the merged base."""
 
     require_same_origin(request)
     settings = _admin_settings(request)
@@ -205,18 +214,18 @@ async def admin_rule_save(
     try:
         async with session_factory() as session:
             if override_id:
-                existing = await get_override(session, uuid.UUID(override_id))
+                existing = await get_card(session, uuid.UUID(override_id))
                 if existing is None:
                     raise HTTPException(status_code=404)
-                await update_override(session, existing, draft)
+                await update_card(session, existing, draft)
             else:
-                await create_override(session, draft)
+                await create_card(session, draft)
             await session.commit()
             # Republish immediately: waiting out the refresh interval would
             # leave the operator unable to tell whether the edit took effect.
-            await refresh_rule_pack(session, FACE)
+            await refresh_knowledge_base(session, FACE)
     except IntegrityError:
-        error = _error_text(language, "duplicate_rule")
+        error = _error_text(language, "duplicate_card")
     except ValueError as exc:
         error = _error_text(language, str(exc))
 
@@ -230,16 +239,16 @@ async def admin_rule_save(
             sample=sample,
             status_code=400,
         )
-    return _no_store(RedirectResponse(f"/admin/rules?language={language}", status_code=303))
+    return _no_store(RedirectResponse(f"/admin/cards?language={language}", status_code=303))
 
 
-@router.post("/admin/rules/{override_id}/delete", include_in_schema=False)
-async def admin_rule_delete(
+@router.post("/admin/cards/{override_id}/delete", include_in_schema=False)
+async def admin_card_delete(
     request: Request,
     override_id: uuid.UUID,
     language: Annotated[str, Form()] = DEFAULT_LANGUAGE,
 ) -> Response:
-    """Delete an override so the shipped baseline rule applies again."""
+    """Delete a card override so the shipped baseline card applies again."""
 
     require_same_origin(request)
     settings = _admin_settings(request)
@@ -250,65 +259,84 @@ async def admin_rule_delete(
 
     session_factory = _session_factory_or_error(request)
     async with session_factory() as session:
-        override = await get_override(session, override_id)
+        override = await get_card(session, override_id)
         if override is None:
             raise HTTPException(status_code=404)
-        await delete_override(session, override)
+        await delete_card(session, override)
         await session.commit()
-        await refresh_rule_pack(session, FACE)
-    return _no_store(RedirectResponse(f"/admin/rules?language={language}", status_code=303))
+        await refresh_knowledge_base(session, FACE)
+    return _no_store(RedirectResponse(f"/admin/cards?language={language}", status_code=303))
 
 
 def _form_response(
     request: Request,
     language: str,
     *,
-    override: RuleOverride | RuleOverrideDraft | None,
+    override: KnowledgeCardOverride | KnowledgeCardDraft | None,
     override_id: str | None = None,
     error: str | None = None,
     sample: str = "",
-    preview_ran: bool = False,
-    matched: tuple[str, ...] = (),
+    preview: CardPreview | None = None,
     status_code: int = 200,
 ) -> HTMLResponse:
     resolved_id = override_id or (
-        str(override.id) if isinstance(override, RuleOverride) else None
+        str(override.id) if isinstance(override, KnowledgeCardOverride) else None
     )
     return _no_store(
         templates.TemplateResponse(
             request,
-            "admin_rule_form.html",
+            "admin_card_form.html",
             _context(
                 request,
                 language,
                 override=override,
                 override_id=resolved_id,
-                patterns=_patterns_for_form(override),
-                pattern_languages=PATTERN_LANGUAGES,
+                fields=_fields_for_form(override),
+                aliases=_aliases_for_form(override),
+                alias_languages=ALIAS_LANGUAGES,
+                statuses=STATUSES,
                 error=error,
                 sample=sample,
-                preview_ran=preview_ran,
-                matched=matched,
+                preview=preview,
             ),
             status_code=status_code,
         )
     )
 
 
-def _patterns_for_form(
-    override: RuleOverride | RuleOverrideDraft | None,
-) -> dict[str, str]:
-    """Render stored patterns back into one-per-line textarea values."""
+_LIST_FIELDS = (
+    "trigger_rule_ids",
+    "trigger_signal_kinds",
+    "red_flags",
+    "verify_steps",
+    "questions",
+    "reviewed_case_ids",
+)
 
-    stored = getattr(override, "patterns", None) or {}
+
+def _fields_for_form(
+    override: KnowledgeCardOverride | KnowledgeCardDraft | None,
+) -> dict[str, str]:
+    """Render stored list fields back into one-per-line textarea values."""
+
     return {
-        language: "\n".join(stored.get(language, []) or []) for language in PATTERN_LANGUAGES
+        field: "\n".join(getattr(override, field, None) or []) if override else ""
+        for field in _LIST_FIELDS
+    }
+
+
+def _aliases_for_form(
+    override: KnowledgeCardOverride | KnowledgeCardDraft | None,
+) -> dict[str, str]:
+    stored = getattr(override, "retrieval_aliases", None) or {}
+    return {
+        language: "\n".join(stored.get(language, []) or []) for language in ALIAS_LANGUAGES
     }
 
 
 def _error_text(language: str, key: str) -> str:
-    errors = RULES_COPY[language]["errors"]
-    return errors.get(key, errors["invalid_patterns"])
+    errors = KNOWLEDGE_COPY[language]["errors"]
+    return errors.get(key, errors["invalid_aliases"])
 
 
 def _context(request: Request, language: str, **extra) -> dict:
@@ -316,7 +344,7 @@ def _context(request: Request, language: str, **extra) -> dict:
         "request": request,
         "copy": WEB_COPY[language],
         "editorial": EDITORIAL_COPY[language],
-        "rules": RULES_COPY[language],
+        "knowledge": KNOWLEDGE_COPY[language],
         "language": language,
         "languages": LANGUAGES,
         "language_labels": LANGUAGE_LABELS,
@@ -346,7 +374,7 @@ def _require_admin(
 def _session_factory_or_error(request: Request) -> async_sessionmaker[AsyncSession]:
     session_factory = getattr(request.app.state, "session_factory", None)
     if session_factory is None:
-        raise HTTPException(status_code=503, detail="Rule storage is not configured.")
+        raise HTTPException(status_code=503, detail="Knowledge storage is not configured.")
     return session_factory
 
 

@@ -126,6 +126,14 @@ rule_pack_version, kb_version, prompt_version, model_id, validator_version
 
 Do not log or persist the submission, OCR text, minimized text, generated retrieval query, prompt, or model output.
 
+Cards are authored in the `knowledge_card_override` table (`app/knowledge_store/`) and merged onto
+the shipped `knowledge/<face>/cards.yaml` base by card ID; a `draft` or `retired` override
+suppresses the baseline card of that ID. The base is served from a process-level snapshot refreshed
+every `KNOWLEDGE_REFRESH_MINUTES`, falling back to the shipped YAML — never to an empty base, which
+would report `retrieval_status=empty` and hide the degradation. When an override contributes,
+`kb_version` becomes `<base-version>.db<YYYYMMDDHHMMSS>`, constrained by `VERSION_RE` in
+`app/data/repo.py`.
+
 ## 7. Acceptance criteria
 
 The pipeline is compliant only when automated tests prove all of the following:

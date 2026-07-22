@@ -1,8 +1,8 @@
 ---
 id: T-10
 title: Add the operator-only knowledge card editor with a retrieval dry-run
-status: open
-owner: unassigned
+status: done
+owner: claude
 branch: claude/knowledge-cards-admin
 size: 1d
 depends_on: [T-09]

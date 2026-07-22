@@ -8,6 +8,8 @@
        href="/admin/posts?language={{ language }}">{{ editorial.admin_title }}</a>
     <a class="{% if request.url.path.startswith('/admin/rules') %}active{% endif %}"
        href="/admin/rules?language={{ language }}">{{ rules_nav_label }}</a>
+    <a class="{% if request.url.path.startswith('/admin/cards') %}active{% endif %}"
+       href="/admin/cards?language={{ language }}">{{ cards_nav_label }}</a>
   </nav>
   <div class="admin-topbar-actions">
     <nav class="language-nav" aria-label="{{ copy.language_label }}">

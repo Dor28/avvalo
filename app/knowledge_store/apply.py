@@ -9,6 +9,7 @@ it would force an operator to re-enter the entire base before adding one card.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -16,12 +17,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.engine.faces import FACES
+from app.engine.knowledge import retrieve_knowledge
 from app.engine.knowledge.loader import (
     load_yaml_knowledge_base,
     set_active_knowledge_base,
 )
 from app.engine.knowledge.types import KnowledgeBase
-from app.knowledge_store.repo import LoadedOverrides, load_overrides
+from app.engine.minimize import minimize
+from app.engine.rules import run_rules
+from app.knowledge_store.repo import KnowledgeCardDraft, LoadedOverrides, load_overrides
 from app.obs.events import log_error, log_event
 
 # ``app.data.repo.VERSION_RE`` rejects a kb_version outside
@@ -40,6 +44,67 @@ def derive_kb_version(base_version: str, latest_updated_ts: datetime | None) -> 
     stamped = f"{base_version}.db{latest_updated_ts.astimezone(UTC):{_DB_VERSION_FORMAT}}"
     # Fail back to the baseline version rather than emit something unwritable.
     return stamped if len(stamped) <= _KB_VERSION_MAX_CHARS else base_version
+
+
+@dataclass(frozen=True)
+class CardPreview:
+    """What retrieval would do with an unsaved card, for the operator dry-run."""
+
+    selected: bool
+    mode: str
+    status: str
+    other_card_ids: tuple[str, ...]
+    not_approved: bool
+
+
+class _StaticKnowledgeStore:
+    """Serve one in-memory base so a preview never touches the database."""
+
+    def __init__(self, base: KnowledgeBase) -> None:
+        self._base = base
+
+    def load(self, face_id: str) -> KnowledgeBase:
+        return self._base
+
+
+async def preview_card(
+    draft: KnowledgeCardDraft, sample: str, base: KnowledgeBase
+) -> CardPreview:
+    """Report whether ``draft`` would actually be retrieved for ``sample``.
+
+    A card can be well formed, save cleanly, and still never be retrieved,
+    because selection runs on trigger IDs and aliases rather than on the card
+    body. This drives the real ``retrieve_knowledge`` over an in-memory merge so
+    the answer cannot drift from production. The router is never invoked, so the
+    dry-run is deterministic and free. Raises ``ValueError`` on an invalid draft.
+    """
+
+    card = draft.as_card()
+    without_card = tuple(existing for existing in base.cards if existing.id != card.id)
+    # A non-approved card is absent from retrieval entirely; keep it out so the
+    # preview shows what the operator would really get.
+    candidate = (*without_card, card) if card.status == "approved" else without_card
+
+    rule_hits, signals = run_rules(sample, draft.face)
+    result = await retrieve_knowledge(
+        face_id=draft.face,
+        minimized_text=minimize(sample, signals),
+        rule_hits=rule_hits,
+        signals=signals,
+        store=_StaticKnowledgeStore(
+            KnowledgeBase(version=base.version, face=base.face, cards=candidate)
+        ),
+        router=None,
+    )
+
+    selected_ids = tuple(result.knowledge_card_ids)
+    return CardPreview(
+        selected=card.id in selected_ids,
+        mode=result.mode,
+        status=card.status,
+        other_card_ids=tuple(other for other in selected_ids if other != card.id),
+        not_approved=card.status != "approved",
+    )
 
 
 def merge_knowledge_base(base: KnowledgeBase, overrides: LoadedOverrides) -> KnowledgeBase:
