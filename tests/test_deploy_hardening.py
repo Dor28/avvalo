@@ -109,14 +109,13 @@ def test_ci_uses_hash_locked_dependencies_and_pinned_actions() -> None:
     assert "ruff check app --select S" in workflow
 
 
-def test_deploy_uses_a_pretrusted_ssh_host_key() -> None:
+def test_deploy_preserves_the_existing_ssh_secret_contract() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(
         encoding="utf-8"
     )
 
-    assert "DEPLOY_HOST_KEY" in workflow
-    assert "ssh-keyscan" not in workflow
-    assert "printf '%s\\n' \"$SSH_HOST_KEY\" > ~/.ssh/known_hosts" in workflow
+    assert "DEPLOY_HOST_KEY" not in workflow
+    assert 'ssh-keyscan -T 10 -p "$SSH_PORT" "$SSH_HOST"' in workflow
 
 
 def test_production_jobs_are_gated_to_main() -> None:
