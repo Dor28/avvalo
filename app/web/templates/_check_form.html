@@ -54,15 +54,6 @@
         <button type="button" class="file-clear" aria-label="{{ copy.clear_file }}">&times;</button>
       </p>
     </div>
-
-    <label class="field context-field">
-      <span class="field-label">
-        {{ copy.caption_label }}
-        <span class="optional-tag">{{ copy.optional_label }}</span>
-      </span>
-      <input name="caption" type="text" maxlength="{{ max_caption_chars }}"
-             placeholder="{{ check_copy.caption_placeholder }}">
-    </label>
   </div>
 
   {% if turnstile_site_key %}

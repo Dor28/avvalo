@@ -124,6 +124,8 @@ def test_unified_checker_is_localized_and_old_merchants_url_redirects() -> None:
     assert 'action="/check"' in landing.text
     assert 'name="face"' not in landing.text
     assert 'name="face"' not in family.text
+    assert 'name="caption"' not in landing.text
+    assert 'name="caption"' not in family.text
     assert "/merchants?language=uz_latn" not in landing.text
     assert "/merchants?language=uz_latn" not in family.text
     assert 'type="radio"' not in family.text
