@@ -237,8 +237,7 @@ async def test_pipeline_retries_once_after_validation_failure(session) -> None:
 
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="u-t7-retry",
+                        user_key="u-t7-retry",
             language=Language.uz_latn,
             input_type=InputType.text,
             raw_text="Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
@@ -278,8 +277,7 @@ async def test_pipeline_returns_safety_fallback_after_double_validation_failure(
 
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="u-t7-fallback",
+                        user_key="u-t7-fallback",
             language=Language.uz_latn,
             input_type=InputType.text,
             raw_text="Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",

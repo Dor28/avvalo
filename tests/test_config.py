@@ -21,8 +21,7 @@ def test_settings_load_required_values() -> None:
 
     assert settings.max_output_tokens == 600
     assert settings.ocr_provider == "gcv"
-    assert settings.daily_limit_family == 5
-    assert settings.daily_limit_for("merchants") is None
+    assert settings.daily_check_limit == 5
     assert settings.web_enabled is False
     assert settings.admin_access_key is None
     assert "test-api-key" not in repr(settings)

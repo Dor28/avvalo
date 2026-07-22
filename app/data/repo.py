@@ -25,7 +25,9 @@ from app.data.models import (
 
 USEFULNESS_VALUES = {"yes", "partly", "no"}
 NEXT_ACTION_VALUES = {"verify", "delay_stop", "continue", "not_sure"}
-CHECK_EVENT_FACES = {"family"}
+# The two independent daily counters sharing ``rate_limit``: the per-user limit
+# and the web channel's per-IP guard, whose user_key is an IP hash.
+RATE_LIMIT_SCOPES = {"user", "web_ip"}
 CHECK_EVENT_INPUT_TYPES = {"text", "image"}
 CHECK_EVENT_LANGUAGES = {"uz_latn", "ru"}
 CHECK_EVENT_STATUSES = {
@@ -60,17 +62,15 @@ async def upsert_consent(
     session: AsyncSession,
     *,
     user_key: str,
-    face: str,
     notice_version: str,
     language: str,
 ) -> Consent:
-    """Insert or refresh the consent row for ``(user_key, face)``."""
+    """Insert or refresh the consent row for ``user_key``."""
 
-    row = await session.get(Consent, (user_key, face))
+    row = await session.get(Consent, user_key)
     if row is None:
         row = Consent(
             user_key=user_key,
-            face=face,
             notice_version=notice_version,
             language=language,
             ts=_utcnow(),
@@ -84,17 +84,16 @@ async def upsert_consent(
     return row
 
 
-async def get_consent(session: AsyncSession, *, user_key: str, face: str) -> Consent | None:
-    """Return the consent row for ``(user_key, face)`` or ``None``."""
+async def get_consent(session: AsyncSession, *, user_key: str) -> Consent | None:
+    """Return the consent row for ``user_key`` or ``None``."""
 
-    return await session.get(Consent, (user_key, face))
+    return await session.get(Consent, user_key)
 
 
 async def record_check_event(
     session: AsyncSession,
     *,
     user_key: str,
-    face: str,
     input_type: str,
     language: str,
     status: str,
@@ -119,7 +118,6 @@ async def record_check_event(
     """Persist one privacy-safe check event and return its generated id."""
 
     _validate_check_event_metadata(
-        face=face,
         input_type=input_type,
         language=language,
         status=status,
@@ -135,7 +133,6 @@ async def record_check_event(
     event = CheckEvent(
         id=uuid.uuid4(),
         user_key=user_key,
-        face=face,
         ts=_utcnow(),
         input_type=input_type,
         language=language,
@@ -171,7 +168,6 @@ async def get_check_event(session: AsyncSession, check_id: uuid.UUID) -> CheckEv
 
 def _validate_check_event_metadata(
     *,
-    face: str,
     input_type: str,
     language: str,
     status: str,
@@ -184,8 +180,6 @@ def _validate_check_event_metadata(
     kb_version: str | None,
     error_class: str | None,
 ) -> None:
-    if face not in CHECK_EVENT_FACES:
-        raise ValueError(f"Unsupported check face: {face}")
     if input_type not in CHECK_EVENT_INPUT_TYPES:
         raise ValueError(f"Unsupported input_type: {input_type}")
     if language not in CHECK_EVENT_LANGUAGES:
@@ -242,24 +236,26 @@ async def record_feedback(
 
 
 async def get_usage(
-    session: AsyncSession, *, user_key: str, face: str, day: date | None = None
+    session: AsyncSession, *, user_key: str, scope: str = "user", day: date | None = None
 ) -> int:
-    """Return today's (or ``day``'s) check count for ``(user_key, face)``."""
+    """Return today's (or ``day``'s) check count for ``(user_key, scope)``."""
 
-    row = await session.get(RateLimit, (user_key, face, day or _utcnow().date()))
+    _validate_scope(scope)
+    row = await session.get(RateLimit, (user_key, scope, day or _utcnow().date()))
     return row.count if row else 0
 
 
 async def increment_usage(
-    session: AsyncSession, *, user_key: str, face: str, day: date | None = None
+    session: AsyncSession, *, user_key: str, scope: str = "user", day: date | None = None
 ) -> int:
-    """Increment and return the daily check count for ``(user_key, face)``.
+    """Increment and return the daily check count for ``(user_key, scope)``.
 
     On PostgreSQL this is a single atomic ``INSERT ... ON CONFLICT DO UPDATE`` so
     two concurrent checks from the same user can't lose an increment (a plain
     read-modify-write races). SQLite (unit tests only) keeps the simple path.
     """
 
+    _validate_scope(scope)
     day = day or _utcnow().date()
 
     if session.bind.dialect.name == "postgresql":
@@ -267,18 +263,18 @@ async def increment_usage(
 
         stmt = (
             pg_insert(RateLimit)
-            .values(user_key=user_key, face=face, day=day, count=1)
+            .values(user_key=user_key, scope=scope, day=day, count=1)
             .on_conflict_do_update(
-                index_elements=["user_key", "face", "day"],
+                index_elements=["user_key", "scope", "day"],
                 set_={"count": RateLimit.count + 1},
             )
             .returning(RateLimit.count)
         )
         return (await session.execute(stmt)).scalar_one()
 
-    row = await session.get(RateLimit, (user_key, face, day))
+    row = await session.get(RateLimit, (user_key, scope, day))
     if row is None:
-        row = RateLimit(user_key=user_key, face=face, day=day, count=1)
+        row = RateLimit(user_key=user_key, scope=scope, day=day, count=1)
         session.add(row)
     else:
         row.count += 1
@@ -287,7 +283,7 @@ async def increment_usage(
 
 
 async def refund_usage(
-    session: AsyncSession, *, user_key: str, face: str, day: date | None = None
+    session: AsyncSession, *, user_key: str, scope: str = "user", day: date | None = None
 ) -> None:
     """Return one daily slot consumed by a non-billable check.
 
@@ -299,18 +295,24 @@ async def refund_usage(
     ``count > 0`` guard keeps the counter from going negative under concurrency.
     """
 
+    _validate_scope(scope)
     day = day or _utcnow().date()
     await session.execute(
         update(RateLimit)
         .where(
             RateLimit.user_key == user_key,
-            RateLimit.face == face,
+            RateLimit.scope == scope,
             RateLimit.day == day,
             RateLimit.count > 0,
         )
         .values(count=RateLimit.count - 1)
     )
     await session.flush()
+
+
+def _validate_scope(scope: str) -> None:
+    if scope not in RATE_LIMIT_SCOPES:
+        raise ValueError(f"Unsupported rate-limit scope: {scope}")
 
 
 async def delete_user_data(session: AsyncSession, *, user_key: str) -> None:

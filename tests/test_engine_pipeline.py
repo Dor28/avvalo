@@ -44,8 +44,7 @@ class FakeOCRProvider:
 
 async def test_run_check_text_returns_result_and_records_event(session) -> None:
     check_input = CheckInput(
-        face="family",
-        user_key="u1",
+                user_key="u1",
         language=Language.ru,
         input_type=InputType.text,
         raw_text=(
@@ -66,7 +65,6 @@ async def test_run_check_text_returns_result_and_records_event(session) -> None:
 
     stored_event = (await session.execute(select(CheckEvent))).scalar_one()
     assert stored_event.user_key == "u1"
-    assert stored_event.face == "family"
     assert stored_event.status == "ok"
     assert stored_event.language == "uz_latn"
     assert stored_event.input_type == "text"
@@ -82,8 +80,7 @@ async def test_rate_limit_reservation_commits_before_external_llm_work(session) 
 
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="short-rate-transaction",
+                        user_key="short-rate-transaction",
             language=Language.ru,
             input_type=InputType.text,
             raw_text="Bank xodimimiz. SMS kodni yuboring.",
@@ -103,8 +100,7 @@ async def test_run_check_image_uses_ocr_and_records_only_metadata(session) -> No
         "Hozir SMS orqali kelgan 6 xonali kodni yuboring."
     )
     check_input = CheckInput(
-        face="family",
-        user_key="u-img",
+                user_key="u-img",
         language=Language.ru,
         input_type=InputType.image,
         image_bytes=b"private-image-bytes",
@@ -148,8 +144,7 @@ async def test_image_check_combines_typed_context_caption_and_ocr(session) -> No
     llm = CapturingLLM()
     await run_check(
         CheckInput(
-            face="family",
-            user_key="u-image-context",
+                        user_key="u-image-context",
             language=Language.ru,
             input_type=InputType.image,
             raw_text="typed context words",
@@ -170,8 +165,7 @@ async def test_run_check_low_ocr_returns_without_llm(session) -> None:
     llm = FakeLLMProvider()
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="u-low-ocr",
+                        user_key="u-low-ocr",
             language=Language.uz_latn,
             input_type=InputType.image,
             image_bytes=b"private-image-bytes",
@@ -184,14 +178,13 @@ async def test_run_check_low_ocr_returns_without_llm(session) -> None:
     assert result.status == CheckStatus.low_ocr
     assert result.ocr_confidence == 0.2
     assert llm.calls == 0
-    assert await repo.get_usage(session, user_key="u-low-ocr", face="family") == 1
+    assert await repo.get_usage(session, user_key="u-low-ocr", scope="user") == 1
 
 
 async def test_run_check_never_persists_ephemeral_input(session) -> None:
     raw_text = "Transfer to raw-card 8600123412345678 and call +998901234567."
     check_input = CheckInput(
-        face="family",
-        user_key="u2",
+                user_key="u2",
         language=Language.uz_latn,
         input_type=InputType.text,
         raw_text=raw_text,
@@ -217,8 +210,7 @@ async def test_run_check_never_persists_ephemeral_input(session) -> None:
 async def test_run_check_empty_text_returns_empty_input(session) -> None:
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="u3",
+                        user_key="u3",
             language=Language.uz_latn,
             input_type=InputType.text,
             raw_text="   ",

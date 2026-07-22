@@ -1,8 +1,8 @@
 """Consent-version helpers and the consent gate (§12).
 
-A user may process content only when a consent row exists for ``(user_key,
-face)`` at the current ``NOTICE_VERSION``. Bumping the notice version forces
-re-consent because the stored version no longer matches.
+A user may process content only when a consent row exists for ``user_key`` at
+the current ``NOTICE_VERSION``. Bumping the notice version forces re-consent
+because the stored version no longer matches.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,16 +21,14 @@ async def grant_consent(
     session: AsyncSession,
     *,
     user_key: str,
-    face: str,
     language: str,
     notice_version: str,
 ) -> Consent:
-    """Record (or refresh) consent for ``(user_key, face)`` at *notice_version*."""
+    """Record (or refresh) consent for ``user_key`` at *notice_version*."""
 
     return await repo.upsert_consent(
         session,
         user_key=user_key,
-        face=face,
         notice_version=notice_version,
         language=language,
     )

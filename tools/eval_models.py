@@ -66,9 +66,9 @@ def load(p: pathlib.Path) -> str:
     return p.read_text(encoding="utf-8")
 
 
-def build_prompt(system_tmpl: str, face_tmpl: str, fx: dict):
+def build_prompt(system_tmpl: str, check_tmpl: str, fx: dict):
     hits = "\n".join(f"- {f}" for f in fx.get("expected_rule_families", [])) or "- (none detected)"
-    user = (face_tmpl
+    user = (check_tmpl
             .replace("{language}", fx["language"])
             .replace("{minimized_text}", fx["input"])
             .replace("{rule_hits}", hits)
@@ -188,9 +188,7 @@ def build_providers():
 
 def main():
     system = load(PROMPTS / "system_safety.txt")
-    templates = {
-        "family": load(PROMPTS / "family.txt"),
-    }
+    check_template = load(PROMPTS / "check.txt")
     fixtures = []
     for f in sorted(glob.glob(str(FIXTURES / "*.json"))):
         fixtures.extend(json.loads(load(pathlib.Path(f))))
@@ -207,7 +205,7 @@ def main():
     print(f"Fixtures: {len(fixtures)}  Providers: {', '.join(n for n, _ in providers)}\n")
 
     for fx in fixtures:
-        sys_p, user_p = build_prompt(system, templates[fx["face"]], fx)
+        sys_p, user_p = build_prompt(system, check_template, fx)
         for name, fn in providers:
             try:
                 raw = fn(sys_p, user_p)

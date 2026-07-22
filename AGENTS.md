@@ -32,7 +32,7 @@ nit.
    to in Latin script only; Cyrillic-Uzbek input is still read and still matched by the
    `uz_cyrl` keyword groups in the rule packs.
 
-8. **There is one active product face:** the internal compatibility ID is `family`. Merchant
+8. **There is one checker and no product-face concept:** the `face` discriminator was removed from the code and the database. Merchant
    payment situations use the same checker and safety pipeline. Do not restore Avvalo Merchants,
    the scam library, story capture, Scam Pulse, or another face from git history.
 

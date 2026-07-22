@@ -11,7 +11,6 @@ class KnowledgeCard(BaseModel):
     """One versioned, reviewed pattern or verification card."""
 
     id: str
-    face: str
     version: str
     status: Literal["approved", "draft", "retired"]
     reviewer: str
@@ -26,10 +25,9 @@ class KnowledgeCard(BaseModel):
 
 
 class KnowledgeBase(BaseModel):
-    """Approved cards and their deploy-visible version for one face."""
+    """Approved cards and their deploy-visible version."""
 
     version: str
-    face: str
     cards: tuple[KnowledgeCard, ...]
 
 
@@ -59,7 +57,7 @@ class RetrievalResult(BaseModel):
 class KnowledgeStore(Protocol):
     """Load approved cards without accepting user content."""
 
-    def load(self, face_id: str) -> KnowledgeBase: ...
+    def load(self) -> KnowledgeBase: ...
 
 
 class KnowledgeRouter(Protocol):
@@ -68,7 +66,6 @@ class KnowledgeRouter(Protocol):
     async def route(
         self,
         *,
-        face_id: str,
         minimized_text: str,
         allowed_ids: tuple[str, ...],
         max_results: int,

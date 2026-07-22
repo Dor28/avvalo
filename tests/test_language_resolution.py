@@ -68,8 +68,7 @@ async def test_pipeline_uses_detected_content_language_for_prompt_and_event(sess
 
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key="lang-content",
+                        user_key="lang-content",
             language=Language.ru,
             input_type=InputType.text,
             raw_text="Bank xavfsizlik xizmatidanmiz. Hozir SMS kodni yuboring.",

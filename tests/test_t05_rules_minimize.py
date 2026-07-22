@@ -18,20 +18,15 @@ from app.engine.rules.engine import (
 
 
 def test_rule_packs_load_with_description_map() -> None:
-    pack = load_rule_pack("family")
+    pack = load_rule_pack()
     assert pack.rules
     for rule in pack.rules:
         assert pack.descriptions[rule.id] == rule.desc
 
 
-def test_unknown_face_is_rejected() -> None:
-    with pytest.raises(ValueError):
-        load_rule_pack("no_such_face")
-
-
-def test_family_goldens_fire_expected_families(golden) -> None:
-    for fixture in golden("family"):
-        hits, _ = run_rules(fixture["input"], "family")
+def test_goldens_fire_expected_families(golden) -> None:
+    for fixture in golden():
+        hits, _ = run_rules(fixture["input"])
         assert hits, f"{fixture['id']}: expected at least one rule hit"
         families = {hit.family for hit in hits}
         missing = set(fixture["expected_rule_families"]) - families

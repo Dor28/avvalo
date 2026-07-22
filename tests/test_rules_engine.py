@@ -7,7 +7,7 @@ from app.engine.minimize import minimize
 from app.engine.rules import load_rule_pack, run_rules
 
 _ROOT = Path(__file__).resolve().parents[1]
-_FAMILY_GOLDEN_PATH = _ROOT / "tests" / "fixtures" / "golden" / "family.json"
+_GOLDEN_PATH = _ROOT / "tests" / "fixtures" / "golden" / "checks.json"
 
 _EXPECTED_FS_RULE_IDS = {
     "fs_01_fake_bank_support": {
@@ -56,18 +56,18 @@ _EXPECTED_FS_RULE_IDS = {
 
 
 def test_loader_flattens_family_pack() -> None:
-    pack = load_rule_pack("family")
+    pack = load_rule_pack()
 
     rule_ids = {rule.id for rule in pack.rules}
     assert _EXPECTED_FS_RULE_IDS["fs_01_fake_bank_support"].issubset(rule_ids)
     assert pack.descriptions["fs.credential.otp"].startswith("Asks for an SMS")
 
 
-def test_family_golden_inputs_fire_expected_rules() -> None:
-    fixtures = json.loads(_FAMILY_GOLDEN_PATH.read_text(encoding="utf-8"))
+def test_golden_inputs_fire_expected_rules() -> None:
+    fixtures = json.loads(_GOLDEN_PATH.read_text(encoding="utf-8"))
 
     for fixture in fixtures:
-        hits, _signals = run_rules(fixture["input"], fixture["face"])
+        hits, _signals = run_rules(fixture["input"])
         hit_ids = {hit.rule_id for hit in hits}
         hit_families = {hit.family for hit in hits}
 
@@ -83,7 +83,7 @@ def test_minimization_tokenizes_pii_and_preserves_link_signal() -> None:
         "email test@example.com, admin @payme_help, link hxxps://payme-secure[.]example/a."
     )
 
-    _hits, signals = run_rules(raw_text, "family")
+    _hits, signals = run_rules(raw_text)
     minimized = minimize(raw_text, signals)
     signal_pairs = {(signal.kind, signal.note) for signal in signals}
 

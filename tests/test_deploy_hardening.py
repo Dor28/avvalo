@@ -6,8 +6,9 @@ from pathlib import Path
 
 import yaml
 
-from app.engine.faces import FACES
 from app.engine.knowledge import FileKnowledgeStore
+from app.engine.llm.prompt import _CHECK_PROMPT, _SYSTEM_PROMPT
+from app.engine.rules.loader import RULE_PACK_DIR
 from app.main import _run_service_runners
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -199,11 +200,9 @@ def test_every_engine_runtime_asset_directory_is_copied_into_image() -> None:
         for path in (REPO_ROOT / "app" / "engine").rglob("*.py")
     )
     configured_assets = {
-        Path(face.prompt_template).parts[0]
-        for face in FACES.values()
-    } | {
-        Path(face.rule_pack_dir).parts[0]
-        for face in FACES.values()
+        RULE_PACK_DIR.relative_to(REPO_ROOT).parts[0],
+        _CHECK_PROMPT.relative_to(REPO_ROOT).parts[0],
+        _SYSTEM_PROMPT.relative_to(REPO_ROOT).parts[0],
     }
     configured_assets.update(
         re.findall(r'_REPO_ROOT\s*/\s*["\']([^/"\']+)["\']', engine_source)

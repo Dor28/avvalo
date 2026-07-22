@@ -14,7 +14,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models import CheckEvent, Feedback
-from app.engine.faces import FACES
 from app.engine.rules import load_rule_pack
 
 _USEFUL_VALUES = {"yes", "partly"}
@@ -23,13 +22,9 @@ _CANDIDATE_GAP = 0.15
 
 
 def rule_family_map() -> dict[str, str]:
-    """Return the current rule-id to family mapping from active packs."""
+    """Return the current rule-id to scam-family mapping from the active pack."""
 
-    mapping: dict[str, str] = {}
-    for face_id in FACES:
-        for rule in load_rule_pack(face_id).rules:
-            mapping[rule.id] = rule.family
-    return mapping
+    return {rule.id: rule.family for rule in load_rule_pack().rules}
 
 
 async def collect_labels(
@@ -37,13 +32,12 @@ async def collect_labels(
     *,
     since: date | datetime | None = None,
 ) -> dict[str, Any]:
-    """Correlate active-product feedback with rule IDs and the overall baseline."""
+    """Correlate feedback with rule IDs and the overall baseline."""
 
     since_bound = _since_bound(since)
     statement = (
         select(CheckEvent.rule_ids, Feedback.usefulness, Feedback.next_action)
         .join(Feedback, Feedback.check_id == CheckEvent.id)
-        .where(CheckEvent.face.in_(tuple(FACES)))
         .order_by(Feedback.ts)
     )
     if since_bound is not None:

@@ -63,13 +63,11 @@ def _static_version() -> str:
 templates.env.globals["static_version"] = _static_version()
 DEV_WEB_SESSION_SECRET = "development-web-session-secret"
 WEB_MAX_TEXT_CHARS = 6000
-WEB_MAX_CAPTION_CHARS = 500
-WEB_IP_FACE_PREFIX = "web_ip:"
+WEB_IP_SCOPE = "web_ip"
 
 # The form's own maxlength attributes come from the same constants the POST
 # handler validates against, so the browser can never invite an oversized body.
 templates.env.globals["max_text_chars"] = WEB_MAX_TEXT_CHARS
-templates.env.globals["max_caption_chars"] = WEB_MAX_CAPTION_CHARS
 templates.env.globals["short_language_labels"] = {
     "uz_latn": "O‘z",
     "ru": "RU",
@@ -133,7 +131,6 @@ WEB_COPY = {
         "title": "Avvalo",
         "privacy_title": "Maxfiylik",
         "consent_label": "Maxfiylik shartlarini o'qidim va roziman",
-        "caption_label": "Qo'shimcha izoh",
         "image_label": "Skrinshot yoki rasm",
         "optional_label": "ixtiyoriy",
         "choose_file": "Rasm tanlash",
@@ -144,35 +141,32 @@ WEB_COPY = {
         "empty_error": "Tekshirish uchun xabar yozing yoki matni ko'rinadigan rasm yuklang.",
         "too_long_error": "Matn biroz uzun. Qisqartirib, qayta yuboring.",
         "consent_error": "Avval maxfiylik shartlariga rozilik bering.",
-        "faces": {
-            "family": {
-                "name": "Vaziyat tekshiruvi",
-                "headline": "Avval Avvalo'ga yuboring.",
-                "subhead": (
-                    "Javob berish, pul to‘lash, ilova o‘rnatish, hujjat imzolash yoki "
-                    "shaxsiy ma’lumot yuborishdan oldin nimaga e’tibor berish va nimani "
-                    "mustaqil tekshirishni ko‘ring."
-                ),
-                "prompt": "Matn, havola yoki vaziyat tavsifi",
-                "textarea_placeholder": (
-                    "Masalan: to‘lov skrinshotini yuborib, pul tushmasidan oldin "
-                    "tovarni berishimni so‘rashyapti..."
-                ),
-                "caption_placeholder": "Kerak bo'lsa: kim yubordi, nima so'rayapti?",
-                "image_hint": "Yozishma, chek, QR-kod yoki hujjat aniq ko‘rinsin.",
-                "use_cases": [
-                    "Xabar yoki suhbat",
-                    "Havola yoki QR-kod",
-                    "To‘lov skrinshoti yoki so‘rovi",
-                    "Ish yoki savdo taklifi",
-                    "Hujjat yoki so‘rov",
-                ],
-                "trust": [
-                    "Odamni emas, vaziyatni tekshiradi",
-                    "Hukm emas, aniq tekshiruv qadamlari",
-                    "Matn, rasm va javob saqlanmaydi, logga yozilmaydi",
-                ],
-            },
+        "check": {
+            "name": "Vaziyat tekshiruvi",
+            "headline": "Avval Avvalo'ga yuboring.",
+            "subhead": (
+                "Javob berish, pul to‘lash, ilova o‘rnatish, hujjat imzolash yoki "
+                "shaxsiy ma’lumot yuborishdan oldin nimaga e’tibor berish va nimani "
+                "mustaqil tekshirishni ko‘ring."
+            ),
+            "prompt": "Matn, havola yoki vaziyat tavsifi",
+            "textarea_placeholder": (
+                "Masalan: to‘lov skrinshotini yuborib, pul tushmasidan oldin "
+                "tovarni berishimni so‘rashyapti..."
+            ),
+            "image_hint": "Yozishma, chek, QR-kod yoki hujjat aniq ko‘rinsin.",
+            "use_cases": [
+                "Xabar yoki suhbat",
+                "Havola yoki QR-kod",
+                "To‘lov skrinshoti yoki so‘rovi",
+                "Ish yoki savdo taklifi",
+                "Hujjat yoki so‘rov",
+            ],
+            "trust": [
+                "Odamni emas, vaziyatni tekshiradi",
+                "Hukm emas, aniq tekshiruv qadamlari",
+                "Matn, rasm va javob saqlanmaydi, logga yozilmaydi",
+            ],
         },
     },
     "ru": {
@@ -229,7 +223,6 @@ WEB_COPY = {
         "title": "Avvalo",
         "privacy_title": "Конфиденциальность",
         "consent_label": "Я прочитал условия конфиденциальности и согласен",
-        "caption_label": "Короткий контекст",
         "image_label": "Скриншот или фото",
         "optional_label": "необязательно",
         "choose_file": "Выбрать фото",
@@ -240,35 +233,32 @@ WEB_COPY = {
         "empty_error": "Вставьте текст или загрузите читаемое изображение.",
         "too_long_error": "Текст получился слишком длинным. Сократите его и отправьте ещё раз.",
         "consent_error": "Сначала примите условия конфиденциальности.",
-        "faces": {
-            "family": {
-                "name": "Проверка ситуации",
-                "headline": "Сначала отправьте это в Avvalo.",
-                "subhead": (
-                    "До ответа, оплаты, установки приложения, подписания документа или "
-                    "передачи личных данных "
-                    "посмотрите, на что обратить внимание и что проверить самостоятельно."
-                ),
-                "prompt": "Текст, ссылка или описание ситуации",
-                "textarea_placeholder": (
-                    "Например: прислали скрин оплаты и просят отдать товар до "
-                    "зачисления денег..."
-                ),
-                "caption_placeholder": "Если нужно: кто написал и чего просит?",
-                "image_hint": "Подойдёт читаемый скриншот переписки, чека, QR-кода или документа.",
-                "use_cases": [
-                    "Сообщение или переписка",
-                    "Ссылка или QR-код",
-                    "Скрин оплаты или запрос на оплату",
-                    "Работа или сделка",
-                    "Документ или запрос",
-                ],
-                "trust": [
-                    "Проверяем ситуацию, а не человека",
-                    "Конкретные шаги проверки вместо вердикта",
-                    "Текст, изображения и ответ не сохраняются и не записываются в журналы",
-                ],
-            },
+        "check": {
+            "name": "Проверка ситуации",
+            "headline": "Сначала отправьте это в Avvalo.",
+            "subhead": (
+                "До ответа, оплаты, установки приложения, подписания документа или "
+                "передачи личных данных "
+                "посмотрите, на что обратить внимание и что проверить самостоятельно."
+            ),
+            "prompt": "Текст, ссылка или описание ситуации",
+            "textarea_placeholder": (
+                "Например: прислали скрин оплаты и просят отдать товар до "
+                "зачисления денег..."
+            ),
+            "image_hint": "Подойдёт читаемый скриншот переписки, чека, QR-кода или документа.",
+            "use_cases": [
+                "Сообщение или переписка",
+                "Ссылка или QR-код",
+                "Скрин оплаты или запрос на оплату",
+                "Работа или сделка",
+                "Документ или запрос",
+            ],
+            "trust": [
+                "Проверяем ситуацию, а не человека",
+                "Конкретные шаги проверки вместо вердикта",
+                "Текст, изображения и ответ не сохраняются и не записываются в журналы",
+            ],
         },
     },
 }
@@ -313,7 +303,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
             "checker.html",
         {
             "copy": copy,
-            "face_copy": copy["faces"]["family"],
+            "check_copy": copy["check"],
             "language_path": "/",
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
@@ -327,7 +317,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
 
 
 @router.get("/check", response_class=HTMLResponse)
-async def family_check(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
+async def check_page(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
     """Render the consumer checker and its result surface."""
 
     return await _check_page(request, language=language)
@@ -358,7 +348,7 @@ async def _check_page(request: Request, *, language: str) -> HTMLResponse:
             "checker.html",
         {
             "copy": copy,
-            "face_copy": copy["faces"]["family"],
+            "check_copy": copy["check"],
             "language_path": "/check",
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
@@ -404,7 +394,6 @@ async def check(
     request: Request,
     language: Annotated[str, Form()] = DEFAULT_LANGUAGE,
     text: Annotated[str, Form()] = "",
-    caption: Annotated[str, Form()] = "",
     consent: Annotated[str | None, Form()] = None,
     turnstile_token: Annotated[str | None, Form(alias="cf-turnstile-response")] = None,
     image: Annotated[UploadFile | None, File()] = None,
@@ -415,7 +404,6 @@ async def check(
     settings = _settings_or_error(request)
     language = _normalize_language(language)
     copy = WEB_COPY[language]
-    face = "family"
 
     web_session = get_or_create_web_session(request, secret=_web_secret(settings))
     session_factory = _session_factory_or_none(request)
@@ -426,7 +414,6 @@ async def check(
         if not await _ensure_web_consent(
             session,
             user_key=web_session.user_key,
-            face=face,
             language=language,
             settings=settings,
             accepted=consent == "yes",
@@ -439,7 +426,7 @@ async def check(
                 web_session=web_session,
             )
 
-        limit_error = _form_limit_error(copy, text=text, caption=caption)
+        limit_error = _form_limit_error(copy, text=text)
         if limit_error is not None:
             return _partial(
                 request,
@@ -468,20 +455,17 @@ async def check(
 
         input_type = InputType.image if image_bytes else InputType.text
         check_input = CheckInput(
-            face=face,
             user_key=web_session.user_key,
             language=Language(language),
             input_type=input_type,
             raw_text=text or None,
             image_bytes=image_bytes,
-            caption=caption or None,
         )
 
         ip_limit = await _reserve_web_ip_limit(
             session,
             request=request,
             settings=settings,
-            face=face,
             language=Language(language),
             input_type=input_type,
         )
@@ -504,11 +488,11 @@ async def check(
             )
         except Exception:
             if isinstance(ip_limit, str):
-                await repo.refund_usage(session, user_key=ip_limit, face=_web_ip_face(face))
+                await repo.refund_usage(session, user_key=ip_limit, scope=WEB_IP_SCOPE)
                 await session.commit()
             raise
         if isinstance(ip_limit, str) and result.status not in WEB_BILLABLE_STATUSES:
-            await repo.refund_usage(session, user_key=ip_limit, face=_web_ip_face(face))
+            await repo.refund_usage(session, user_key=ip_limit, scope=WEB_IP_SCOPE)
         await session.commit()
 
     return _partial(request, result=result, copy=copy, web_session=web_session)
@@ -518,12 +502,11 @@ async def _ensure_web_consent(
     session: AsyncSession,
     *,
     user_key: str,
-    face: str,
     language: str,
     settings: Settings,
     accepted: bool,
 ) -> bool:
-    consent = await repo.get_consent(session, user_key=user_key, face=face)
+    consent = await repo.get_consent(session, user_key=user_key)
     if is_consent_current(consent, settings.notice_version):
         return True
     if not accepted:
@@ -531,15 +514,14 @@ async def _ensure_web_consent(
     await repo.upsert_consent(
         session,
         user_key=user_key,
-        face=face,
         notice_version=settings.notice_version,
         language=language,
     )
     return True
 
 
-def _form_limit_error(copy: dict, *, text: str, caption: str) -> str | None:
-    if len(text) > WEB_MAX_TEXT_CHARS or len(caption) > WEB_MAX_CAPTION_CHARS:
+def _form_limit_error(copy: dict, *, text: str) -> str | None:
+    if len(text) > WEB_MAX_TEXT_CHARS:
         return copy["too_long_error"]
     return None
 
@@ -549,7 +531,6 @@ async def _reserve_web_ip_limit(
     *,
     request: Request,
     settings: Settings,
-    face: str,
     language: Language,
     input_type: InputType,
 ) -> str | CheckResult | None:
@@ -557,12 +538,11 @@ async def _reserve_web_ip_limit(
     if ip_key is None:
         return None
 
-    ip_face = _web_ip_face(face)
-    count = await repo.increment_usage(session, user_key=ip_key, face=ip_face)
+    count = await repo.increment_usage(session, user_key=ip_key, scope=WEB_IP_SCOPE)
     if count <= settings.web_daily_limit:
         return ip_key
 
-    await repo.refund_usage(session, user_key=ip_key, face=ip_face)
+    await repo.refund_usage(session, user_key=ip_key, scope=WEB_IP_SCOPE)
     return CheckResult(
         status=CheckStatus.rate_limited,
         text=format_status_message(CheckStatus.rate_limited, language),
@@ -570,10 +550,6 @@ async def _reserve_web_ip_limit(
         input_type=input_type,
         error_class="WebIpDailyLimitExceeded",
     )
-
-
-def _web_ip_face(face: str) -> str:
-    return f"{WEB_IP_FACE_PREFIX}{face}"
 
 
 def _partial(

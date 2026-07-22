@@ -112,8 +112,7 @@ async def test_blocklist_hit_flows_through_shared_pipeline_without_raw_url(
 
     result = await run_check(
         CheckInput(
-            face="family",
-            user_key=f"r6-{language}",
+                        user_key=f"r6-{language}",
             language=language,
             input_type=InputType.text,
             raw_text=raw_url,
@@ -144,8 +143,7 @@ async def test_no_hit_and_disabled_flag_are_noops() -> None:
     )
     no_hit = await run_check(
         CheckInput(
-            face="family",
-            user_key="r6-no-hit",
+                        user_key="r6-no-hit",
             language=Language.ru,
             input_type=InputType.text,
             raw_text="https://ordinary.example/path",
@@ -156,8 +154,7 @@ async def test_no_hit_and_disabled_flag_are_noops() -> None:
     )
     disabled = await run_check(
         CheckInput(
-            face="family",
-            user_key="r6-disabled",
+                        user_key="r6-disabled",
             language=Language.ru,
             input_type=InputType.text,
             raw_text="https://listed.example/path",

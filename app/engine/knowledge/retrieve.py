@@ -18,7 +18,6 @@ _MAX_CARDS = 3
 
 async def retrieve_knowledge(
     *,
-    face_id: str,
     minimized_text: str,
     rule_hits: list[RuleHit],
     signals: list[Signal],
@@ -28,7 +27,7 @@ async def retrieve_knowledge(
     """Select at most three cards; invalid router IDs never reach lookup/prompt."""
 
     try:
-        knowledge_base = (store or FileKnowledgeStore()).load(face_id)
+        knowledge_base = (store or FileKnowledgeStore()).load()
     except KnowledgeLookupError:
         return RetrievalResult(status="unavailable")
 
@@ -75,7 +74,6 @@ async def retrieve_knowledge(
     if router is not None and not deterministic_ids:
         try:
             routed = await router.route(
-                face_id=face_id,
                 minimized_text=minimized_text,
                 allowed_ids=tuple(sorted(cards_by_id)),
                 max_results=_MAX_CARDS,

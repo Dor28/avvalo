@@ -56,7 +56,6 @@ class OpenAICompatibleKnowledgeRouter:
     async def route(
         self,
         *,
-        face_id: str,
         minimized_text: str,
         allowed_ids: tuple[str, ...],
         max_results: int,
@@ -70,7 +69,6 @@ class OpenAICompatibleKnowledgeRouter:
         )
         user = json.dumps(
             {
-                "face": face_id,
                 "minimized_text": minimized_text,
                 "allowed_ids": list(allowed_ids),
                 "max_results": min(3, max_results),

@@ -11,7 +11,6 @@ from app.bot.texts import t
 from app.config import Settings
 from app.data import repo
 from app.data.models import Consent, Feedback
-from app.engine.faces import FACES
 from app.privacy.user_key import derive_user_key
 
 
@@ -88,7 +87,6 @@ async def _record_check(session, *, user_key: str):
     check_id = await repo.record_check_event(
         session,
         user_key=user_key,
-        face="family",
         input_type="text",
         language="ru",
         status="ok",
@@ -109,7 +107,6 @@ async def test_feedback_callback_updates_its_check_not_latest_fsm_check(session)
         state,
         settings,
         _SessionFactory(session),
-        FACES["family"],
     )
 
     first_feedback = await session.get(Feedback, first_check_id)
@@ -130,7 +127,6 @@ async def test_feedback_callback_rejects_a_check_owned_by_another_user(session) 
         _State({"language": "ru"}),
         settings,
         _SessionFactory(session),
-        FACES["family"],
     )
 
     assert await session.get(Feedback, check_id) is None
@@ -151,11 +147,10 @@ async def test_stale_consent_callback_reissues_current_notice_without_granting(
         state,
         settings,
         _SessionFactory(session),
-        FACES["family"],
     )
 
     user_key = derive_user_key(123, secret=settings.app_hmac_secret.get_secret_value())
-    assert await session.get(Consent, (user_key, "family")) is None
+    assert await session.get(Consent, user_key) is None
     assert state.state == Onboarding.awaiting_consent
     assert callback.answers == [(t("consent_updated", language), {"show_alert": True})]
     assert bot.messages[-1]["text"] == t("privacy_notice", language)
@@ -173,11 +168,10 @@ async def test_current_consent_callback_grants_exact_notice_version(session) -> 
         state,
         settings,
         _SessionFactory(session),
-        FACES["family"],
     )
 
     user_key = derive_user_key(123, secret=settings.app_hmac_secret.get_secret_value())
-    consent = await session.get(Consent, (user_key, "family"))
+    consent = await session.get(Consent, user_key)
     assert consent is not None
     assert consent.notice_version == settings.notice_version
     assert consent.language == "ru"
@@ -197,9 +191,8 @@ async def test_current_consent_callback_requires_active_consent_prompt(session) 
         _State({"language": "ru"}),
         settings,
         _SessionFactory(session),
-        FACES["family"],
     )
 
     user_key = derive_user_key(123, secret=settings.app_hmac_secret.get_secret_value())
-    assert await session.get(Consent, (user_key, "family")) is None
+    assert await session.get(Consent, user_key) is None
     assert callback.answers == [(t("consent_updated", "ru"), {"show_alert": True})]

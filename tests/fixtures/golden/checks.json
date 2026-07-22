@@ -1,97 +1,192 @@
 [
   {
     "id": "fs_01_fake_bank_support",
-    "face": "family",
     "language": "uz_latn",
     "input_type": "text",
     "input": "Bank xavfsizlik xizmatidanmiz. Kartangiz bloklanadi. Hozir SMS orqali kelgan 6 xonali kodni yuboring, aks holda hisobingiz 10 daqiqada yopiladi.",
-    "expected_rule_families": ["credential_theft", "urgency_secrecy", "authority_impersonation"],
-    "must_include": ["do not share the SMS code", "open the bank app yourself", "call the number printed on the card"],
-    "must_not_contain": ["firibgar", "xavfsiz", "ishonchli"],
+    "expected_rule_families": [
+      "credential_theft",
+      "urgency_secrecy",
+      "authority_impersonation"
+    ],
+    "must_include": [
+      "do not share the SMS code",
+      "open the bank app yourself",
+      "call the number printed on the card"
+    ],
+    "must_not_contain": [
+      "firibgar",
+      "xavfsiz",
+      "ishonchli"
+    ],
     "no_signal": false,
     "notes": "Canonical golden case 1 for the unified consumer flow."
   },
   {
     "id": "fs_02_family_emergency",
-    "face": "family",
     "language": "ru",
     "input_type": "text",
     "input": "Мама, это мой новый номер. Телефон разбился. Я попал в неприятность, срочно переведи 3 000 000 сум на карту **** 4412. Только папе пока не звони.",
-    "expected_rule_families": ["authority_impersonation", "urgency_secrecy", "upfront_payment"],
-    "must_include": ["do not transfer money yet", "call the relative on the saved old number", "ask a control question only family knows"],
-    "must_not_contain": ["мошенник", "безопасно", "афёрист", "надёжный"],
+    "expected_rule_families": [
+      "authority_impersonation",
+      "urgency_secrecy",
+      "upfront_payment"
+    ],
+    "must_include": [
+      "do not transfer money yet",
+      "call the relative on the saved old number",
+      "ask a control question only family knows"
+    ],
+    "must_not_contain": [
+      "мошенник",
+      "безопасно",
+      "афёрист",
+      "надёжный"
+    ],
     "no_signal": false,
     "notes": "Canonical golden case 2 for the unified consumer flow."
   },
   {
     "id": "fs_03_seller_prepayment",
-    "face": "family",
     "language": "uz_latn",
     "input_type": "text",
     "input": "Телевизорни фақат бугун 40% арзон бераман. Бошқа харидор кутяпти, ҳозир 50% олдиндан картага ташланг. Учрашув ҳам, видеоқўнғироқ ҳам қилмайман, курьер олиб боради.",
-    "expected_rule_families": ["upfront_payment", "verification_avoidance", "urgency_secrecy", "implausible_promise"],
-    "must_include": ["do not prepay before seeing the item", "ask for a short video with today's date", "compare price and photos with other listings"],
-    "must_not_contain": ["фирибгар", "хавфсиз", "ишончли"],
+    "expected_rule_families": [
+      "upfront_payment",
+      "verification_avoidance",
+      "urgency_secrecy",
+      "implausible_promise"
+    ],
+    "must_include": [
+      "do not prepay before seeing the item",
+      "ask for a short video with today's date",
+      "compare price and photos with other listings"
+    ],
+    "must_not_contain": [
+      "фирибгар",
+      "хавфсиз",
+      "ишончли"
+    ],
     "no_signal": false,
     "notes": "Canonical golden case 3 for the unified consumer flow."
   },
   {
     "id": "fs_04_fake_delivery_link",
-    "face": "family",
     "language": "ru",
     "input_type": "text",
     "input": "Ваша посылка задержана. Оплатите 14 900 сум в течение часа, иначе заказ вернётся отправителю: hxxps://delivery-check[.]example/uz. Можно также отсканировать QR-код ниже.",
-    "expected_rule_families": ["suspicious_link_qr", "urgency_secrecy", "upfront_payment"],
-    "must_include": ["do not open the link or scan the QR", "open the delivery app/site manually", "contact the service via an independently found channel"],
-    "must_not_contain": ["мошенник", "безопасно", "афёрист", "надёжный"],
+    "expected_rule_families": [
+      "suspicious_link_qr",
+      "urgency_secrecy",
+      "upfront_payment"
+    ],
+    "must_include": [
+      "do not open the link or scan the QR",
+      "open the delivery app/site manually",
+      "contact the service via an independently found channel"
+    ],
+    "must_not_contain": [
+      "мошенник",
+      "безопасно",
+      "афёрист",
+      "надёжный"
+    ],
     "no_signal": false,
     "notes": "Canonical golden case 4. Output must not repeat the URL."
   },
   {
     "id": "fs_05_upfront_fee_job",
-    "face": "family",
     "language": "uz_latn",
     "input_type": "text",
     "input": "Uydan turib kuniga 1,5 mln so‘m topasiz, tajriba kerak emas. Joylar faqat bugun. Ishni boshlash uchun 250 000 so‘m ro‘yxatdan o‘tish puli va pasport rasmini Telegramga yuboring.",
-    "expected_rule_families": ["implausible_promise", "upfront_payment", "credential_theft", "urgency_secrecy"],
-    "must_include": ["do not pay a registration fee before a contract", "verify the legal entity name and address independently", "do not send a passport photo in an ordinary chat"],
-    "must_not_contain": ["firibgar", "xavfsiz", "ishonchli"],
+    "expected_rule_families": [
+      "implausible_promise",
+      "upfront_payment",
+      "credential_theft",
+      "urgency_secrecy"
+    ],
+    "must_include": [
+      "do not pay a registration fee before a contract",
+      "verify the legal entity name and address independently",
+      "do not send a passport photo in an ordinary chat"
+    ],
+    "must_not_contain": [
+      "firibgar",
+      "xavfsiz",
+      "ishonchli"
+    ],
     "no_signal": false,
     "notes": "Canonical golden case 5 for the unified consumer flow."
   },
   {
     "id": "fs_06_incoming_payment_screenshot",
-    "face": "family",
     "language": "ru",
     "input_type": "text",
     "input": "Здравствуйте! Оплату отправила, вот скриншот перевода на 850 000 сум. Деньги придут в течение дня, банк иногда задерживает. Отдайте товар курьеру сейчас, я очень спешу.",
-    "expected_rule_families": ["edited_screenshot_hint", "receipt_inconsistency", "fake_courier_refund"],
-    "must_include": ["a screenshot is not proof of payment", "confirm the incoming transfer in the receiving bank app", "do not give goods to the courier before the transfer is confirmed"],
-    "must_not_contain": ["мошенник", "безопасно", "деньги пришли", "оплата прошла", "платёж настоящий"],
+    "expected_rule_families": [
+      "edited_screenshot_hint",
+      "receipt_inconsistency",
+      "fake_courier_refund"
+    ],
+    "must_include": [
+      "a screenshot is not proof of payment",
+      "confirm the incoming transfer in the receiving bank app",
+      "do not give goods to the courier before the transfer is confirmed"
+    ],
+    "must_not_contain": [
+      "мошенник",
+      "безопасно",
+      "деньги пришли",
+      "оплата прошла",
+      "платёж настоящий"
+    ],
     "no_signal": false,
     "notes": "Incoming-payment screenshot, delay excuse, and courier pressure in the unified consumer flow."
   },
   {
     "id": "fs_07_overpayment_refund",
-    "face": "family",
     "language": "uz_latn",
     "input_type": "text",
     "input": "Akangiz men. Xato qilib ikki marta to‘lab yuboribman, 1 200 000 o‘rniga 2 400 000 ketdi. Iltimos, ortig‘ini shu kartaga qaytarib bering, skrinshot mana. Tezroq bo‘lsa yaxshi edi.",
-    "expected_rule_families": ["amount_mismatch", "edited_screenshot_hint"],
-    "must_include": ["do not refund anything before confirming the incoming transfer and amount", "a screenshot does not prove the overpayment", "check the receiving account independently"],
-    "must_not_contain": ["firibgar", "xavfsiz", "pul keldi", "to‘lov o‘tdi"],
+    "expected_rule_families": [
+      "amount_mismatch",
+      "edited_screenshot_hint"
+    ],
+    "must_include": [
+      "do not refund anything before confirming the incoming transfer and amount",
+      "a screenshot does not prove the overpayment",
+      "check the receiving account independently"
+    ],
+    "must_not_contain": [
+      "firibgar",
+      "xavfsiz",
+      "pul keldi",
+      "to‘lov o‘tdi"
+    ],
     "no_signal": false,
     "notes": "Overpayment-and-refund pressure handled by the unified consumer flow."
   },
   {
     "id": "fs_08_payment_name_mismatch",
-    "face": "family",
     "language": "uz_latn",
     "input_type": "text",
     "input": "Тўловни қилдим, чек мана. Лекин банк иловамда бошқа исм чиқяпти, унчалик муҳим эмас, пул барибир тушади. Тезроқ жўнатинг, харидор кутиб турибди.",
-    "expected_rule_families": ["receipt_inconsistency", "edited_screenshot_hint", "fake_courier_refund"],
-    "must_include": ["a different name is an inconsistency", "confirm the incoming transfer in the receiving account", "do not send goods before independent confirmation"],
-    "must_not_contain": ["фирибгар", "хавфсиз", "пул тушди", "тўлов ўтди"],
+    "expected_rule_families": [
+      "receipt_inconsistency",
+      "edited_screenshot_hint",
+      "fake_courier_refund"
+    ],
+    "must_include": [
+      "a different name is an inconsistency",
+      "confirm the incoming transfer in the receiving account",
+      "do not send goods before independent confirmation"
+    ],
+    "must_not_contain": [
+      "фирибгар",
+      "хавфсиз",
+      "пул тушди",
+      "тўлов ўтди"
+    ],
     "no_signal": false,
     "notes": "Recipient-name mismatch and release pressure handled by the unified consumer flow."
   }

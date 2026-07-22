@@ -6,7 +6,7 @@
 > **Evidence boundary:** A knowledge card or reviewed case is explanatory guidance, never an
 > official-source fact. Avvalo Verify requires a separate typed adapter result with source,
 > observation time, status, and limitations. Do not relabel knowledge retrieval as verification.
-> **Current runtime:** There is one active knowledge face, `family`. Merchant payment protections
+> **Current runtime:** There is one knowledge pack and no face discriminator. Merchant payment protections
 > are part of the main checker. The retired story-capture flow is not a source of new cases.
 
 ## 1. Required outcome
@@ -67,7 +67,7 @@ The external model never receives the raw image, raw phone numbers, card numbers
 Minimum card fields:
 
 ```text
-id, face, version, status, reviewer
+id, version, status, reviewer
 trigger_rule_ids[], trigger_signal_kinds[], retrieval_aliases{language: []}
 mechanism, red_flags[], verify_steps[], questions[], reviewed_case_ids[]
 ```
@@ -97,7 +97,7 @@ mechanism, red_flags[], verify_steps[], questions[], reviewed_case_ids[]
 
 ## 4. Retrieval rules
 
-1. Resolve mandatory cards from `face + rule_ids + signal kinds`.
+1. Resolve mandatory cards from `rule_ids + signal kinds`.
 2. Add candidates from broad multilingual retrieval cues.
 3. If the candidate set is empty or ambiguous, optionally ask the semantic router for allowlisted IDs.
 4. Dedupe, rank deterministically, and inject no more than three cards/cases.
@@ -118,7 +118,7 @@ The alpha does not require embeddings or a vector database. Versioned files plus
 Allowed per-check metadata may include:
 
 ```text
-face, language, input_type, status, latency and cost fields
+language, input_type, status, latency and cost fields
 rule_ids, signal kinds, knowledge_card_ids, reviewed_case_ids
 retrieval_mode, retrieval_status
 rule_pack_version, kb_version, prompt_version, model_id, validator_version
@@ -149,9 +149,9 @@ This is a dated baseline, not a completion claim. Re-run the audit after T14/R0 
 |---|---|---|
 | One engine for Telegram and web | ✅ Implemented and tested | Both channel handlers build `CheckInput` and call `app.engine.pipeline.run_check()`; `test_r0_criterion_10_telegram_and_web_share_run_check` guards the shared call path |
 | Intake, language, and OCR | ⚠️ Partial | Text/image intake, language resolution, OCR abstraction, confidence gating, and metadata stripping exist. The configured default is Google Cloud Vision, so the separate local/on-prem OCR product promise depends on deployment configuration and is not guaranteed by this code default |
-| Rules on raw local text, then minimization | ✅ Implemented and tested | `pipeline._run_stages()` calls `run_rules(text, face)` before the local URL-artifact lookup and `minimize(text, signals)`; `tests/test_t05_rules_minimize.py` guards minimization |
+| Rules on raw local text, then minimization | ✅ Implemented and tested | `pipeline._run_stages()` calls `run_rules(text)` before the local URL-artifact lookup and `minimize(text, signals)`; `tests/test_t05_rules_minimize.py` guards minimization |
 | Zero-rule semantic analysis | ✅ Implemented and tested | `test_r0_criterion_01_zero_rule_message_still_reaches_answer_llm` proves `rule_ids=[]` still reaches the answer model |
-| Versioned knowledge-card store | ✅ Implemented and tested | `FileKnowledgeStore.load()` validates the approved `family` cards and `knowledge/version.yaml`; deploy tests prove `knowledge/` is copied into the image and the active pack loads |
+| Versioned knowledge-card store | ✅ Implemented and tested | `FileKnowledgeStore.load()` validates the approved cards in `knowledge/cards/` against `knowledge/version.yaml`; deploy tests prove `knowledge/` is copied into the image and the active pack loads |
 | Rule/signal/cue retrieval | ✅ Implemented and tested | `retrieve_knowledge()` ranks mandatory rule/signal matches and multilingual cues, enforces the three-card ceiling, and has direct tests for all three paths |
 | Allowlisted semantic router | ⚠️ Wiring implemented and tested; recall unmeasured | `OpenAICompatibleKnowledgeRouter` sees minimized text plus a server allowlist only; backend validation rejects invented IDs. Tests cover timeout/failure degradation, default-off config, token-cost aggregation, and an end-to-end inflected-Russian path **against a fake provider**. No eval against a live model exists, so the inflected-recall gap that motivated the router is not yet proven closed |
 | Reviewed cases | ⚠️ Contract present; no intake pipeline | Cards and events carry validated `reviewed_case_ids`, but current approved cards reference no reviewed derivatives. The retired `story_submission` rows are never runtime knowledge and no new story-capture writes are allowed. Founder-authored public posts are an editorial surface, not reviewed-case grounding, and are never injected into answers |
@@ -160,4 +160,4 @@ This is a dated baseline, not a completion claim. Re-run the audit after T14/R0 
 | Provider fallback / degraded answer | ✅ Implemented and tested | `_configured_fallback_provider()` and `_call_llm()` use the secondary provider after primary timeout/error; the T14 regression proves the result remains a normal successful answer |
 | Knowledge/version observability | ✅ Implemented and tested | `CheckResult`, `check_event`, logs, migrations, gap reports, and daily metrics carry card/case IDs, retrieval/router status, KB version, coverage, unavailable rate, and approved-card inventory without content |
 | Privacy-safe persistence | ✅ Implemented and tested | Active check, router, and URL-reputation paths persist only IDs, enums, hashes, versions, and metrics. `story_submission.minimized_text` is legacy stewardship only: no new writes or product reads; old rows remain covered by deletion and retention until an authorized purge |
-| Automated verification | ✅ Current contract green | `pytest -q`: 259 passed and `ruff check .` passed on 2026-07-22 after the legacy-surface removal |
+| Automated verification | ✅ Current contract green | `pytest -q`: 258 passed, 1 skipped and `ruff check .` passed on 2026-07-22 after the product-face removal |

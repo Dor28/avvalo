@@ -93,8 +93,7 @@ class _FailingOCRProvider:
 
 def _image_input(user_key: str) -> CheckInput:
     return CheckInput(
-        face="family",
-        user_key=user_key,
+                user_key=user_key,
         language=Language.ru,
         input_type=InputType.image,
         image_bytes=b"\x89PNG\r\n",

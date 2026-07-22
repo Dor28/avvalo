@@ -47,7 +47,6 @@ class CheckInput(BaseModel):
     used during the request but must never be persisted.
     """
 
-    face: str
     user_key: str
     language: Language
     input_type: InputType
@@ -64,7 +63,11 @@ class Signal(BaseModel):
 
 
 class RuleHit(BaseModel):
-    """A deterministic rule hit."""
+    """A deterministic rule hit.
+
+    ``family`` names the scam-family taxonomy bucket (credential_theft,
+    urgency_secrecy, …), not any product identifier.
+    """
 
     rule_id: str
     family: str
