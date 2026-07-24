@@ -35,6 +35,7 @@ CHECK_EVENT_STATUSES = {
     "no_signal",
     "empty_input",
     "meta",
+    "off_topic",
     "low_ocr",
     "rate_limited",
     "timeout",

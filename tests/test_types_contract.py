@@ -15,6 +15,7 @@ from app.engine.types import (
     Language,
     RuleHit,
     Signal,
+    SituationType,
 )
 
 
@@ -32,6 +33,7 @@ def test_check_status_enum_values() -> None:
         "no_signal",
         "empty_input",
         "meta",
+        "off_topic",
         "low_ocr",
         "rate_limited",
         "timeout",
@@ -51,8 +53,13 @@ def test_check_input_fields_and_ephemeral_defaults() -> None:
         assert fields[ephemeral].default is None
 
 
+def test_situation_type_enum_values() -> None:
+    assert {kind.value for kind in SituationType} == {"checkable", "off_topic"}
+
+
 def test_draft_output_contract() -> None:
     assert set(DraftOutput.model_fields) == {
+        "situation_type",
         "red_flags",
         "pattern",
         "verify",
@@ -62,6 +69,9 @@ def test_draft_output_contract() -> None:
     empty = DraftOutput()
     assert empty.red_flags == [] and empty.verify == [] and empty.ask == []
     assert empty.pattern is None
+    # Fail-safe direction: an omitted classification must run a real check
+    # rather than redirect the user away from a possible situation.
+    assert empty.situation_type is SituationType.checkable
 
 
 def test_rule_hit_and_signal_contract() -> None:

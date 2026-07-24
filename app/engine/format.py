@@ -162,6 +162,20 @@ _STATUS_MESSAGES = {
             "данными."
         ),
     },
+    CheckStatus.off_topic: {
+        Language.uz_latn: (
+            "Men aniq vaziyatlarni ko'rib chiqaman: xabar, qo'ng'iroq, havola, "
+            "QR-kod, hisob, taklif yoki skrinshot. Sizni shubhaga solgan narsani "
+            "yuboring — xavf belgilarini, nimani mustaqil tekshirish va nimani "
+            "so'rashni ko'rsataman."
+        ),
+        Language.ru: (
+            "Я разбираю конкретные ситуации: сообщение, звонок, ссылку, QR-код, "
+            "счёт, предложение или скриншот. Пришлите то, что вас насторожило — "
+            "покажу тревожные признаки, что проверить самостоятельно и что "
+            "спросить."
+        ),
+    },
     CheckStatus.low_ocr: {
         Language.uz_latn: (
             "Rasmdagi matn yoki QR-kodni aniq o'qiy olmadim. Muhim joyni matn qilib "
