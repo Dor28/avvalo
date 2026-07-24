@@ -10,6 +10,7 @@ from app.engine.types import (
     Language,
     RuleHit,
     Signal,
+    SituationType,
 )
 from app.engine.validate import ValidationReason, ValidationResult, validate
 
@@ -23,6 +24,7 @@ __all__ = [
     "Language",
     "RuleHit",
     "Signal",
+    "SituationType",
     "ValidationReason",
     "ValidationResult",
     "run_check",

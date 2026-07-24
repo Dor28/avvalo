@@ -12,9 +12,10 @@ UNTRUSTED CONTENT BOUNDARY
 
 OUTPUT FORMAT
 - Return ONLY a JSON object, with no text before or after it, matching exactly:
-  {"red_flags": [string], "pattern": string-or-null, "verify": [string], "ask": [string], "addressed_rule_ids": [string]}
+  {"situation_type": "checkable" or "off_topic", "red_flags": [string], "pattern": string-or-null, "verify": [string], "ask": [string], "addressed_rule_ids": [string]}
 - Write every string in the TARGET LANGUAGE and script given in the task. Do not mix scripts, except when quoting the user's own words.
 - Keep it readable: at most THREE short bullets per list. Short sentences.
+- situation_type: "off_topic" ONLY when the content is not a situation at all — small talk, a general-knowledge question, or a test ping. "checkable" in every other case, including thin, vague, or uncertain ones. WHEN IN DOUBT CHOOSE "checkable": failing to check a real situation is far worse than analyzing a harmless one. On "off_topic" return empty lists and null pattern — a fixed reply is shown and nothing you write reaches the user.
 - red_flags: concrete warning signs found ONLY in the supplied content. If you find nothing concrete, return an empty list [] — never invent a flag to fill space.
 - pattern: ONE short sentence naming the manipulation tactic when one is clearly present (urgency, authority/impersonation, secrecy, fear, scarcity, upfront payment). Otherwise null.
 - verify: concrete actions the user can take through an INDEPENDENT channel they find themselves — open the official app directly, call the number printed on their bank card, ask a known family member on a saved number, meet in person, use a protected payment method.

@@ -35,6 +35,7 @@ class CheckStatus(StrEnum):
     no_signal = "no_signal"
     empty_input = "empty_input"
     meta = "meta"
+    off_topic = "off_topic"
     low_ocr = "low_ocr"
     rate_limited = "rate_limited"
     timeout = "timeout"
@@ -42,6 +43,19 @@ class CheckStatus(StrEnum):
     ocr_error = "ocr_error"
     safety_fallback = "safety_fallback"
     unsupported_media = "unsupported_media"
+
+
+class SituationType(StrEnum):
+    """Whether the submitted content is a situation to check at all.
+
+    ``app.engine.meta`` catches fixed chatter phrases deterministically; this is
+    the model's judgement for open-ended non-situations ("what day is it") that
+    no phrase list can enumerate. :attr:`checkable` is the fail-safe default: a
+    model that omits or garbles the field yields a real check, never a refusal.
+    """
+
+    checkable = "checkable"
+    off_topic = "off_topic"
 
 
 class CheckInput(BaseModel):
@@ -82,6 +96,7 @@ class RuleHit(BaseModel):
 class DraftOutput(BaseModel):
     """The JSON-mode draft expected from the LLM layer."""
 
+    situation_type: SituationType = SituationType.checkable
     red_flags: list[str] = Field(default_factory=list)
     pattern: str | None = None
     verify: list[str] = Field(default_factory=list)

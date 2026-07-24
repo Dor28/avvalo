@@ -46,6 +46,7 @@ from app.engine.types import (
     InputType,
     RuleHit,
     Signal,
+    SituationType,
 )
 from app.engine.url_reputation import (
     DatabaseURLReputationStore,
@@ -72,15 +73,20 @@ class _UnavailableKnowledgeRouter:
 _DEFAULT_DAILY_LIMIT = 5
 
 # Outcomes that consume a daily-limit slot: a real completion (ok / no_signal),
-# an OCR attempt that reached the configured provider, or a safety fallback
-# that still ran the model. Every other status is a pre-analysis or system fault
-# and is refunded so it doesn't burn the quota.
+# an OCR attempt that reached the configured provider, a safety fallback that
+# still ran the model, or an off-topic redirect the model had to read the
+# content to decide. Every other status is a pre-analysis or system fault and is
+# refunded so it doesn't burn the quota. ``off_topic`` is deliberately billable:
+# it costs a real model call, so charging it caps junk at the daily limit
+# instead of leaving an unmetered path. ``meta`` stays free — it is matched
+# deterministically before any provider is touched.
 # Public because the web channel's per-IP limit applies the same refund rule.
 BILLABLE_STATUSES = frozenset(
     {
         CheckStatus.ok,
         CheckStatus.no_signal,
         CheckStatus.low_ocr,
+        CheckStatus.off_topic,
         CheckStatus.safety_fallback,
     }
 )
@@ -588,6 +594,19 @@ async def _call_llm(
 
         total_input_tokens += response.input_tokens
         total_output_tokens += response.output_tokens
+        # A deterministic rule hit is an authoritative fact that this content is
+        # a situation, so it outranks the model's judgement: only an otherwise
+        # signal-free message may be redirected as off-topic.
+        if not rule_hits and response.draft.situation_type is SituationType.off_topic:
+            return _off_topic_stage_result(
+                check_input,
+                started=started,
+                input_tokens=total_input_tokens,
+                output_tokens=total_output_tokens,
+                settings=resolved_settings,
+                ocr_ms=ocr_ms,
+                ocr_confidence=ocr_confidence,
+            )
         validation = validate(
             response.draft,
             signals,
@@ -633,6 +652,43 @@ async def _call_llm(
             llm_ms=llm_ms,
             input_tokens=total_input_tokens,
             output_tokens=total_output_tokens,
+            cost_usd=cost_usd,
+        ),
+    )
+
+
+def _off_topic_stage_result(
+    check_input: CheckInput,
+    *,
+    started: float,
+    input_tokens: int,
+    output_tokens: int,
+    settings: Settings | None,
+    ocr_ms: int | None,
+    ocr_confidence: float | None,
+) -> _LLMStageResult:
+    """Return the fixed redirect for content the model judged not a situation.
+
+    The model acts purely as a classifier here: none of its prose is rendered,
+    only deterministic localized copy, so this path needs no safety validation
+    and records no rule IDs.
+    """
+
+    llm_ms = max(0, round((perf_counter() - started) * 1000))
+    cost_usd = _estimate_cost(input_tokens, output_tokens, settings)
+    return _LLMStageResult(
+        response=None,
+        llm_ms=llm_ms,
+        cost_usd=cost_usd,
+        status=_result(
+            check_input,
+            CheckStatus.off_topic,
+            text=format_status_message(CheckStatus.off_topic, check_input.language),
+            ocr_ms=ocr_ms,
+            ocr_confidence=ocr_confidence,
+            llm_ms=llm_ms,
+            input_tokens=input_tokens or None,
+            output_tokens=output_tokens or None,
             cost_usd=cost_usd,
         ),
     )

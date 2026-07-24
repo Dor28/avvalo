@@ -101,10 +101,17 @@ missing authoritative rule coverage.
 
 ### Statuses
 
-The engine uses categorical statuses such as `ok`, `no_signal`, `empty_input`, `meta`, `low_ocr`,
-`rate_limited`, `timeout`, `llm_error`, `ocr_error`, `unsupported_media`, and `safety_fallback`.
+The engine uses categorical statuses such as `ok`, `no_signal`, `empty_input`, `meta`, `off_topic`,
+`low_ocr`, `rate_limited`, `timeout`, `llm_error`, `ocr_error`, `unsupported_media`, and
+`safety_fallback`.
 `meta` is a deterministic, non-billable short-circuit for chatter about the bot itself (greetings,
 "what can you do", thanks) that never reaches the rule pack or the LLM — see `app.engine.meta`.
+`off_topic` covers the open-ended non-situations no phrase list can enumerate ("what day is it").
+The model classifies these via the `situation_type` field on `DraftOutput`, and the reply is fixed
+localized copy — none of the model's prose is rendered, so that path needs no safety validation.
+Two guards keep it from swallowing a real case: `checkable` is the default when the field is absent,
+and any deterministic rule hit overrides an `off_topic` classification. It is billable, because it
+costs a real model call and the daily limit is what caps junk volume.
 Error classes are categorical identifiers, never exception messages.
 
 ## 5. Rules and payment protection

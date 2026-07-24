@@ -9,7 +9,7 @@ from pathlib import Path
 
 from app.engine.knowledge import KnowledgeCard
 from app.engine.rules import load_rule_pack
-from app.engine.types import DraftOutput, Language, RuleHit, Signal
+from app.engine.types import DraftOutput, Language, RuleHit, Signal, SituationType
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SYSTEM_PROMPT = _REPO_ROOT / "prompts" / "system_safety.txt"
@@ -42,11 +42,37 @@ def draft_output_schema() -> dict:
     """Return the JSON schema supplied to providers that support it."""
 
     schema = DraftOutput.model_json_schema()
+    _inline_situation_type(schema)
     required = list(schema.get("required", []))
-    if "addressed_rule_ids" not in required:
-        required.append("addressed_rule_ids")
+    for field in ("situation_type", "addressed_rule_ids"):
+        if field not in required:
+            required.append(field)
     schema["required"] = required
     return schema
+
+
+def _inline_situation_type(schema: dict) -> None:
+    """Replace the ``$ref``/``$defs`` indirection Pydantic emits for the enum.
+
+    Not every OpenAI-compatible host resolves ``$defs`` in JSON-schema mode, and
+    a silently dropped ``situation_type`` would disable off-topic triage rather
+    than fail loudly. An inline enum keeps the contract legible to every host.
+    """
+
+    properties = schema.get("properties", {})
+    if "situation_type" in properties:
+        properties["situation_type"] = {
+            "type": "string",
+            "enum": [member.value for member in SituationType],
+            "description": (
+                "off_topic when the content is not a situation to check at all; "
+                "checkable in every other case, including thin or uncertain ones."
+            ),
+        }
+    defs = schema.get("$defs", {})
+    defs.pop("SituationType", None)
+    if not defs:
+        schema.pop("$defs", None)
 
 
 @cache
