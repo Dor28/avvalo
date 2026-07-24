@@ -125,6 +125,8 @@ def test_log_error_accepts_metadata_and_refuses_content() -> None:
     with pytest.raises(ValueError):
         log_error("llm", "LLMProviderError", reason="+998 90 123 45 67")
     with pytest.raises(ValueError):
+        log_error("validate", "SafetyValidationError", reason="private negotiation detail")
+    with pytest.raises(ValueError):
         log_error("llm", "LLMProviderError", raw_text="secret submitted content")
 
 

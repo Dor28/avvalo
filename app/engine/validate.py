@@ -8,6 +8,8 @@ not proof that its wording explained that fact well.
 from __future__ import annotations
 
 import re
+import unicodedata
+from enum import StrEnum
 
 from pydantic import BaseModel
 
@@ -71,6 +73,15 @@ _DIRECT_VERDICT_PATTERNS = (
     r"(?iu)\bмошенничеств\w*\b",
     r"(?i)\bfiribgarlik\w*\b",
     r"(?iu)\bфирибгарлик\w*\b",
+    r"(?i)\bno\s+(?:risk|danger|warning\s+signs?)\s+(?:was\s+|were\s+)?"
+    r"(?:detected|found|identified)\b",
+    r"(?i)\b(?:the\s+)?(?:company|organization|business)\s+"
+    r"(?:is|appears|seems)\s+(?:trustworthy|reliable)\b",
+    r"(?iu)\bриск\w*\s+не\s+(?:выявлен\w*|обнаружен\w*|найден\w*)\b",
+    r"(?iu)\bкомпани\w*\s+можно\s+доверять\b",
+    r"(?i)\bxavf\w*\s+(?:aniqlanmadi|topilmadi|ko['’]?rinmadi)\b",
+    r"(?i)\b(?:bu\s+)?(?:kompaniya|tashkilot)(?:ga)?\s+"
+    r"ishon(?:sa|ish)\w*\b",
 )
 _RISK_SCORE_PATTERNS = (
     r"(?i)\b(?:risk|danger|trust|safety)\s+(?:score|rating|probability)\b",
@@ -121,6 +132,20 @@ _UNSUPPORTED_LOOKUP_PATTERNS = (
     r"tekshird(?:im|ik|i)\b",
     r"(?iu)\b(?:мен|биз|avvalo)\s+(?:база|ҳисоб|шахс|сайт|ташкилот)(?:ни)?\s+"
     r"текширд(?:им|ик|и)\b",
+    r"(?i)\b(?:i|we|avvalo)\s+(?:checked|searched|verified)\s+"
+    r"(?:all|every)\s+(?:the\s+)?official\s+(?:databases?|records?)\b",
+    r"(?iu)\b(?:я|мы|avvalo)\s+проверил(?:а|и)?\s+все\s+официальн\w*\s+"
+    r"(?:баз\w*|реестр\w*)\b",
+    r"(?i)\b(?:men|biz|avvalo)\s+barcha\s+rasmiy\s+"
+    r"(?:baza|reyestr)(?:larni|ni)?\s+tekshird(?:im|ik|i)\b",
+    r"(?i)\b(?:this\s+)?(?:phone\s+number|phone|number)\s+"
+    r"(?:has\s+been\s+|was\s+)?reported\b",
+    r"(?iu)\b(?:этот\s+)?(?:номер|телефон)\s+(?:был\s+)?(?:отмечен|зарегистрирован)\b",
+    r"(?i)\b(?:bu\s+)?(?:telefon\s+)?raqam\s+(?:haqida\s+)?xabar\s+berilgan\b",
+    r"(?i)\b(?:the\s+)?(?:company|organization|business)\s+"
+    r"(?:does\s+not|doesn['’]?t)\s+exist\b",
+    r"(?iu)\b(?:компани\w*|организаци\w*)\s+не\s+существует\b",
+    r"(?i)\b(?:kompaniya|tashkilot)\s+mavjud\s+emas\b",
     r"(?i)\b(?:the\s+)?(?:(?:external|public|internal)\s+)?"
     r"(?:database|records)\s+(?:shows?|indicates?|confirms?|verified|found|returned|"
     r"contains?|has)\b",
@@ -155,12 +180,37 @@ _BLOCKLIST_CLAIM_RE = re.compile(
 )
 
 
+class ValidationReason(StrEnum):
+    """Fixed safety-rejection codes safe to reuse in retries and metadata logs."""
+
+    DRAFT_FAILED = "draft failed deterministic safety validation"
+    BANNED_VERDICT_WORD = "banned verdict word"
+    BANNED_DIRECT_VERDICT = "banned direct verdict"
+    RISK_SCORE = "risk score or probability leaked"
+    RAW_CONTACT_OR_URL = "raw contact or URL leaked"
+    RAW_PHONE = "raw phone number leaked"
+    RAW_CARD = "raw card/account number leaked"
+    PASSPORT = "passport number leaked"
+    SECRET = "secret value leaked"
+    UNSAFE_CONTACT_PATH = "unsafe instruction to use suspicious contact path"
+    INTERNAL_KNOWLEDGE_ID = "internal knowledge id leaked"
+    REVIEWED_CASE_AS_PROOF = "reviewed case represented as proof"
+    UNSUPPORTED_EXTERNAL_LOOKUP = "unsupported external lookup claim"
+    UNSUPPORTED_BLOCKLIST_CLAIM = "unsupported URL blocklist claim"
+    WRONG_LANGUAGE_SCRIPT = "wrong language script"
+    VERIFY_BLOCK_EMPTY = "verify block is empty"
+    ASK_BLOCK_EMPTY = "ask block is empty"
+    REQUIRED_RED_FLAGS_EMPTY = "red_flags block is empty despite detected signals"
+    UNKNOWN_RULE_IDS = "unknown addressed rule ids"
+    MISSING_RULE_IDS = "missing addressed rule ids"
+
+
 class ValidationResult(BaseModel):
     """Result of deterministic draft validation."""
 
     ok: bool
     draft: DraftOutput
-    reason: str | None = None
+    reason: ValidationReason | None = None
     no_signal: bool = False
 
 
@@ -222,21 +272,21 @@ def _first_rejection_reason(
     knowledge_card_ids: list[str],
     authoritative_lookup: bool,
     rule_hits: list[RuleHit],
-) -> str | None:
-    lower = text.casefold()
-    _ = language
+) -> ValidationReason | None:
+    scan_text = _normalize_for_matching(text)
+    lower = scan_text.casefold()
     banned = (*_all_banned_words(), *_EN_BANNED)
     for word in banned:
         if re.search(rf"(?<![\w-]){re.escape(word.casefold())}(?![\w-])", lower):
-            return f"banned verdict word: {word}"
-    if any(re.search(pattern, text) for pattern in _DIRECT_VERDICT_PATTERNS):
-        return "banned direct verdict"
+            return ValidationReason.BANNED_VERDICT_WORD
+    if any(re.search(pattern, scan_text) for pattern in _DIRECT_VERDICT_PATTERNS):
+        return ValidationReason.BANNED_DIRECT_VERDICT
 
-    if any(re.search(pattern, text) for pattern in _RISK_SCORE_PATTERNS):
-        return "risk score or probability leaked"
+    if any(re.search(pattern, scan_text) for pattern in _RISK_SCORE_PATTERNS):
+        return ValidationReason.RISK_SCORE
 
-    if _EMAIL_RE.search(text) or _URL_OR_DOMAIN_RE.search(text):
-        return "raw contact or URL leaked"
+    if _EMAIL_RE.search(scan_text) or _URL_OR_DOMAIN_RE.search(scan_text):
+        return ValidationReason.RAW_CONTACT_OR_URL
     has_blocklist_fact = any(
         hit.rule_id == "shared.link.blocklisted" for hit in rule_hits
     )
@@ -244,51 +294,70 @@ def _first_rejection_reason(
     # detector also matches YYYY-MM-DD, so remove only that exact shape and only
     # when the authoritative blocklist fact is present. All other digit runs
     # remain subject to the normal phone/account guards.
-    phone_scan_text = _ISO_DATE_RE.sub("[DATE]", text) if has_blocklist_fact else text
+    phone_scan_text = (
+        _ISO_DATE_RE.sub("[DATE]", scan_text) if has_blocklist_fact else scan_text
+    )
     if _PHONE_RE.search(phone_scan_text):
-        return "raw phone number leaked"
-    if _CARD_RE.search(text):
-        return "raw card/account number leaked"
-    if _PASSPORT_RE.search(text):
-        return "passport number leaked"
-    if _OTP_LABELED_RE.search(text) or _PASSWORD_VALUE_RE.search(text):
-        return "secret value leaked"
+        return ValidationReason.RAW_PHONE
+    if _CARD_RE.search(scan_text):
+        return ValidationReason.RAW_CARD
+    if _PASSPORT_RE.search(scan_text):
+        return ValidationReason.PASSPORT
+    if _OTP_LABELED_RE.search(scan_text) or _PASSWORD_VALUE_RE.search(scan_text):
+        return ValidationReason.SECRET
     for pattern in _UNSAFE_PATTERNS:
-        if re.search(pattern, text):
-            return "unsafe instruction to use suspicious contact path"
-    if _INTERNAL_KNOWLEDGE_ID_RE.search(text) or any(
+        if re.search(pattern, scan_text):
+            return ValidationReason.UNSAFE_CONTACT_PATH
+    if _INTERNAL_KNOWLEDGE_ID_RE.search(scan_text) or any(
         card_id.casefold() in lower for card_id in knowledge_card_ids
     ):
-        return "internal knowledge id leaked"
+        return ValidationReason.INTERNAL_KNOWLEDGE_ID
     for pattern in _CASE_PROOF_PATTERNS:
-        if re.search(pattern, text):
-            return "reviewed case represented as proof"
+        if re.search(pattern, scan_text):
+            return ValidationReason.REVIEWED_CASE_AS_PROOF
     # The legacy boolean cannot waive person/account/database prohibitions. R6's
     # only authoritative exception is the separately grounded URL blocklist fact.
     _ = authoritative_lookup
     for pattern in _UNSUPPORTED_LOOKUP_PATTERNS:
-        if re.search(pattern, text):
-            return "unsupported external lookup claim"
-    if _BLOCKLIST_CLAIM_RE.search(text) and not has_blocklist_fact:
-        return "unsupported URL blocklist claim"
+        if re.search(pattern, scan_text):
+            return ValidationReason.UNSUPPORTED_EXTERNAL_LOOKUP
+    if _BLOCKLIST_CLAIM_RE.search(scan_text) and not has_blocklist_fact:
+        return ValidationReason.UNSUPPORTED_BLOCKLIST_CLAIM
+    if _uses_wrong_script(scan_text, language):
+        return ValidationReason.WRONG_LANGUAGE_SCRIPT
     if not draft.verify:
-        return "verify block is empty"
+        return ValidationReason.VERIFY_BLOCK_EMPTY
     if not draft.ask:
-        return "ask block is empty"
+        return ValidationReason.ASK_BLOCK_EMPTY
     if requires_red_flag and not draft.red_flags:
-        return "red_flags block is empty despite detected signals"
+        return ValidationReason.REQUIRED_RED_FLAGS_EMPTY
     known_rule_ids = {hit.rule_id for hit in rule_hits}
     declared_rule_ids = set(draft.addressed_rule_ids)
-    invented_rule_ids = sorted(declared_rule_ids - known_rule_ids)
-    if invented_rule_ids:
-        return f"unknown addressed rule ids: {', '.join(invented_rule_ids)}"
+    if declared_rule_ids - known_rule_ids:
+        return ValidationReason.UNKNOWN_RULE_IDS
     required_rule_ids = {
         hit.rule_id for hit in rule_hits if hit.severity >= _RED_FLAG_MIN_SEVERITY
     }
-    missing_rule_ids = sorted(required_rule_ids - declared_rule_ids)
-    if missing_rule_ids:
-        return f"missing addressed rule ids: {', '.join(missing_rule_ids)}"
+    if required_rule_ids - declared_rule_ids:
+        return ValidationReason.MISSING_RULE_IDS
     return None
+
+
+def _normalize_for_matching(text: str) -> str:
+    """Collapse common output obfuscation without changing the visible draft."""
+
+    normalized = unicodedata.normalize("NFKC", text)
+    without_format_controls = "".join(
+        character for character in normalized if unicodedata.category(character) != "Cf"
+    )
+    return re.sub(r"[*~`]+", "", without_format_controls)
+
+
+def _uses_wrong_script(text: str, language: Language) -> bool:
+    """Enforce the product rule that Uzbek replies use Latin script only."""
+
+    cyrillic_count = len(re.findall(r"[\u0400-\u052f]", text))
+    return language is Language.uz_latn and cyrillic_count > 0
 
 
 def _all_banned_words() -> tuple[str, ...]:

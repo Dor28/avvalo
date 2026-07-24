@@ -178,6 +178,8 @@ def log_error(stage: str, error_type: str, **fields: Any) -> dict[str, Any]:
     normalized: dict[str, Any] = {"stage": stage, "error_type": _normalize_value(error_type)}
     for key, value in fields.items():
         _validate_field_name(key, ALLOWED_ERROR_FIELDS)
+        if key == "reason" and not isinstance(value, Enum):
+            raise ValueError("Error reason must be a fixed enum")
         normalized[key] = _normalize_value(value)
 
     payload = {"event": "app_error", **normalized}

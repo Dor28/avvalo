@@ -3,6 +3,7 @@
 import logging
 from decimal import Decimal
 
+import pytest
 from sqlalchemy import select
 
 from app.config import Settings
@@ -11,7 +12,8 @@ from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.format import format_fallback, format_result, format_status_message
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput, RuleHit
-from app.engine.validate import validate
+from app.engine.validate import ValidationReason, validate
+from app.obs.events import log_error
 from tests.support import addressed_rule_ids
 
 
@@ -158,6 +160,133 @@ def test_validator_rejects_direct_verdicts_scores_lookup_claims_and_bare_domains
         Language.ru,
     )
     assert allowed_percentage.ok
+
+
+@pytest.mark.parametrize(
+    ("language", "unsafe_text", "expected_reason"),
+    [
+        (Language.uz_latn, "No risk was detected.", ValidationReason.BANNED_DIRECT_VERDICT),
+        (
+            Language.uz_latn,
+            "The company is trustworthy.",
+            ValidationReason.BANNED_DIRECT_VERDICT,
+        ),
+        (
+            Language.uz_latn,
+            "This phone number has been reported.",
+            ValidationReason.UNSUPPORTED_EXTERNAL_LOOKUP,
+        ),
+        (
+            Language.uz_latn,
+            "The organization does not exist.",
+            ValidationReason.UNSUPPORTED_EXTERNAL_LOOKUP,
+        ),
+        (
+            Language.uz_latn,
+            "We checked all official databases.",
+            ValidationReason.UNSUPPORTED_EXTERNAL_LOOKUP,
+        ),
+        (Language.ru, "Рисков не выявлено.", ValidationReason.BANNED_DIRECT_VERDICT),
+        (Language.ru, "Компании можно доверять.", ValidationReason.BANNED_DIRECT_VERDICT),
+        (
+            Language.ru,
+            "Мы проверили все официальные базы.",
+            ValidationReason.UNSUPPORTED_EXTERNAL_LOOKUP,
+        ),
+        (
+            Language.uz_latn,
+            "Bu holatda xavf aniqlanmadi.",
+            ValidationReason.BANNED_DIRECT_VERDICT,
+        ),
+        (
+            Language.uz_latn,
+            "Bu kompaniyaga ishonsa bo'ladi.",
+            ValidationReason.BANNED_DIRECT_VERDICT,
+        ),
+    ],
+)
+def test_validator_rejects_demonstrated_indirect_claims(
+    language: Language,
+    unsafe_text: str,
+    expected_reason: ValidationReason,
+) -> None:
+    supporting = (
+        ("Проверьте данные самостоятельно.", "Запросите письменные условия.")
+        if language is Language.ru
+        else ("Ma'lumotni mustaqil tekshiring.", "Yozma shartlarni so'rang.")
+    )
+    result = validate(
+        DraftOutput(
+            red_flags=[unsafe_text],
+            verify=[supporting[0]],
+            ask=[supporting[1]],
+        ),
+        [],
+        [],
+        language,
+    )
+
+    assert result.reason is expected_reason
+
+
+@pytest.mark.parametrize(
+    "unsafe_text",
+    [
+        "This person is a s**cammer.",
+        "This appears s\u200bafe.",
+        "Ｔｈｉｓ appears ｓａｆｅ.",  # noqa: RUF001 - deliberate NFKC bypass probe
+    ],
+)
+def test_validator_normalizes_markdown_zero_width_and_nfkc(unsafe_text: str) -> None:
+    result = validate(
+        DraftOutput(
+            red_flags=[unsafe_text],
+            verify=["Ma'lumotni mustaqil tekshiring."],
+            ask=["Yozma shartlarni so'rang."],
+        ),
+        [],
+        [],
+        Language.uz_latn,
+    )
+
+    assert result.reason is ValidationReason.BANNED_VERDICT_WORD
+
+
+def test_validator_rejects_cyrillic_uzbek_reply_script() -> None:
+    draft = DraftOutput(
+        red_flags=["Хабарда шошилинч талаб бор."],  # noqa: RUF001
+        verify=["Маълумотни мустақил текширинг."],
+        ask=["Ёзма шартларни сўранг."],
+    )
+
+    result = validate(draft, [], [], Language.uz_latn)
+
+    assert result.reason is ValidationReason.WRONG_LANGUAGE_SCRIPT
+
+
+def test_validation_reason_does_not_include_model_controlled_rule_ids() -> None:
+    result = validate(
+        DraftOutput(
+            verify=["Ma'lumotni mustaqil tekshiring."],
+            ask=["Yozma shartlarni so'rang."],
+            addressed_rule_ids=["private negotiation detail", "+998 90 123 45 67"],
+        ),
+        [],
+        [],
+        Language.uz_latn,
+    )
+
+    assert result.reason is ValidationReason.UNKNOWN_RULE_IDS
+    assert "private negotiation detail" not in result.reason
+    assert "+998" not in result.reason
+    payload = log_error(
+        "validate",
+        "SafetyValidationError",
+        reason=result.reason,
+    )
+    assert payload["reason"] == ValidationReason.UNKNOWN_RULE_IDS.value
+    assert "private negotiation detail" not in str(payload)
+    assert "+998" not in str(payload)
 
 
 def test_validator_accepts_clean_draft_and_truncates_blocks() -> None:
