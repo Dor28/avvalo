@@ -26,6 +26,8 @@ def test_rule_packs_load_with_description_map() -> None:
 
 def test_goldens_fire_expected_families(golden) -> None:
     for fixture in golden():
+        if fixture["input_type"] != "text":
+            continue
         hits, _ = run_rules(fixture["input"])
         assert hits, f"{fixture['id']}: expected at least one rule hit"
         families = {hit.family for hit in hits}

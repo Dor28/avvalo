@@ -38,8 +38,15 @@ from app.engine.meta import is_meta_message
 from app.engine.minimize import minimize
 from app.engine.ocr import OCRInvalidImageError, OCRProvider, OCRProviderError
 from app.engine.ocr import get_provider as get_ocr_provider
+from app.engine.qr import (
+    QRCodeDecoder,
+    QRDecoderError,
+    ZXingQRCodeDecoder,
+    is_emvco_payment_payload,
+)
 from app.engine.rules import run_rules
 from app.engine.types import (
+    MAX_SUBMITTED_TEXT_CHARS,
     CheckInput,
     CheckResult,
     CheckStatus,
@@ -72,7 +79,7 @@ class _UnavailableKnowledgeRouter:
 _DEFAULT_DAILY_LIMIT = 5
 
 # Outcomes that consume a daily-limit slot: a real completion (ok / no_signal),
-# an OCR attempt that reached the configured provider, or a safety fallback
+# an image-decoding attempt that reached QR/OCR processing, or a safety fallback
 # that still ran the model. Every other status is a pre-analysis or system fault
 # and is refunded so it doesn't burn the quota.
 # Public because the web channel's per-IP limit applies the same refund rule.
@@ -93,6 +100,7 @@ async def run_check(
     llm_provider: LLMProvider | None = None,
     fallback_llm_provider: LLMProvider | None = None,
     ocr_provider: OCRProvider | None = None,
+    qr_decoder: QRCodeDecoder | None = None,
     knowledge_store: KnowledgeStore | None = None,
     knowledge_router: KnowledgeRouter | None = None,
     url_reputation_store: URLReputationStore | None = None,
@@ -128,6 +136,7 @@ async def run_check(
                 llm_provider=llm_provider,
                 fallback_llm_provider=fallback_llm_provider,
                 ocr_provider=ocr_provider,
+                qr_decoder=qr_decoder,
                 knowledge_store=knowledge_store,
                 knowledge_router=knowledge_router,
                 url_reputation_store=url_reputation_store,
@@ -232,6 +241,7 @@ async def _run_stages(
     llm_provider: LLMProvider | None,
     fallback_llm_provider: LLMProvider | None,
     ocr_provider: OCRProvider | None,
+    qr_decoder: QRCodeDecoder | None,
     knowledge_store: KnowledgeStore | None,
     knowledge_router: KnowledgeRouter | None,
     url_reputation_store: URLReputationStore | None,
@@ -241,6 +251,7 @@ async def _run_stages(
     content = await _content_from_input(
         check_input,
         ocr_provider=ocr_provider,
+        qr_decoder=qr_decoder,
         settings=settings,
     )
     if content.status is not None:
@@ -265,6 +276,12 @@ async def _run_stages(
         )
 
     rule_hits, signals = run_rules(text)
+    signal_keys = {(signal.kind, signal.note) for signal in signals}
+    for signal in content.signals:
+        key = (signal.kind, signal.note)
+        if key not in signal_keys:
+            signal_keys.add(key)
+            signals.append(signal)
     reputation_enabled = (
         url_reputation_store is not None
         if settings is None
@@ -357,12 +374,14 @@ class _ContentStageResult:
     status: CheckResult | None = None
     ocr_ms: int | None = None
     ocr_confidence: float | None = None
+    signals: tuple[Signal, ...] = ()
 
 
 async def _content_from_input(
     check_input: CheckInput,
     *,
     ocr_provider: OCRProvider | None,
+    qr_decoder: QRCodeDecoder | None,
     settings: Settings | None,
 ) -> _ContentStageResult:
     if check_input.input_type is InputType.text:
@@ -389,11 +408,65 @@ async def _content_from_input(
             ),
         )
 
+    timeout_s = settings.ocr_timeout_s if settings is not None else 30.0
+    qr_payloads: tuple[str, ...] = ()
+    decoder = qr_decoder or ZXingQRCodeDecoder()
+    try:
+        qr_result = await _with_timeout(decoder.decode(check_input.image_bytes), timeout_s)
+    except OCRInvalidImageError:
+        # OCR owns the final invalid-image decision; an unreadable QR is not a
+        # separate technical failure when the normal image path can continue.
+        pass
+    except (TimeoutError, QRDecoderError) as exc:
+        error_class = getattr(exc, "error_code", None) or type(exc).__name__
+        fields: dict[str, object] = {}
+        if isinstance(exc, TimeoutError):
+            fields["timeout_s"] = timeout_s
+        log_error(stage="qr", error_type=error_class, **fields)
+    else:
+        qr_payloads = qr_result.payloads
+
+    if len(qr_payloads) > 1:
+        return _ContentStageResult(
+            text=None,
+            status=_result(
+                check_input,
+                CheckStatus.low_ocr,
+                text=format_status_message(CheckStatus.low_ocr, check_input.language),
+                error_class="MultipleQRCodes",
+            ),
+        )
+
+    qr_text: str | None = None
+    qr_signals: tuple[Signal, ...] = ()
+    if qr_payloads:
+        payload = qr_payloads[0].strip()
+        if len(payload) > MAX_SUBMITTED_TEXT_CHARS:
+            return _ContentStageResult(
+                text=None,
+                status=_result(
+                    check_input,
+                    CheckStatus.low_ocr,
+                    text=format_status_message(CheckStatus.low_ocr, check_input.language),
+                    error_class="QRPayloadTooLong",
+                ),
+            )
+        if is_emvco_payment_payload(payload):
+            qr_text = "[PAYMENT_QR]"
+            qr_signals = (Signal(kind="payment_qr", note="emvco-shaped"),)
+        else:
+            qr_text = payload
+
     try:
         provider = ocr_provider or get_ocr_provider(settings)
     except ValueError:
         # Misconfigured OCR_PROVIDER — an operator fault, not the user's image.
         log_error(stage="ocr", error_type="OCRConfigError")
+        if qr_text:
+            return _ContentStageResult(
+                text=_join_content(check_input.caption, check_input.raw_text, qr_text),
+                signals=qr_signals,
+            )
         return _ContentStageResult(
             text=None,
             status=_result(
@@ -405,11 +478,17 @@ async def _content_from_input(
         )
 
     started = perf_counter()
-    timeout_s = settings.ocr_timeout_s if settings is not None else 30.0
     try:
         ocr_result = await _with_timeout(provider.extract(check_input.image_bytes), timeout_s)
     except (TimeoutError, NotImplementedError, OCRProviderError) as exc:
-        return _ocr_failure(check_input, exc, started=started, timeout_s=timeout_s)
+        failure = _ocr_failure(check_input, exc, started=started, timeout_s=timeout_s)
+        if qr_text:
+            return _ContentStageResult(
+                text=_join_content(check_input.caption, check_input.raw_text, qr_text),
+                ocr_ms=failure.ocr_ms,
+                signals=qr_signals,
+            )
+        return failure
 
     ocr_ms = max(0, round((perf_counter() - started) * 1000))
     min_confidence = (
@@ -417,6 +496,13 @@ async def _content_from_input(
     )
     ocr_text = ocr_result.text.strip()
     if not ocr_text or ocr_result.confidence < min_confidence:
+        if qr_text:
+            return _ContentStageResult(
+                text=_join_content(check_input.caption, check_input.raw_text, qr_text),
+                ocr_ms=ocr_ms,
+                ocr_confidence=ocr_result.confidence,
+                signals=qr_signals,
+            )
         return _ContentStageResult(
             text=None,
             ocr_ms=ocr_ms,
@@ -430,16 +516,23 @@ async def _content_from_input(
             ),
         )
 
-    parts = [
-        part.strip()
-        for part in (check_input.caption, check_input.raw_text, ocr_text)
-        if part and part.strip()
-    ]
     return _ContentStageResult(
-        text="\n".join(parts),
+        text=_join_content(check_input.caption, check_input.raw_text, ocr_text, qr_text),
         ocr_ms=ocr_ms,
         ocr_confidence=ocr_result.confidence,
+        signals=qr_signals,
     )
+
+
+def _join_content(*parts: str | None) -> str:
+    """Join unique submitted fragments without changing their content."""
+
+    unique: list[str] = []
+    for part in parts:
+        value = part.strip() if part else ""
+        if value and value not in unique:
+            unique.append(value)
+    return "\n".join(unique)
 
 
 def _ocr_failure_status(exc: Exception) -> CheckStatus:
