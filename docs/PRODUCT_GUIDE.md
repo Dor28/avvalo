@@ -117,6 +117,12 @@ Avvalo may decode a QR code locally, normalize the destination domain including 
 deceptive subdomains, compare it with the official catalog, and consult a local cached
 URL-reputation dataset.
 
+By founder decision (2026-07-24, recorded in [ROADMAP.md](ROADMAP.md) Phase 1), the deterministic
+part of this family — local QR decoding, URL normalization, and the local reputation lookup — is
+authorized as explainer capability with shape-based wording and no official-source claims. Only
+the official-catalog comparison and other sourced facts remain gated behind
+[VERIFY_VALIDATION.md](VERIFY_VALIDATION.md).
+
 Avvalo must not open, render, or execute an arbitrary submitted page. Submitted URLs and domains
 remain ephemeral and are not echoed back by default.
 
