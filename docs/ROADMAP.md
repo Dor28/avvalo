@@ -34,18 +34,18 @@ opened, rendered, or fetched.
 
 ### 1.1 QR decoding at intake
 
-- [ ] Decode QR payloads locally, in-process, from submitted images — beside OCR in the content
+- [x] Decode QR payloads locally, in-process, from submitted images — beside OCR in the content
       stage of `app/engine/pipeline.py`. Candidate library: `zxing-cpp` (pip wheels for
       linux/windows, offline, Apache-2.0). No system packages, no network, no external service.
-- [ ] Decoded payload is treated exactly like submitted text: URL payloads flow through the URL
+- [x] Decoded payload is treated exactly like submitted text: URL payloads flow through the URL
       rules; non-URL payloads flow through the normal text path; EMVCo-style payment payloads
       raise a typed `Signal`, never a parsed merchant claim.
-- [ ] Unreadable or multi-QR images degrade honestly (reuse low-confidence messaging; any new
+- [x] Unreadable or multi-QR images degrade honestly (reuse low-confidence messaging; any new
       `CheckStatus` is added to the allow-set in `app/data/repo.py`).
-- [ ] Golden fixtures: QR PNGs covering a payment-page URL, a shortened URL, a lookalike domain,
+- [x] Golden fixtures: QR PNGs covering a payment-page URL, a shortened URL, a lookalike domain,
       non-URL text, and an unreadable code — wired into the e2e goldens
       (`tests/fixtures/golden/checks.json`).
-- [ ] Privacy: decoded payloads are ephemeral like `raw_text` — minimized before the LLM, never
+- [x] Privacy: decoded payloads are ephemeral like `raw_text` — minimized before the LLM, never
       persisted, never logged, never fetched.
 
 ### 1.2 One URL analyzer

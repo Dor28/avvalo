@@ -67,6 +67,8 @@ def test_golden_inputs_fire_expected_rules() -> None:
     fixtures = json.loads(_GOLDEN_PATH.read_text(encoding="utf-8"))
 
     for fixture in fixtures:
+        if fixture["input_type"] != "text":
+            continue
         hits, _signals = run_rules(fixture["input"])
         hit_ids = {hit.rule_id for hit in hits}
         hit_families = {hit.family for hit in hits}

@@ -60,7 +60,9 @@ Important modules:
 Every accepted request follows this order:
 
 1. Confirm current consent and reserve the applicable daily limit.
-2. Read text, or preprocess the image and run OCR.
+2. Read text, or preprocess the image and locally decode QR symbols beside OCR. A single decoded
+   payload joins the same ephemeral text path; EMVCo-shaped payment payloads become only a typed
+   signal, and multiple codes return retry guidance instead of an arbitrary choice.
 3. Resolve the response language: `uz_latn` or `ru` (Cyrillic-Uzbek resolves to `uz_latn`).
 4. Run local rules and structural signal extraction on local text.
 5. Optionally check URL hashes against the local reputation table.
@@ -84,7 +86,8 @@ Non-billable failures refund the reserved limit. Channels do not duplicate engin
 - `input_type` (`text` or `image`);
 - ephemeral `raw_text`, `image_bytes`, and `caption`.
 
-Ephemeral content must never enter a database row, log, event, alert, metric, cache, or output file.
+Ephemeral content, including locally decoded QR payloads, must never enter a database row, log,
+event, alert, metric, cache, or output file.
 
 ### Output
 
@@ -182,7 +185,7 @@ and editorial rows are not part of `/delete_my_data` because they are operator-o
 - dropping the table or purging remaining data requires a separately authorized migration.
 
 `log_event()` and `log_error()` accept only allowlisted categorical metadata. Submitted content,
-OCR text, model output, URLs, contacts, and exception strings are forbidden.
+decoded QR payloads, OCR text, model output, URLs, contacts, and exception strings are forbidden.
 
 ## 8. Channel behavior
 

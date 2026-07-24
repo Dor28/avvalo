@@ -127,6 +127,7 @@ CONTENT_VALUE_PATTERNS = (
 
 ALLOWED_ERROR_STAGES = {
     "ocr",
+    "qr",
     "llm",
     "validate",
     "web",

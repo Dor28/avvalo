@@ -86,10 +86,20 @@ def test_fixture_shape_and_values() -> None:
 
         for list_key in ("expected_rule_families", "must_include", "must_not_contain"):
             value = fixture[list_key]
-            assert isinstance(value, list) and value, f"{fid}: '{list_key}' must be non-empty"
+            assert isinstance(value, list), f"{fid}: '{list_key}' must be a list"
+            if list_key != "expected_rule_families" or fixture["input_type"] == "text":
+                assert value, f"{fid}: '{list_key}' must be non-empty"
             assert all(isinstance(item, str) and item.strip() for item in value), (
                 f"{fid}: '{list_key}' has empty entries"
             )
+
+        if fixture["input_type"] == "image":
+            assert fixture.get("expected_status") in {"ok", "low_ocr"}, (
+                f"{fid}: bad expected_status"
+            )
+            signal_kinds = fixture.get("expected_signal_kinds")
+            assert isinstance(signal_kinds, list), f"{fid}: expected_signal_kinds must be a list"
+            assert (GOLDEN_DIR / fixture["input"]).is_file(), f"{fid}: image fixture is missing"
 
 
 def test_expected_families_exist_in_the_rule_pack() -> None:
@@ -105,7 +115,11 @@ def test_expected_families_exist_in_the_rule_pack() -> None:
 
 def test_payment_fixtures_forbid_claiming_money_arrived() -> None:
     confirmed = {_norm(phrase) for phrase in SG_MONEY_CONFIRMED}
-    payment_fixtures = [fixture for fixture in _load() if fixture["id"] >= "fs_06"]
+    payment_fixtures = [
+        fixture
+        for fixture in _load()
+        if fixture["id"].startswith("fs_") and fixture["id"] >= "fs_06"
+    ]
     for fixture in payment_fixtures:
         forbidden = {_norm(item) for item in fixture["must_not_contain"]}
         assert forbidden & confirmed, (
