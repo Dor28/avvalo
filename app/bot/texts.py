@@ -80,6 +80,42 @@ TEXTS: dict[str, dict[str, str]] = {
             "Нажмите «Согласен», чтобы начать."
         ),
     },
+    "web_privacy_notice": {
+        "uz_latn": (
+            "👋 Assalomu alaykum. Avvalo shubhali vaziyatni javob berish, pul to'lash, "
+            "ilova o'rnatish yoki hujjat imzolash yoxud shaxsiy ma'lumot yuborishdan "
+            "oldin tushunishga yordam beradi.\n\n"
+            "Davom etishdan oldin:\n"
+            "• Avvalo vaziyat, material yoki jarayonni tahlil qiladi — odamning "
+            "obro'sini emas. «Xavfsiz», «firibgar» yoki yakuniy hukm bermaydi.\n"
+            "• Yuborgan matn, rasm, havola va tayyorlangan javob saqlanmaydi hamda "
+            "logga yozilmaydi.\n"
+            "• Rasm faqat matnni aniqlash uchun qayta ishlanadi. Tashqi tahlil "
+            "xizmatiga telefon, karta va havolalar token bilan almashtirilgan matn "
+            "yuboriladi.\n"
+            "• Veb tekshiruvdagi taxallusli texnik yozuvlar saqlash muddati tugagach "
+            "avtomatik o'chiriladi. Saytda ularni alohida o'chirish imkoniyati "
+            "hozircha yo'q.\n\n"
+            "Boshlash uchun «Roziman» ni belgilang."
+        ),
+        "ru": (
+            "👋 Здравствуйте. Avvalo помогает разобраться в сомнительной ситуации "
+            "до того, как вы ответите, заплатите, установите приложение, подпишете "
+            "документ или передадите личные данные.\n\n"
+            "Перед продолжением:\n"
+            "• Avvalo анализирует ситуацию, материал или процесс, а не репутацию "
+            "человека. Мы не ставим ярлыки «безопасно» или «мошенник» и не выносим "
+            "вердикт.\n"
+            "• Присланные текст, изображение, ссылка и подготовленный ответ не "
+            "сохраняются и не записываются в журналы.\n"
+            "• Изображение используется только для распознавания текста. Сервис "
+            "анализа получает текст, в котором телефоны, карты и ссылки заменены "
+            "токенами.\n"
+            "• Псевдонимные технические записи веб-проверки удаляются автоматически "
+            "по сроку хранения. Отдельного удаления на сайте пока нет.\n\n"
+            "Чтобы начать, отметьте «Согласен»."
+        ),
+    },
     "btn_agree": {
         "uz_latn": "✅ Roziman",
         "ru": "✅ Согласен",
@@ -104,6 +140,35 @@ TEXTS: dict[str, dict[str, str]] = {
             "• Сервис анализа получает текст, в котором телефоны, карты и ссылки заменены токенами.\n"
             "• Avvalo даёт шаги независимой проверки, но не юридическое, финансовое или официальное заключение.\n"
             "• Чтобы удалить свои данные, отправьте /delete_my_data."
+        ),
+    },
+    "web_privacy": {
+        "uz_latn": (
+            "🔒 Maxfiylik\n\n"
+            "• Avvalo vaziyat, material yoki jarayonni tahlil qiladi; odamning "
+            "obro'siga baho bermaydi.\n"
+            "• Yuborgan matn, rasm, havola va tayyorlangan javob saqlanmaydi hamda "
+            "logga yozilmaydi.\n"
+            "• Tashqi tahlil xizmatiga telefon, karta va havolalar token bilan "
+            "almashtirilgan matn yuboriladi.\n"
+            "• Avvalo mustaqil tekshiruv qadamlarini beradi, lekin yuridik, moliyaviy "
+            "yoki rasmiy xulosa bermaydi.\n"
+            "• Veb tekshiruvdagi taxallusli texnik yozuvlar saqlash muddati tugagach "
+            "avtomatik o'chiriladi. Saytda ularni alohida o'chirish imkoniyati "
+            "hozircha yo'q."
+        ),
+        "ru": (
+            "🔒 Конфиденциальность\n\n"
+            "• Avvalo анализирует ситуацию, материал или процесс, а не репутацию "
+            "человека.\n"
+            "• Присланные текст, изображение, ссылка и подготовленный ответ не "
+            "сохраняются и не записываются в журналы.\n"
+            "• Сервис анализа получает текст, в котором телефоны, карты и ссылки "
+            "заменены токенами.\n"
+            "• Avvalo даёт шаги независимой проверки, но не юридическое, финансовое "
+            "или официальное заключение.\n"
+            "• Псевдонимные технические записи веб-проверки удаляются автоматически "
+            "по сроку хранения. Отдельного удаления на сайте пока нет."
         ),
     },
     "data_deleted": {

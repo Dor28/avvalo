@@ -34,6 +34,7 @@ from app.engine.llm import (
     build_prompt,
     draft_output_schema,
 )
+from app.engine.meta import is_meta_message
 from app.engine.minimize import minimize
 from app.engine.ocr import OCRInvalidImageError, OCRProvider, OCRProviderError
 from app.engine.ocr import get_provider as get_ocr_provider
@@ -51,7 +52,7 @@ from app.engine.url_reputation import (
     URLReputationStore,
     lookup_url_reputation,
 )
-from app.engine.validate import validate
+from app.engine.validate import ValidationReason, validate
 from app.obs.cost import estimate_llm_cost_from_settings
 from app.obs.events import log_error, log_event
 
@@ -256,6 +257,13 @@ async def _run_stages(
     effective_input = check_input.model_copy(
         update={"language": resolve_content_language(text, fallback=check_input.language)}
     )
+    if is_meta_message(text):
+        return _result(
+            effective_input,
+            CheckStatus.meta,
+            text=format_status_message(CheckStatus.meta, effective_input.language),
+        )
+
     rule_hits, signals = run_rules(text)
     reputation_enabled = (
         url_reputation_store is not None
@@ -520,7 +528,7 @@ async def _call_llm(
     )
     total_input_tokens = initial_input_tokens
     total_output_tokens = initial_output_tokens
-    validation_reason = "draft failed deterministic safety validation"
+    validation_reason = ValidationReason.DRAFT_FAILED
 
     for attempt in range(2):
         attempt_system = system if attempt == 0 else _retry_system_prompt(system, validation_reason)
@@ -721,7 +729,7 @@ def _configured_fallback_provider(settings: Settings | None) -> LLMProvider | No
     )
 
 
-def _retry_system_prompt(system: str, reason: str) -> str:
+def _retry_system_prompt(system: str, reason: ValidationReason) -> str:
     return (
         f"{system}\n\n"
         "SAFETY RETRY: The previous JSON draft failed deterministic validation: "

@@ -57,6 +57,22 @@ def test_web_app_exposes_core_routes() -> None:
     assert "/sitemap.xml" not in paths
 
 
+def test_web_privacy_copy_does_not_promise_the_telegram_deletion_command() -> None:
+    client = TestClient(create_app(settings=_settings()))
+
+    uz_notice = client.get("/?language=uz_latn").text
+    uz_privacy = client.get("/privacy?language=uz_latn").text
+    ru_notice = client.get("/?language=ru").text
+    ru_privacy = client.get("/privacy?language=ru").text
+
+    for page in (uz_notice, uz_privacy, ru_notice, ru_privacy):
+        assert "/delete_my_data" not in page
+    assert "alohida o&#39;chirish imkoniyati" in uz_notice
+    assert "alohida o&#39;chirish imkoniyati" in uz_privacy
+    assert "Отдельного удаления на сайте пока нет" in ru_notice
+    assert "Отдельного удаления на сайте пока нет" in ru_privacy
+
+
 def test_readiness_fails_closed_without_database_wiring() -> None:
     response = TestClient(create_app(settings=_settings())).get("/readyz")
 

@@ -7,7 +7,7 @@ import pytest
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.llm import LLMResponse
 from app.engine.types import DraftOutput, RuleHit
-from app.engine.validate import validate
+from app.engine.validate import ValidationReason, validate
 
 HITS = [
     RuleHit(rule_id="fs.authority.impersonation", family="authority", message_key="a", severity=3),
@@ -31,9 +31,7 @@ def test_multiple_rule_facts_reject_partial_and_accept_complete(language: Langua
     complete = validate(_draft([hit.rule_id for hit in HITS]), [], HITS, language)
 
     assert partial.ok is False
-    assert partial.reason == (
-        "missing addressed rule ids: fs.credential.otp, fs.urgency.deadline"
-    )
+    assert partial.reason is ValidationReason.MISSING_RULE_IDS
     assert complete.ok is True
 
 

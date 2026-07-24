@@ -349,7 +349,7 @@ async def _check_page(request: Request, *, language: str) -> HTMLResponse:
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
             "language": language,
-            "privacy_text": t("privacy_notice", language),
+            "privacy_text": t("web_privacy_notice", language),
             "turnstile_site_key": _turnstile_site_key(settings),
         },
     )
@@ -378,7 +378,7 @@ async def privacy(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRes
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
             "language_path": "/privacy",
-            "privacy_text": t("privacy", language),
+            "privacy_text": t("web_privacy", language),
         },
     ))
 

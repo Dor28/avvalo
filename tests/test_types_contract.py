@@ -31,6 +31,7 @@ def test_check_status_enum_values() -> None:
         "ok",
         "no_signal",
         "empty_input",
+        "meta",
         "low_ocr",
         "rate_limited",
         "timeout",

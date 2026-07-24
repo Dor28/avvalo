@@ -110,13 +110,22 @@ def test_ci_uses_hash_locked_dependencies_and_pinned_actions() -> None:
     assert "ruff check app --select S" in workflow
 
 
-def test_deploy_preserves_the_existing_ssh_secret_contract() -> None:
+def test_deploy_pins_the_ssh_host_key_from_a_secret() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(
         encoding="utf-8"
     )
 
-    assert "DEPLOY_HOST_KEY" not in workflow
-    assert 'ssh-keyscan -T 10 -p "$SSH_PORT" "$SSH_HOST"' in workflow
+    assert "SSH_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}" in workflow
+    assert 'missing DEPLOY_HOST_KEY secret' in workflow
+    assert 'printf \'%s\\n\' "$SSH_HOST_KEY" > ~/.ssh/known_hosts' in workflow
+    assert "ssh-keyscan" not in workflow
+
+
+def test_production_env_uses_the_unified_daily_limit_name() -> None:
+    env_example = (REPO_ROOT / "deploy" / "env.prod.example").read_text(encoding="utf-8")
+
+    assert "DAILY_CHECK_LIMIT=5" in env_example
+    assert "DAILY_LIMIT_FAMILY" not in env_example
 
 
 def test_production_jobs_are_gated_to_main() -> None:
