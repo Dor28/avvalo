@@ -288,12 +288,10 @@ async def readyz(request: Request) -> Response:
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
-    """Render the home page: the consumer check form above how-it-works.
+    """Render the marketing landing page: what Avvalo does and why, plus a CTA to /check.
 
-    The form posts to the same POST /check handler as the standalone page, so
-    landing here costs a visitor no extra click. Unlike ``_check_page`` this
-    deliberately does *not* mint a session cookie — nothing on a GET needs one,
-    and POST /check creates it on first submit anyway.
+    This deliberately does *not* mint a session cookie — nothing on a GET needs
+    one, and POST /check creates it on first submit anyway.
     """
 
     language = _normalize_language(language)
@@ -301,7 +299,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
     latest_posts = await _latest_editorial_posts(request, language=language)
     return _no_store(templates.TemplateResponse(
         request,
-            "checker.html",
+            "landing.html",
         {
             "copy": copy,
             "check_copy": copy["check"],
@@ -309,8 +307,6 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
             "languages": LANGUAGES,
             "language_labels": LANGUAGE_LABELS,
             "language": language,
-            "privacy_text": t("privacy_notice", language),
-            "turnstile_site_key": _turnstile_site_key(_settings_or_none(request)),
             "editorial": EDITORIAL_COPY[language],
             "latest_posts": latest_posts,
         },
@@ -337,13 +333,12 @@ async def retired_merchants(language: str = DEFAULT_LANGUAGE) -> RedirectRespons
 
 
 async def _check_page(request: Request, *, language: str) -> HTMLResponse:
-    """Render the unified consumer check surface."""
+    """Render the focused consumer check surface: the composer and its result."""
 
     language = _normalize_language(language)
     settings = _settings_or_none(request)
     web_session = get_or_create_web_session(request, secret=_web_secret(settings))
     copy = WEB_COPY[language]
-    latest_posts = await _latest_editorial_posts(request, language=language)
     response = templates.TemplateResponse(
         request,
             "checker.html",
@@ -356,8 +351,6 @@ async def _check_page(request: Request, *, language: str) -> HTMLResponse:
             "language": language,
             "privacy_text": t("privacy_notice", language),
             "turnstile_site_key": _turnstile_site_key(settings),
-            "editorial": EDITORIAL_COPY[language],
-            "latest_posts": latest_posts,
         },
     )
     set_web_session_cookie(response, web_session, secure=_cookie_secure(request, settings))

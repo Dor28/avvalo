@@ -13,7 +13,7 @@
       <nav class="primary-nav" aria-label="{{ copy.nav_label }}">
         <a class="{% if active_section == 'check' %}active{% endif %}"
            {% if active_section == 'check' %}aria-current="page"{% endif %}
-           href="/?language={{ language }}">{{ copy.nav_check }}</a>
+           href="/check?language={{ language }}">{{ copy.nav_check }}</a>
         <a class="{% if active_section == 'cases' %}active{% endif %}"
            {% if active_section == 'cases' %}aria-current="page"{% endif %}
            href="/cases?language={{ language }}">{{ copy.nav_cases }}</a>

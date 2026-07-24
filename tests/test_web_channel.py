@@ -109,7 +109,7 @@ def test_unhandled_route_exception_logs_and_returns_500(caplog) -> None:
     assert "'error_type': 'ValueError'" in messages
 
 
-def test_unified_checker_is_localized_and_old_merchants_url_redirects() -> None:
+def test_checker_is_localized_and_old_merchants_url_redirects() -> None:
     client = TestClient(create_app(settings=_settings()))
 
     landing = client.get("/?language=uz_latn")
@@ -120,8 +120,9 @@ def test_unified_checker_is_localized_and_old_merchants_url_redirects() -> None:
     assert family.status_code == 200
     assert merchants.status_code == 308
     assert merchants.headers["location"] == "/check?language=ru"
-    # Home and /check both post to the same single check handler.
-    assert 'action="/check"' in landing.text
+    # The landing page links to /check; only /check itself posts there.
+    assert 'action="/check"' in family.text
+    assert 'href="/check?language=uz_latn"' in landing.text
     assert 'name="face"' not in landing.text
     assert 'name="face"' not in family.text
     assert 'name="caption"' not in landing.text

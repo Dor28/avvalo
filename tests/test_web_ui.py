@@ -1,4 +1,4 @@
-"""Unified public web shell, behavior, and cache-policy tests."""
+"""Public web pages (landing + checker), behavior, and cache-policy tests."""
 
 import re
 
@@ -22,12 +22,12 @@ def test_redesign_assets_are_cache_busted_across_public_pages() -> None:
         assert re.search(r'/static/icon-192\.png\?v=[0-9a-f]{12}', response.text)
 
 
-def test_home_leads_with_the_unified_checker() -> None:
-    """The home page IS the checker.
+def test_home_is_a_landing_page_that_links_to_the_checker() -> None:
+    """The home page sells the product; ``/check`` is where you use it.
 
-    This deliberately reverses the earlier landing/checker split: a visitor who
-    lands on ``/`` must be able to paste a message without a second click.
-    ``/check`` stays live for existing links, QR codes and bot deep links.
+    A visitor who lands on ``/`` sees what Avvalo does and why before being
+    asked to paste anything. The check form itself lives only on ``/check``,
+    which every landing CTA points to.
     """
 
     client = TestClient(create_app())
@@ -40,12 +40,12 @@ def test_home_leads_with_the_unified_checker() -> None:
     assert checker.status_code == 200
     assert merchant.status_code == 308
     assert merchant.headers["location"] == "/check?language=uz_latn"
-    assert 'class="check-form"' in landing.text
-    assert 'action="/check"' in landing.text
+    assert 'class="check-form"' not in landing.text
+    assert 'href="/check?language=uz_latn"' in landing.text
     assert 'name="face"' not in landing.text
-    assert 'id="result"' in landing.text
     assert 'href="/merchants' not in landing.text
     assert 'class="check-form"' in checker.text
+    assert 'action="/check"' in checker.text
     assert 'id="result"' in checker.text
     assert 'name="face"' not in checker.text
     assert 'href="/merchants' not in checker.text
@@ -53,22 +53,28 @@ def test_home_leads_with_the_unified_checker() -> None:
     assert client.get("/sitemap.xml").status_code == 404
 
 
-def test_home_and_check_share_one_product_shell_and_supported_scope() -> None:
+def test_landing_and_check_pages_use_distinct_focused_shells() -> None:
     client = TestClient(create_app())
 
     landing = client.get("/?language=ru")
     checker = client.get("/check?language=ru")
 
+    assert landing.status_code == 200
+    assert checker.status_code == 200
+
+    assert 'class="scenario-grid"' in landing.text
+    assert 'class="outcome-section"' in landing.text
+    assert 'class="boundary-card"' in landing.text
+    assert 'class="workbench-panel"' not in landing.text
+    assert 'Скрин оплаты' in landing.text
+    assert 'Документ или запрос' in landing.text
+
+    assert 'class="workbench-panel"' in checker.text
+    assert 'class="trust-list"' in checker.text
+    assert 'class="attachment-grid"' in checker.text
+    assert 'class="scenario-grid"' not in checker.text
+
     for response in (landing, checker):
-        assert response.status_code == 200
-        assert 'class="workbench-panel"' in response.text
-        assert 'class="scenario-grid"' in response.text
-        assert 'class="trust-list"' in response.text
-        assert 'class="outcome-section"' in response.text
-        assert 'class="boundary-card"' in response.text
-        assert 'class="attachment-grid"' in response.text
-        assert 'Скрин оплаты' in response.text
-        assert 'Документ или запрос' in response.text
         assert 'class="check-summary"' not in response.text
         assert 'class="field-step"' not in response.text
         assert 'class="result-meta"' not in response.text
@@ -106,10 +112,9 @@ def test_consumer_copy_leads_with_the_check_instead_of_family_branding() -> None
         assert new_name in landing.text
         assert new_name in checker.text
         assert broad_example in landing.text
-        assert broad_example in checker.text
 
 
-def test_checker_headline_is_simple_and_aligned_in_both_languages() -> None:
+def test_landing_headline_is_simple_and_aligned_in_both_languages() -> None:
     client = TestClient(create_app())
     localized_headlines = {
         "uz_latn": "Vaziyatni Avvalo bilan tekshiring.",
@@ -118,10 +123,8 @@ def test_checker_headline_is_simple_and_aligned_in_both_languages() -> None:
 
     for language, headline in localized_headlines.items():
         landing = client.get(f"/?language={language}")
-        checker = client.get(f"/check?language={language}")
 
         assert headline in landing.text
-        assert headline in checker.text
 
 
 def test_checker_explains_advisory_limit_in_both_languages() -> None:
@@ -132,10 +135,8 @@ def test_checker_explains_advisory_limit_in_both_languages() -> None:
     }
 
     for language, limitation in localized_limits.items():
-        landing = client.get(f"/?language={language}")
         checker = client.get(f"/check?language={language}")
 
-        assert limitation in landing.text
         assert limitation in checker.text
 
 
@@ -143,7 +144,7 @@ def test_check_page_exposes_localized_flow_and_busy_state() -> None:
     response = TestClient(create_app()).get("/check?language=ru")
 
     assert response.status_code == 200
-    assert 'aria-label="Что можно отправить в Avvalo"' in response.text
+    assert 'aria-label="Доверие"' in response.text
     assert 'aria-current="page"' in response.text
     assert 'data-busy-label="Проверяем..."' in response.text
     assert 'data-consent-error="Сначала примите условия конфиденциальности."' in response.text
