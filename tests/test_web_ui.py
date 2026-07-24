@@ -61,8 +61,8 @@ def test_home_and_check_share_one_product_shell_and_supported_scope() -> None:
 
     for response in (landing, checker):
         assert response.status_code == 200
-        assert 'class="composer-card"' in response.text
-        assert 'class="use-cases"' in response.text
+        assert 'class="workbench-panel"' in response.text
+        assert 'class="scenario-grid"' in response.text
         assert 'class="trust-list"' in response.text
         assert 'class="outcome-section"' in response.text
         assert 'class="boundary-card"' in response.text
