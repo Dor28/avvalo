@@ -4,10 +4,19 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from urllib.parse import urlparse
 
 from app.engine.rules.loader import RuleDefinition, load_rule_pack
 from app.engine.types import RuleHit, Signal
+from app.engine.url import (
+    LABEL_CREDENTIALS,
+    LABEL_DOMAIN_IN_SUBDOMAIN,
+    LABEL_IP,
+    LABEL_LOOKALIKE,
+    LABEL_MIXED_SCRIPT,
+    LABEL_SHORTENED,
+    URL_RE,
+    classify_link,
+)
 
 _APOSTROPHES = str.maketrans(
     {
@@ -20,12 +29,6 @@ _APOSTROPHES = str.maketrans(
     }
 )
 
-_URL_RE = re.compile(
-    r"(?ix)"
-    r"\b(?:https?|hxxps?)://[^\s<>()]+"
-    r"|\b(?:www\.)?[a-z0-9][a-z0-9.-]*(?:\.|\[\.\]|\(\.\))[a-z]{2,}"
-    r"(?:/[^\s<>()]*)?"
-)
 _EMAIL_RE = re.compile(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b")
 _HANDLE_RE = re.compile(r"(?<!\w)@[a-z0-9_]{4,32}\b", re.IGNORECASE)
 # Match explicit international numbers first, then common Uzbek local/mobile
@@ -49,35 +52,15 @@ _TRANSFER_NEAR_CARD_RE = re.compile(
     r"(?:karta|карта|card|перевод|perevod|o'tkaz|ўтказ|tashla|ташла|qaytar|қайтар)"
 )
 
-_SHORTENER_DOMAINS = {
-    "bit.ly",
-    "cutt.ly",
-    "goo.gl",
-    "is.gd",
-    "lnkd.in",
-    "ow.ly",
-    "s.id",
-    "shorturl.at",
-    "t.co",
-    "tiny.cc",
-    "tinyurl.com",
-    "clck.ru",
-}
-_BRAND_ALLOWED_DOMAINS: dict[str, tuple[str, ...]] = {
-    "agrobank": ("agrobank.uz",),
-    "anorbank": ("anorbank.uz",),
-    "beeline": ("beeline.uz",),
-    "click": ("click.uz",),
-    "hamkorbank": ("hamkorbank.uz",),
-    "humo": ("humocard.uz", "humo.uz"),
-    "ipoteka": ("ipotekabank.uz",),
-    "kapitalbank": ("kapitalbank.uz",),
-    "olx": ("olx.uz",),
-    "payme": ("payme.uz",),
-    "telegram": ("telegram.org", "t.me"),
-    "uzcard": ("uzcard.uz",),
-    "uzum": ("uzum.uz", "uzumbank.uz"),
-    "xalqqbank": ("xb.uz",),
+# Every link-shape label maps to the signal kind for its class of deception, so
+# knowledge cards keep triggering on `link_lookalike` as new shapes are detected.
+_SIGNAL_KIND_BY_LABEL = {
+    LABEL_SHORTENED: "link_shortened",
+    LABEL_LOOKALIKE: "link_lookalike",
+    LABEL_DOMAIN_IN_SUBDOMAIN: "link_lookalike",
+    LABEL_MIXED_SCRIPT: "link_lookalike",
+    LABEL_CREDENTIALS: "link_userinfo",
+    LABEL_IP: "link_ip",
 }
 
 
@@ -114,14 +97,13 @@ def extract_structural_signals(text: str) -> list[Signal]:
     signal_keys: set[tuple[str, str | None]] = set()
     text_without_emails = _EMAIL_RE.sub(" ", text)
 
-    for match in _URL_RE.finditer(text_without_emails):
+    for match in URL_RE.finditer(text_without_emails):
         label = classify_link(match.group(0))
-        if label == "shortened":
-            _add_signal(signals, signal_keys, kind="link_shortened", note=label)
-        elif label == "lookalike-domain":
-            _add_signal(signals, signal_keys, kind="link_lookalike", note=label)
-        else:
+        kind = _SIGNAL_KIND_BY_LABEL.get(label) if label else None
+        if kind is None:
             _add_signal(signals, signal_keys, kind="link", note=None)
+        else:
+            _add_signal(signals, signal_keys, kind=kind, note=label)
 
     if _EMAIL_RE.search(text):
         _add_signal(signals, signal_keys, kind="email", note=None)
@@ -145,26 +127,6 @@ def normalize_text(text: str) -> str:
     normalized = unicodedata.normalize("NFKC", text).translate(_APOSTROPHES)
     normalized = normalized.replace("\u0451", "\u0435").replace("\u0401", "\u0435")
     return re.sub(r"\s+", " ", normalized.casefold()).strip()
-
-
-def classify_link(raw_url: str) -> str | None:
-    """Classify a raw link into the safe labels used by minimization."""
-
-    domain = _domain_from_url(raw_url)
-    if not domain:
-        return None
-
-    if domain in _SHORTENER_DOMAINS:
-        return "shortened"
-
-    domain_labels = re.split(r"[^a-z0-9]+", domain)
-    for brand, allowed_domains in _BRAND_ALLOWED_DOMAINS.items():
-        if _domain_is_allowed(domain, allowed_domains):
-            continue
-        if brand in domain or any(_looks_like_brand(label, brand) for label in domain_labels):
-            return "lookalike-domain"
-
-    return None
 
 
 def matching_patterns(rule: RuleDefinition, text: str) -> tuple[str, ...]:
@@ -200,60 +162,6 @@ def _rule_matches(rule: RuleDefinition, normalized_text: str) -> bool:
         for patterns in rule.match.values()
         for pattern in patterns
     )
-
-
-def _domain_from_url(raw_url: str) -> str | None:
-    cleaned = raw_url.strip().strip(".,;:!?)]}\"'")
-    cleaned = cleaned.replace("[.]", ".").replace("(.)", ".")
-    cleaned = re.sub(r"(?i)^hxxp", "http", cleaned)
-    if "://" not in cleaned:
-        cleaned = f"https://{cleaned}"
-
-    parsed = urlparse(cleaned)
-    domain = (parsed.hostname or "").casefold().strip(".")
-    if domain.startswith("www."):
-        domain = domain.removeprefix("www.")
-    return domain or None
-
-
-def _domain_is_allowed(domain: str, allowed_domains: tuple[str, ...]) -> bool:
-    return any(domain == allowed or domain.endswith(f".{allowed}") for allowed in allowed_domains)
-
-
-def _looks_like_brand(label: str, brand: str) -> bool:
-    if len(brand) < 4 or abs(len(label) - len(brand)) > 2:
-        return False
-    if label == brand:
-        return True
-    return _levenshtein_at_most_one(label, brand)
-
-
-def _levenshtein_at_most_one(left: str, right: str) -> bool:
-    if left == right:
-        return True
-    if abs(len(left) - len(right)) > 1:
-        return False
-
-    edits = 0
-    i = 0
-    j = 0
-    while i < len(left) and j < len(right):
-        if left[i] == right[j]:
-            i += 1
-            j += 1
-            continue
-        edits += 1
-        if edits > 1:
-            return False
-        if len(left) == len(right):
-            i += 1
-            j += 1
-        elif len(left) > len(right):
-            i += 1
-        else:
-            j += 1
-
-    return True
 
 
 def _card_digits(value: str) -> str | None:

@@ -81,9 +81,18 @@ def test_minimize_tokenizes_textual_secret_values(secret: str) -> None:
     ],
 )
 def test_minimize_tokenizes_non_ascii_domains(domain: str) -> None:
+    """A homograph host is tokenized *and* recognized as mixed-script.
+
+    This assertion used to be ``[LINK]``: the old classifier could not tell a
+    Cyrillic imitation from an ordinary link, so the shape was lost before the
+    model saw it. The unified analyzer labels it. The invariant both versions
+    protect is the same — the submitted domain itself never survives
+    minimization.
+    """
+
     out = minimize(f"Pay {domain} now")
 
-    assert out == "Pay [LINK] now"
+    assert out == "Pay [LINK: mixed-script-domain] now"
     assert domain not in out
 
 

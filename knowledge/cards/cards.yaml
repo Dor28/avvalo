@@ -132,11 +132,11 @@ cards:
     reviewed_case_ids: []
 
   - id: family.suspicious_link_qr
-    version: 1.0.0
+    version: 1.1.0
     status: approved
-    reviewer: product-contract-2026-07-15
+    reviewer: product-contract-2026-07-25
     trigger_rule_ids: [fs.link.payorlogin]
-    trigger_signal_kinds: [link, link_shortened, link_lookalike]
+    trigger_signal_kinds: [link, link_shortened, link_lookalike, link_userinfo, link_ip]
     retrieval_aliases:
       uz_latn: [linkni bosing, havolani oching, qr kod, saytga kiring]
       uz_cyrl: [линкни босинг, ҳаволани очинг, qr код, сайтга киринг]
@@ -145,6 +145,7 @@ cards:
     red_flags:
       - The message directs payment or login through its own link or QR code.
       - A shortened or lookalike link can hide the actual destination.
+      - An address can display a familiar name while leading somewhere else entirely.
     verify_steps:
       - Do not use the supplied path; open the official app or type a known official address independently.
       - Confirm the request through an independently found official channel.
