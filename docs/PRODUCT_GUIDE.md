@@ -207,13 +207,20 @@ Definitions and the procedure live in [VERIFY_VALIDATION.md](VERIFY_VALIDATION.m
 
 ## 9. Current sequence
 
-1. Publish and review the first small set of founder-authored educational cases.
-2. Produce the 30-scenario Avvalo Verify validation packet.
-3. Run paired advice-only versus evidence-backed sessions.
-4. Make one explicit `go`, `revise once`, or `stop` decision.
-5. Only after `go`, write one executor-ready task for the three-family MVP.
-6. Build and audit the narrow MVP.
-7. Run the measured alpha before expanding scope.
+1. Extend the founder-reviewed official-domain catalog to the most impersonated organizations.
+2. Encode real circulating Uzbek scam material as rules and knowledge cards, and publish the first
+   small set of founder-authored educational cases drawn from it.
+3. Put the checker in front of real users, watch several of them read an answer, and record whether
+   they return.
+4. Produce the 30-scenario Avvalo Verify validation packet.
+5. Run paired advice-only versus evidence-backed sessions.
+6. Make one explicit `go`, `revise once`, or `stop` decision.
+7. Only after `go`, write one executor-ready task for the three-family MVP.
+8. Build and audit the narrow MVP.
+9. Run the measured alpha before expanding scope.
+
+Steps 1–3 are founder work, not engineering. They come first because the explanation quality and
+the decision to build Verify at all both depend on them.
 
 The executable order is maintained in [ROADMAP.md](ROADMAP.md).
 
