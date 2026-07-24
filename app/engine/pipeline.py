@@ -34,6 +34,7 @@ from app.engine.llm import (
     build_prompt,
     draft_output_schema,
 )
+from app.engine.meta import is_meta_message
 from app.engine.minimize import minimize
 from app.engine.ocr import OCRInvalidImageError, OCRProvider, OCRProviderError
 from app.engine.ocr import get_provider as get_ocr_provider
@@ -256,6 +257,13 @@ async def _run_stages(
     effective_input = check_input.model_copy(
         update={"language": resolve_content_language(text, fallback=check_input.language)}
     )
+    if is_meta_message(text):
+        return _result(
+            effective_input,
+            CheckStatus.meta,
+            text=format_status_message(CheckStatus.meta, effective_input.language),
+        )
+
     rule_hits, signals = run_rules(text)
     reputation_enabled = (
         url_reputation_store is not None

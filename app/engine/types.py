@@ -34,6 +34,7 @@ class CheckStatus(StrEnum):
     ok = "ok"
     no_signal = "no_signal"
     empty_input = "empty_input"
+    meta = "meta"
     low_ocr = "low_ocr"
     rate_limited = "rate_limited"
     timeout = "timeout"
