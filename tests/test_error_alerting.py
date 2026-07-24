@@ -7,6 +7,7 @@ import logging
 from aiogram.types import ErrorEvent, Update
 
 from app.bot.dispatcher import _handle_unexpected_error, build_dispatcher
+from app.engine.validate import ValidationReason
 from app.obs.alerts import OperatorAlertHandler
 from app.obs.events import log_error
 
@@ -101,7 +102,9 @@ async def test_operator_alert_handler_skips_safety_fallback() -> None:
     logger.addHandler(handler)
     try:
         log_error(
-            "validate", "SafetyValidationError", reason="verify block is empty"
+            "validate",
+            "SafetyValidationError",
+            reason=ValidationReason.VERIFY_BLOCK_EMPTY,
         )
         await asyncio.sleep(0)
     finally:

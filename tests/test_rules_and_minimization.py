@@ -56,6 +56,36 @@ def test_minimize_tokenizes_email_and_handle() -> None:
 
 
 @pytest.mark.parametrize(
+    "secret",
+    [
+        "password: Hunter2!",
+        "parol: qwerty123",
+        "пароль: секрет123",  # noqa: RUF001 - adversarial Cyrillic secret fixture
+    ],
+)
+def test_minimize_tokenizes_textual_secret_values(secret: str) -> None:
+    label, value = secret.split(": ", maxsplit=1)
+    out = minimize(secret)
+
+    assert out == f"{label}: [SECRET]"
+    assert value not in out
+
+
+@pytest.mark.parametrize(
+    "domain",
+    [
+        "раураl.uz",  # noqa: RUF001 - deliberate mixed-script homograph
+        "paуpal.uz",  # noqa: RUF001 - deliberate mixed-script homograph
+    ],
+)
+def test_minimize_tokenizes_non_ascii_domains(domain: str) -> None:
+    out = minimize(f"Pay {domain} now")
+
+    assert out == "Pay [LINK] now"
+    assert domain not in out
+
+
+@pytest.mark.parametrize(
     "phone",
     [
         "+7 999 123 45 67",

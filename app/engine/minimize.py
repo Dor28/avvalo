@@ -12,7 +12,8 @@ _TME_RE = re.compile(r"(?i)\b(?:https?|hxxps?)://t\.me/[a-z0-9_]{4,32}\b")
 _URL_RE = re.compile(
     r"(?ix)"
     r"\b(?:https?|hxxps?)://[^\s<>()]+"
-    r"|\b(?:www\.)?[a-z0-9][a-z0-9.-]*(?:\.|\[\.\]|\(\.\))[a-z]{2,}"
+    r"|\b(?:www\.)?[a-z0-9\u0080-\uffff][a-z0-9\u0080-\uffff.-]*"
+    r"(?:\.|\[\.\]|\(\.\))[a-z\u0080-\uffff]{2,}"
     r"(?:/[^\s<>()]*)?"
 )
 _HANDLE_RE = re.compile(r"(?<!\w)@[a-z0-9_]{4,32}\b", re.IGNORECASE)
@@ -27,8 +28,12 @@ _PHONE_RE = re.compile(
     r")(?!\d)"
 )
 _CODE_VALUE_RE = re.compile(
-    r"(?iu)\b((?:sms\s*)?(?:otp|kod|code|код|парол|password)[^\d]{0,20})"
+    r"(?iu)\b((?:sms\s*)?(?:otp|kod|code|код|parol|пароль?|password)[^\d]{0,20})"
     r"(\d{4,8})(?!\d)"
+)
+_SECRET_VALUE_RE = re.compile(
+    r"(?iu)\b((?:password|parol|пароль?)(?:\s+(?:is|bu|это))?"
+    r"[ \t:=\-\u2013\u2014]{1,10})(\S{3,128})"
 )
 _PASSPORT_RE = re.compile(r"(?i)(?<![a-z0-9])(?:[a-z]{2}\s?\d{7})(?![a-z0-9])")
 _CARD_RE = re.compile(r"(?<!\d)(?:\d[ -]?){13,19}(?!\d)")
@@ -56,6 +61,7 @@ def minimize(raw_text: str, signals: list[Signal] | None = None) -> str:
     minimized = _URL_RE.sub(_replace_link, minimized)
     minimized = _HANDLE_RE.sub("[HANDLE]", minimized)
     minimized = _PHONE_RE.sub("[PHONE]", minimized)
+    minimized = _SECRET_VALUE_RE.sub(lambda match: f"{match.group(1)}[SECRET]", minimized)
     minimized = _CODE_VALUE_RE.sub(lambda match: f"{match.group(1)}[CODE]", minimized)
     minimized = _PASSPORT_RE.sub("[PASSPORT]", minimized)
     minimized = _CARD_RE.sub(_replace_card, minimized)

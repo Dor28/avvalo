@@ -11,7 +11,7 @@ from app.engine.types import (
     RuleHit,
     Signal,
 )
-from app.engine.validate import ValidationResult, validate
+from app.engine.validate import ValidationReason, ValidationResult, validate
 
 __all__ = [
     "BILLABLE_STATUSES",
@@ -23,6 +23,7 @@ __all__ = [
     "Language",
     "RuleHit",
     "Signal",
+    "ValidationReason",
     "ValidationResult",
     "run_check",
     "validate",
