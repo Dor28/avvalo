@@ -4,18 +4,11 @@ from __future__ import annotations
 
 import re
 
-from app.engine.rules.engine import classify_link
 from app.engine.types import Signal
+from app.engine.url import URL_RE, classify_link
 
 _EMAIL_RE = re.compile(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b")
 _TME_RE = re.compile(r"(?i)\b(?:https?|hxxps?)://t\.me/[a-z0-9_]{4,32}\b")
-_URL_RE = re.compile(
-    r"(?ix)"
-    r"\b(?:https?|hxxps?)://[^\s<>()]+"
-    r"|\b(?:www\.)?[a-z0-9\u0080-\uffff][a-z0-9\u0080-\uffff.-]*"
-    r"(?:\.|\[\.\]|\(\.\))[a-z\u0080-\uffff]{2,}"
-    r"(?:/[^\s<>()]*)?"
-)
 _HANDLE_RE = re.compile(r"(?<!\w)@[a-z0-9_]{4,32}\b", re.IGNORECASE)
 # Match explicit international numbers first, then common Uzbek local/mobile
 # formatting. Requiring ``+`` on the generic branch avoids treating dates and
@@ -58,7 +51,7 @@ def minimize(raw_text: str, signals: list[Signal] | None = None) -> str:
     _ = signals
     minimized = _EMAIL_RE.sub("[EMAIL]", raw_text)
     minimized = _TME_RE.sub("[HANDLE]", minimized)
-    minimized = _URL_RE.sub(_replace_link, minimized)
+    minimized = URL_RE.sub(_replace_link, minimized)
     minimized = _HANDLE_RE.sub("[HANDLE]", minimized)
     minimized = _PHONE_RE.sub("[PHONE]", minimized)
     minimized = _SECRET_VALUE_RE.sub(lambda match: f"{match.group(1)}[SECRET]", minimized)

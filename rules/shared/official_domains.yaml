@@ -1,0 +1,84 @@
+version: 2026-07-25-v1
+
+# Founder-reviewed catalog of commonly impersonated organizations and their real
+# domains, plus the URL shorteners that hide a destination.
+#
+# This file is DATA, not code. Adding an organization here immediately improves
+# lookalike detection in the checker — no code change, no deploy of new logic.
+# It is loaded by `app/engine/url.py` and used for shape-based classification
+# only: Avvalo never opens, fetches, or renders a submitted destination, and
+# never claims an official source was checked (that stays behind
+# docs/VERIFY_VALIDATION.md).
+#
+# How to add an organization:
+#   - `brand` is the lowercase token that appears in imitation domains
+#     (`click`, `payme`, `uzum`). Keep it 4+ characters — shorter tokens produce
+#     false positives against ordinary words.
+#   - `domains` lists every real domain the organization actually uses. A
+#     submitted host equal to one of these, or a subdomain of one, is treated as
+#     the genuine organization. MISSING A REAL DOMAIN HERE CAUSES FALSE
+#     "lookalike" LABELS — verify each domain from the organization's own
+#     published materials before adding the brand.
+#   - Never add a domain taken from a user submission or an unreviewed report.
+#
+# This catalog is also the seed for Avvalo Verify §4.1 (official identity
+# match). Entries added here are reusable there once that capability passes its
+# validation gate — so the review bar is the same: only domains you have
+# confirmed from the organization itself.
+
+brands:
+  - brand: agrobank
+    domains: [agrobank.uz]
+  - brand: anorbank
+    domains: [anorbank.uz]
+  - brand: beeline
+    domains: [beeline.uz]
+  - brand: click
+    domains: [click.uz]
+  - brand: hamkorbank
+    domains: [hamkorbank.uz]
+  - brand: humo
+    domains: [humocard.uz, humo.uz]
+  - brand: ipoteka
+    domains: [ipotekabank.uz]
+  - brand: kapitalbank
+    domains: [kapitalbank.uz]
+  - brand: olx
+    domains: [olx.uz]
+  - brand: payme
+    domains: [payme.uz]
+  - brand: telegram
+    domains: [telegram.org, t.me]
+  - brand: uzcard
+    domains: [uzcard.uz]
+  - brand: uzum
+    domains: [uzum.uz, uzumbank.uz]
+  - brand: xalqqbank
+    domains: [xb.uz]
+
+# Link shorteners hide the real destination. A shortened link is not by itself a
+# problem — it is a reason the destination cannot be judged by shape.
+shorteners:
+  - bit.ly
+  - clck.ru
+  - cutt.ly
+  - goo.gl
+  - is.gd
+  - lnkd.in
+  - ow.ly
+  - s.id
+  - shorturl.at
+  - t.co
+  - tiny.cc
+  - tinyurl.com
+
+# Public suffix labels that must never appear in the middle of a hostname.
+# `click.uz.secure-login.com` reads as "click.uz" to a person but resolves to
+# `secure-login.com`. Kept deliberately small: only suffixes common in
+# Uzbek-language traffic, so ordinary subdomains are not flagged.
+nested_suffixes:
+  - uz
+  - com
+  - net
+  - org
+  - ru

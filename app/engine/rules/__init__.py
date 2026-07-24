@@ -1,7 +1,6 @@
 """Deterministic rule engine package."""
 
 from app.engine.rules.engine import (
-    classify_link,
     extract_structural_signals,
     matching_patterns,
     normalize_text,
@@ -13,6 +12,10 @@ from app.engine.rules.loader import (
     load_rule_pack,
     load_yaml_rule_pack,
 )
+
+# Re-exported: link classification moved to the shared analyzer, but callers
+# reach it through the rules package.
+from app.engine.url import classify_link
 
 __all__ = [
     "RuleDefinition",
