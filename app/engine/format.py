@@ -146,6 +146,22 @@ _STATUS_MESSAGES = {
         Language.uz_latn: "Tekshirish uchun vaziyatga oid matn yoki havolani yuboring.",
         Language.ru: "Пришлите текст или ссылку, относящиеся к ситуации.",
     },
+    CheckStatus.meta: {
+        Language.uz_latn: (
+            "Men vaziyat \"xavfsiz\" yoki \"firibgarlik\" ekanini hal qilmayman — "
+            "shubhali vaziyatni tekshirishga yordam beraman. Matn, havola, QR-kod "
+            "yoki skrinshot yuboring: xavf belgilarini, nimani mustaqil tekshirish "
+            "va nimani so'rashni ko'rsataman — pul to'lash, biror narsa o'rnatish "
+            "yoki ma'lumot berishdan oldin."
+        ),
+        Language.ru: (
+            "Я не решаю, \"безопасно\" это или \"мошенничество\" — я помогаю "
+            "разобрать сомнительную ситуацию. Пришлите текст, ссылку, QR-код или "
+            "скриншот: покажу тревожные признаки, что проверить самостоятельно и "
+            "что спросить, прежде чем платить, что-то устанавливать или делиться "
+            "данными."
+        ),
+    },
     CheckStatus.low_ocr: {
         Language.uz_latn: "Rasm matnini aniq o'qiy olmadim. Muhim joyini xabar qilib yuboring.",
         Language.ru: (

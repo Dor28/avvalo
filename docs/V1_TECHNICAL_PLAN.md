@@ -101,8 +101,10 @@ missing authoritative rule coverage.
 
 ### Statuses
 
-The engine uses categorical statuses such as `ok`, `no_signal`, `empty_input`, `low_ocr`,
+The engine uses categorical statuses such as `ok`, `no_signal`, `empty_input`, `meta`, `low_ocr`,
 `rate_limited`, `timeout`, `llm_error`, `ocr_error`, `unsupported_media`, and `safety_fallback`.
+`meta` is a deterministic, non-billable short-circuit for chatter about the bot itself (greetings,
+"what can you do", thanks) that never reaches the rule pack or the LLM — see `app.engine.meta`.
 Error classes are categorical identifiers, never exception messages.
 
 ## 5. Rules and payment protection
