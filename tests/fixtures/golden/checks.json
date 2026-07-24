@@ -189,5 +189,110 @@
     ],
     "no_signal": false,
     "notes": "Recipient-name mismatch and release pressure handled by the unified consumer flow."
+  },
+  {
+    "id": "qr_01_payment_page_url",
+    "language": "uz_latn",
+    "input_type": "image",
+    "input": "qr/payment_page_url.png",
+    "expected_rule_families": [],
+    "expected_signal_kinds": [
+      "link"
+    ],
+    "expected_status": "ok",
+    "must_include": [
+      "do not open the QR destination",
+      "open the payment service yourself"
+    ],
+    "must_not_contain": [
+      "xavfsiz",
+      "firibgar"
+    ],
+    "no_signal": false,
+    "notes": "A locally decoded payment-page URL flows through structural URL analysis."
+  },
+  {
+    "id": "qr_02_shortened_url",
+    "language": "ru",
+    "input_type": "image",
+    "input": "qr/shortened_url.png",
+    "expected_rule_families": [],
+    "expected_signal_kinds": [
+      "link_shortened"
+    ],
+    "expected_status": "ok",
+    "must_include": [
+      "a shortened address hides the destination",
+      "open the official service yourself"
+    ],
+    "must_not_contain": [
+      "безопасно",
+      "мошенник"
+    ],
+    "no_signal": false,
+    "notes": "A shortened destination is classified locally and never fetched."
+  },
+  {
+    "id": "qr_03_lookalike_domain",
+    "language": "uz_latn",
+    "input_type": "image",
+    "input": "qr/lookalike_domain.png",
+    "expected_rule_families": [],
+    "expected_signal_kinds": [
+      "link_lookalike"
+    ],
+    "expected_status": "ok",
+    "must_include": [
+      "the address imitates a familiar service",
+      "type the official address yourself"
+    ],
+    "must_not_contain": [
+      "xavfsiz",
+      "firibgar"
+    ],
+    "no_signal": false,
+    "notes": "A familiar-brand lookalike is described by shape only."
+  },
+  {
+    "id": "qr_04_non_url_text",
+    "language": "uz_latn",
+    "input_type": "image",
+    "input": "qr/non_url_text.png",
+    "expected_rule_families": [
+      "credential_theft",
+      "authority_impersonation"
+    ],
+    "expected_signal_kinds": [
+      "otp_request"
+    ],
+    "expected_status": "ok",
+    "must_include": [
+      "do not share the SMS code",
+      "contact the bank independently"
+    ],
+    "must_not_contain": [
+      "xavfsiz",
+      "firibgar"
+    ],
+    "no_signal": false,
+    "notes": "Non-URL QR text enters the same deterministic checker path as pasted text."
+  },
+  {
+    "id": "qr_05_unreadable",
+    "language": "ru",
+    "input_type": "image",
+    "input": "qr/unreadable.png",
+    "expected_rule_families": [],
+    "expected_signal_kinds": [],
+    "expected_status": "low_ocr",
+    "must_include": [
+      "send one clear QR code"
+    ],
+    "must_not_contain": [
+      "безопасно",
+      "мошенник"
+    ],
+    "no_signal": true,
+    "notes": "An unreadable image degrades to honest retry guidance without an LLM call."
   }
 ]

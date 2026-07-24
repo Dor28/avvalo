@@ -58,11 +58,13 @@ def test_web_app_exposes_core_routes() -> None:
 
 
 def test_web_privacy_copy_does_not_promise_the_telegram_deletion_command() -> None:
+    """The inline consent-panel notice lives on /check, which has the form."""
+
     client = TestClient(create_app(settings=_settings()))
 
-    uz_notice = client.get("/?language=uz_latn").text
+    uz_notice = client.get("/check?language=uz_latn").text
     uz_privacy = client.get("/privacy?language=uz_latn").text
-    ru_notice = client.get("/?language=ru").text
+    ru_notice = client.get("/check?language=ru").text
     ru_privacy = client.get("/privacy?language=ru").text
 
     for page in (uz_notice, uz_privacy, ru_notice, ru_privacy):
@@ -125,7 +127,7 @@ def test_unhandled_route_exception_logs_and_returns_500(caplog) -> None:
     assert "'error_type': 'ValueError'" in messages
 
 
-def test_unified_checker_is_localized_and_old_merchants_url_redirects() -> None:
+def test_checker_is_localized_and_old_merchants_url_redirects() -> None:
     client = TestClient(create_app(settings=_settings()))
 
     landing = client.get("/?language=uz_latn")
@@ -136,8 +138,9 @@ def test_unified_checker_is_localized_and_old_merchants_url_redirects() -> None:
     assert family.status_code == 200
     assert merchants.status_code == 308
     assert merchants.headers["location"] == "/check?language=ru"
-    # Home and /check both post to the same single check handler.
-    assert 'action="/check"' in landing.text
+    # The landing page links to /check; only /check itself posts there.
+    assert 'action="/check"' in family.text
+    assert 'href="/check?language=uz_latn"' in landing.text
     assert 'name="face"' not in landing.text
     assert 'name="face"' not in family.text
     assert 'name="caption"' not in landing.text

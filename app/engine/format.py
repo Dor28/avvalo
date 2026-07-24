@@ -177,10 +177,13 @@ _STATUS_MESSAGES = {
         ),
     },
     CheckStatus.low_ocr: {
-        Language.uz_latn: "Rasm matnini aniq o'qiy olmadim. Muhim joyini xabar qilib yuboring.",
+        Language.uz_latn: (
+            "Rasmdagi matn yoki QR-kodni aniq o'qiy olmadim. Muhim joyni matn qilib "
+            "yoki bitta QR-kodni alohida yuboring."
+        ),
         Language.ru: (
-            "Не получилось чётко прочитать текст на изображении. "
-            "Пришлите важный фрагмент сообщением."
+            "Не получилось чётко прочитать текст или QR-код на изображении. "
+            "Пришлите важный фрагмент текстом или один QR-код отдельно."
         ),
     },
     CheckStatus.timeout: {

@@ -671,9 +671,11 @@ body.privacy-page .lead {
   gap: 7px;
 }
 
-.workbench-head h2 {
+.workbench-head h1 {
+  max-width: none;
   color: var(--cream);
   font-size: clamp(1.6rem, 3vw, 2.15rem);
+  line-height: 1.1;
 }
 
 .workbench-head p:last-child {
