@@ -58,11 +58,13 @@ def test_web_app_exposes_core_routes() -> None:
 
 
 def test_web_privacy_copy_does_not_promise_the_telegram_deletion_command() -> None:
+    """The inline consent-panel notice lives on /check, which has the form."""
+
     client = TestClient(create_app(settings=_settings()))
 
-    uz_notice = client.get("/?language=uz_latn").text
+    uz_notice = client.get("/check?language=uz_latn").text
     uz_privacy = client.get("/privacy?language=uz_latn").text
-    ru_notice = client.get("/?language=ru").text
+    ru_notice = client.get("/check?language=ru").text
     ru_privacy = client.get("/privacy?language=ru").text
 
     for page in (uz_notice, uz_privacy, ru_notice, ru_privacy):
