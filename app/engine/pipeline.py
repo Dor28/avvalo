@@ -61,6 +61,7 @@ from app.engine.url_reputation import (
     lookup_url_reputation,
 )
 from app.engine.validate import ValidationReason, validate
+from app.obs.context import with_request_context
 from app.obs.cost import estimate_llm_cost_from_settings
 from app.obs.events import log_error, log_event
 
@@ -99,6 +100,7 @@ BILLABLE_STATUSES = frozenset(
 )
 
 
+@with_request_context
 async def run_check(
     check_input: CheckInput,
     session: AsyncSession | None = None,

@@ -66,7 +66,10 @@ class OperatorAlertHandler(logging.Handler):
             return  # No running event loop (e.g. during shutdown) -- drop the alert.
 
         status_code = fields.get("status_code")
+        request_id = fields.get("request_id")
         suffix = f" status={status_code}" if status_code is not None else ""
+        if request_id is not None:
+            suffix += f" request_id={request_id}"
         text = f"Avvalo error: stage={stage} type={error_type}{suffix}"
         task = loop.create_task(self._bot.send_message(self._chat_id, text))
         self._pending.add(task)

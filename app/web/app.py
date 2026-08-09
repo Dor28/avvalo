@@ -10,6 +10,7 @@ from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings
+from app.obs.context import request_context
 from app.obs.events import log_error
 from app.web.abuse import (
     MAX_REQUEST_BODY_BYTES,
@@ -49,6 +50,7 @@ def create_app(
         max_body_bytes=MAX_REQUEST_BODY_BYTES,
     )
     web_app.middleware("http")(_prevent_post_caching)
+    web_app.middleware("http")(_correlate_request)
     web_app.add_exception_handler(Exception, _handle_unexpected_error)
 
     static_dir = Path(__file__).with_name("static")
@@ -56,6 +58,16 @@ def create_app(
         web_app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
     return web_app
+
+
+async def _correlate_request(request: Request, call_next):
+    """Attach one server-generated correlation ID to a web request and response."""
+
+    with request_context() as request_id:
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
 
 
 async def _prevent_post_caching(request: Request, call_next):
@@ -76,11 +88,17 @@ async def _handle_unexpected_error(request: Request, exc: Exception) -> PlainTex
     unexpected failures.
     """
 
-    log_error(stage="web", error_type=exc.__class__.__name__)
+    request_id = getattr(request.state, "request_id", None)
+    with request_context(request_id) as resolved_request_id:
+        log_error(stage="web", error_type=exc.__class__.__name__)
     return PlainTextResponse(
         "Internal Server Error",
         status_code=500,
-        headers={"Cache-Control": "no-store", "Pragma": "no-cache"},
+        headers={
+            "Cache-Control": "no-store",
+            "Pragma": "no-cache",
+            "X-Request-ID": resolved_request_id,
+        },
     )
 
 
