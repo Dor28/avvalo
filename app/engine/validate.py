@@ -160,6 +160,42 @@ _UNSUPPORTED_LOOKUP_PATTERNS = (
     r"(?:тасдиқ|кўрсат|топил|аниқла)\w*\b",
 )
 
+# ``prompts/check.txt`` ("INCOMING PAYMENT CLAIMS") tells the model never to state
+# that an incoming payment arrived on the strength of a screenshot or receipt.
+# These patterns are the deterministic counterpart: the prompt asks, the validator
+# enforces. An apostrophe class covers the Uzbek straight, curly, and modifier
+# quote variants used interchangeably for o' and g'.
+_PAYMENT_CONFIRMED_PATTERNS = (
+    r"(?iu)\b(?:деньги|средства)\s+(?:пришли|поступили|получены)\b",
+    r"(?iu)\b(?:оплата|платёж|платеж|перевод)\s+(?:прошла|прошёл|прошел|"
+    r"получен(?:а)?|поступил(?:а)?|подтвержд[её]н(?:а)?)\b",
+    r"(?iu)\b(?:платёж|платеж|перевод|чек|квитанция)\s+(?:настоящий|настоящая|"
+    r"подлинный|подлинная)\b",
+    # Uzbek negates morphologically (keldi → kelmadi, o'tdi → o'tmadi), so the
+    # affirmative form is already distinct from its own negation.
+    r"(?i)\bpul\s+(?:keldi|tushdi|o['‘’ʻ]?tdi)\b",
+    r"(?i)\bto['‘’ʻ]?lov\s+(?:o['‘’ʻ]?tdi|keldi|tushdi|tasdiqlandi)\b",
+    r"(?iu)\bпул\s+(?:келди|тушди)\b",
+    r"(?iu)\bтўлов\s+(?:ўтди|келди|тушди|тасдиқланди)\b",
+)
+# The desired guidance discusses the claim in order to reject it ("a screenshot is
+# not proof that the money arrived"). Russian keeps the claim phrase intact under
+# negation, so an affirmative claim is distinguished from a disclaimed one by an
+# explicit proof/confirmation construction in the same sentence. A bare negation is
+# deliberately not enough: "не волнуйтесь, деньги пришли" stays a claim.
+_PAYMENT_DISCLAIMER_RE = re.compile(
+    r"(?iu)(?:"
+    r"не\s+(?:доказыва|подтвержда|означа|значит|гарантиру|явля)\w*|"
+    r"не\s+доказательств\w*|"
+    r"(?:пока|ещ[её])\s+не\b|"
+    r"не\s+факт\b|"
+    r"isbot\s*(?:emas|lamaydi)|tasdiqla(?:maydi|nmagan)|degani\s+emas|"
+    r"hali\s+emas|"
+    r"исбот\s*(?:эмас|ламайди)|тасдиқла(?:майди|нмаган)|дегани\s+эмас"
+    r")"
+)
+_SENTENCE_SPLIT_RE = re.compile(r"[.!?\n;]+")
+
 _CASE_PROOF_PATTERNS = (
     r"(?i)\b(?:same|identical)\s+(?:reviewed\s+)?case\b.*\b(?:proves?|confirms?)\b",
     r"(?iu)\b(?:тот\s+же|такой\s+же)\s+случай\b.*\b(?:доказывает|подтверждает)\b",
@@ -197,6 +233,7 @@ class ValidationReason(StrEnum):
     REVIEWED_CASE_AS_PROOF = "reviewed case represented as proof"
     UNSUPPORTED_EXTERNAL_LOOKUP = "unsupported external lookup claim"
     UNSUPPORTED_BLOCKLIST_CLAIM = "unsupported URL blocklist claim"
+    PAYMENT_CONFIRMED_CLAIM = "incoming payment represented as confirmed"
     WRONG_LANGUAGE_SCRIPT = "wrong language script"
     VERIFY_BLOCK_EMPTY = "verify block is empty"
     ASK_BLOCK_EMPTY = "ask block is empty"
@@ -312,6 +349,8 @@ def _first_rejection_reason(
         card_id.casefold() in lower for card_id in knowledge_card_ids
     ):
         return ValidationReason.INTERNAL_KNOWLEDGE_ID
+    if _claims_payment_confirmed(scan_text):
+        return ValidationReason.PAYMENT_CONFIRMED_CLAIM
     for pattern in _CASE_PROOF_PATTERNS:
         if re.search(pattern, scan_text):
             return ValidationReason.REVIEWED_CASE_AS_PROOF
@@ -341,6 +380,22 @@ def _first_rejection_reason(
     if required_rule_ids - declared_rule_ids:
         return ValidationReason.MISSING_RULE_IDS
     return None
+
+
+def _claims_payment_confirmed(text: str) -> bool:
+    """Report whether any sentence asserts an incoming payment as confirmed.
+
+    Scoping to a sentence keeps the disclaimer attached to the claim it rejects,
+    so "a screenshot does not prove the money arrived" passes while a bare
+    "the money arrived" in the next bullet still fails.
+    """
+
+    for sentence in _SENTENCE_SPLIT_RE.split(text):
+        if not any(re.search(pattern, sentence) for pattern in _PAYMENT_CONFIRMED_PATTERNS):
+            continue
+        if not _PAYMENT_DISCLAIMER_RE.search(sentence):
+            return True
+    return False
 
 
 def _normalize_for_matching(text: str) -> str:
