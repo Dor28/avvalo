@@ -148,6 +148,36 @@ async def test_forbidden_phrase_never_reaches_the_user(
 
 
 @pytest.mark.parametrize("fixture_id", [case["id"] for case in _text_fixtures()])
+async def test_expected_knowledge_cards_are_retrieved(fixture_id: str) -> None:
+    """The guidance a fixture's ``must_include`` intent depends on must be retrieved.
+
+    This is the checkable half of ``must_include``. That field states intent in
+    English ("a screenshot is not proof of payment") while replies are
+    ``uz_latn``/``ru``, so it can never be a substring assertion; and the reply
+    body itself comes from the model, which is faked here. What *is*
+    deterministic is whether the pipeline retrieved the card carrying that
+    guidance and put it in front of the model.
+
+    The assertion is a subset, not equality: retrieval may legitimately surface
+    additional cards, and authoring a new card in Phase 2 must not break
+    unrelated fixtures.
+    """
+
+    fixture = _by_id(fixture_id)
+    result = await _run(
+        fixture,
+        _ScriptedLLM(red_flag="The message pressures an immediate decision."),
+        user_key=f"golden-cards-{fixture_id}",
+    )
+
+    missing = set(fixture["expected_knowledge_card_ids"]) - set(result.knowledge_card_ids)
+    assert not missing, (
+        f"{fixture_id}: guidance for {fixture['must_include']} was not retrieved; "
+        f"missing cards {sorted(missing)}, got {sorted(result.knowledge_card_ids)}"
+    )
+
+
+@pytest.mark.parametrize("fixture_id", [case["id"] for case in _text_fixtures()])
 async def test_expected_families_survive_to_the_result(fixture_id: str) -> None:
     """The families a fixture expects must appear in the result's rule IDs.
 

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import yaml
 
+from app.engine.knowledge import FileKnowledgeStore
 from app.engine.rules.loader import RULE_PACK_DIR
 from app.engine.types import InputType, Language
 
@@ -21,6 +22,7 @@ REQUIRED_KEYS = {
     "input_type",
     "input",
     "expected_rule_families",
+    "expected_knowledge_card_ids",
     "must_include",
     "must_not_contain",
     "no_signal",
@@ -100,6 +102,44 @@ def test_fixture_shape_and_values() -> None:
             signal_kinds = fixture.get("expected_signal_kinds")
             assert isinstance(signal_kinds, list), f"{fid}: expected_signal_kinds must be a list"
             assert (GOLDEN_DIR / fixture["input"]).is_file(), f"{fid}: image fixture is missing"
+
+
+def test_expected_knowledge_cards_exist_in_the_knowledge_base() -> None:
+    """An expected card that no longer exists can never be retrieved.
+
+    ``must_include`` states each fixture's intent in English ("a screenshot is
+    not proof of payment") while replies are ``uz_latn``/``ru``, so it cannot be
+    matched against a reply. ``expected_knowledge_card_ids`` is the checkable
+    form of that intent: the guidance carrying it must reach the model.
+    """
+
+    known = {card.id for card in FileKnowledgeStore().load().cards}
+    problems: list[str] = []
+    for fixture in _load():
+        unknown = set(fixture["expected_knowledge_card_ids"]) - known
+        if unknown:
+            problems.append(f"{fixture['id']}: cards not in the knowledge base: {sorted(unknown)}")
+    assert not problems, "\n".join(problems)
+
+
+def test_every_fixture_states_its_intent_in_both_forms() -> None:
+    """``must_include`` documents *why* the expected cards are expected.
+
+    It stays human-readable rationale rather than an assertion; the pairing is
+    enforced so a new fixture cannot land with one half missing.
+    """
+
+    for fixture in _load():
+        assert fixture["must_include"], f"{fixture['id']}: must_include is empty"
+        if fixture.get("expected_status") == "low_ocr":
+            # Never reaches the model, so no guidance is retrieved.
+            assert fixture["expected_knowledge_card_ids"] == [], (
+                f"{fixture['id']}: a low_ocr fixture cannot expect retrieved cards"
+            )
+        else:
+            assert fixture["expected_knowledge_card_ids"], (
+                f"{fixture['id']}: states must_include intent but expects no cards to carry it"
+            )
 
 
 def test_expected_families_exist_in_the_rule_pack() -> None:
