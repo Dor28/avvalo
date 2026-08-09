@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.data.models import Base
+from app.engine.format import share_summary
 from app.engine.rules import run_rules
 from app.engine.rules.loader import (
     RuleDefinition,
@@ -19,6 +20,7 @@ from app.engine.rules.loader import (
     load_rule_pack,
     load_yaml_rule_pack,
 )
+from app.engine.types import Language
 from app.rules_store import (
     RuleOverrideDraft,
     RuleStoreBase,
@@ -240,3 +242,35 @@ async def test_refresh_job_never_raises_when_the_database_is_unreachable() -> No
 
     # The YAML baseline still serves checks.
     assert load_rule_pack().rules
+
+
+async def test_share_summary_reflects_an_override_published_after_the_first_share(
+    rules_session,
+) -> None:
+    """Formatting must read the pack in force, not the one the process booted on.
+
+    ``share_summary`` indexed the rule pack behind an unbounded cache, so the
+    very first share pinned the pre-refresh pack for the life of the process: a
+    rule added by an override never resolved to a family, and an override that
+    changed a rule's family kept reporting the old one.
+    """
+
+    # A share served before the first refresh: the rule does not exist yet.
+    assert "Найденные признаки" not in share_summary(["fs.test.shared"], Language.ru)
+
+    await create_override(
+        rules_session,
+        _draft(
+            rule_id="fs.test.shared",
+            family="upfront_payment",
+            patterns={"ru": ["предоплата до проверки"]},
+        ),
+    )
+    await rules_session.commit()
+    await refresh_rule_pack(rules_session)
+
+    summary = share_summary(["fs.test.shared"], Language.ru)
+
+    assert "предоплата или депозит до проверки" in summary
+    # Still content-free: the label comes from the family taxonomy, not the rule.
+    assert "предоплата до проверки" not in summary

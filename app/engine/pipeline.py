@@ -177,7 +177,11 @@ async def _rate_limit_result(
     limit_override: int | None = None,
 ) -> CheckResult | None:
     count = await repo.increment_usage(session, user_key=check_input.user_key)
-    limit = limit_override or _daily_limit(settings)
+    # ``is not None``, not ``or``: a caller passing 0 means "allow nothing", and
+    # falsy-coalescing silently promoted that to the default limit instead.
+    # ``_log_check_finished`` already reports the limit this way, so the logged
+    # limit and the enforced limit now agree for every override value.
+    limit = limit_override if limit_override is not None else _daily_limit(settings)
     if count <= limit:
         return None
 

@@ -248,6 +248,12 @@ def _verify_turnstile_sync(token: str, secret: str, remote_ip: str | None) -> bo
     try:
         with urlopen(request, timeout=5) as response:
             payload = json.loads(response.read().decode("utf-8"))
-    except OSError:
+    # A proxy or edge outage answers with an HTML error page, not JSON. Decoding
+    # that raises ValueError (json.JSONDecodeError / UnicodeDecodeError), which is
+    # not an OSError -- it used to escape this thread and surface as a 500 instead
+    # of the intended "verification failed" rejection.
+    except (OSError, ValueError):
+        return False
+    if not isinstance(payload, dict):
         return False
     return bool(payload.get("success"))
