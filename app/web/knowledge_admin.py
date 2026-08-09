@@ -5,11 +5,18 @@ selection runs on ``trigger_rule_ids``, ``trigger_signal_kinds``, and
 ``retrieval_aliases`` rather than on the card body. The dry-run exists to make
 that visible, and it drives the real ``retrieve_knowledge`` so it cannot drift
 from production.
+
+The list shows the shipped baseline cards alongside the stored overrides. An
+override-only list renders an empty page on a fresh database while the baseline
+cards are answering real users, which makes the cards in force impossible to
+review and their IDs impossible to discover.
 """
 
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -20,6 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES
 from app.config import Settings
 from app.engine.knowledge.loader import FileKnowledgeStore, load_yaml_knowledge_base
+from app.engine.knowledge.types import KnowledgeCard
 from app.knowledge_store import (
     CardPreview,
     KnowledgeCardDraft,
@@ -88,9 +96,92 @@ def _split(raw: str) -> list[str]:
     return [line.strip() for line in raw.splitlines() if line.strip()]
 
 
+@dataclass(frozen=True)
+class _CardRow:
+    """One list row: a stored override, or a shipped card with no override yet."""
+
+    card_id: str
+    card_version: str
+    status: str
+    reviewer: str
+    mechanism: str
+    edit_url: str
+    override_id: str | None
+    updated_ts: datetime | None
+
+    @property
+    def is_baseline(self) -> bool:
+        return self.override_id is None
+
+
+def _draft_from_card(card: KnowledgeCard) -> KnowledgeCardDraft:
+    """Project a shipped baseline card onto the editor's draft contract.
+
+    Editing a baseline card opens this draft with no ``override_id``, so saving
+    creates an override carrying the same ID — which is exactly how the merge in
+    ``app.knowledge_store.apply`` replaces a baseline card.
+    """
+
+    return KnowledgeCardDraft(
+        card_id=card.id,
+        card_version=card.version,
+        status=card.status,
+        reviewer=card.reviewer,
+        mechanism=card.mechanism,
+        trigger_rule_ids=list(card.trigger_rule_ids),
+        trigger_signal_kinds=list(card.trigger_signal_kinds),
+        retrieval_aliases={
+            language: list(card.retrieval_aliases.get(language, []))
+            for language in ALIAS_LANGUAGES
+        },
+        red_flags=list(card.red_flags),
+        verify_steps=list(card.verify_steps),
+        questions=list(card.questions),
+        reviewed_case_ids=list(card.reviewed_case_ids),
+    )
+
+
+def _card_rows(
+    overrides: list[KnowledgeCardOverride],
+    baseline: tuple[KnowledgeCard, ...],
+    language: str,
+) -> list[_CardRow]:
+    """Overrides newest-first, then the baseline cards no override replaces."""
+
+    overridden = {override.card_id for override in overrides}
+    rows = [
+        _CardRow(
+            card_id=override.card_id,
+            card_version=override.card_version,
+            status=override.status,
+            reviewer=override.reviewer,
+            mechanism=override.mechanism,
+            edit_url=f"/admin/cards/{override.id}/edit?language={language}",
+            override_id=str(override.id),
+            updated_ts=override.updated_ts,
+        )
+        for override in overrides
+    ]
+    rows.extend(
+        _CardRow(
+            card_id=card.id,
+            card_version=card.version,
+            status=card.status,
+            reviewer=card.reviewer,
+            mechanism=card.mechanism,
+            edit_url=f"/admin/cards/baseline/{card.id}/edit?language={language}",
+            override_id=None,
+            updated_ts=None,
+        )
+        for card in sorted(baseline, key=lambda card: card.id)
+        if card.id not in overridden
+    )
+    return rows
+
+
 @router.get("/admin/cards", response_class=HTMLResponse, include_in_schema=False)
 async def admin_cards(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
-    """List every card override alongside the baseline size."""
+    """List the stored overrides and the shipped cards none of them replaces."""
 
     settings = _admin_settings(request)
     language = _normalize_language(language)
@@ -101,6 +192,7 @@ async def admin_cards(request: Request, language: str = DEFAULT_LANGUAGE) -> Res
     session_factory = _session_factory_or_error(request)
     async with session_factory() as session:
         overrides = await list_cards(session)
+    baseline = load_yaml_knowledge_base().cards
     return _no_store(
         templates.TemplateResponse(
             request,
@@ -108,8 +200,8 @@ async def admin_cards(request: Request, language: str = DEFAULT_LANGUAGE) -> Res
             _context(
                 request,
                 language,
-                overrides=overrides,
-                baseline_count=len(load_yaml_knowledge_base().cards),
+                rows=_card_rows(overrides, baseline, language),
+                baseline_count=len(baseline),
                 active_count=len(FileKnowledgeStore().load().cards),
             ),
         )
@@ -126,6 +218,32 @@ async def admin_card_new(request: Request, language: str = DEFAULT_LANGUAGE) -> 
     if redirect is not None:
         return redirect
     return _form_response(request, language, override=None)
+
+
+@router.get(
+    "/admin/cards/baseline/{card_id}/edit",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def admin_card_baseline_edit(
+    request: Request,
+    card_id: str,
+    language: str = DEFAULT_LANGUAGE,
+) -> Response:
+    """Open a shipped card pre-filled; saving stores an override with its ID."""
+
+    settings = _admin_settings(request)
+    language = _normalize_language(language)
+    redirect = _require_admin(request, settings, language)
+    if redirect is not None:
+        return redirect
+    card = next(
+        (card for card in load_yaml_knowledge_base().cards if card.id == card_id),
+        None,
+    )
+    if card is None:
+        raise HTTPException(status_code=404)
+    return _form_response(request, language, override=_draft_from_card(card))
 
 
 @router.get(
