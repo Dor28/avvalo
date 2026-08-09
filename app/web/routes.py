@@ -511,6 +511,12 @@ async def _ensure_web_consent(
         notice_version=settings.notice_version,
         language=language,
     )
+    # Commit the acceptance on its own rather than leaving it to the end of the
+    # request. Accepting the notice is a completed user decision; every later
+    # exit from POST /check -- empty text, over-length text, a failed image
+    # verification, the per-IP daily limit -- returns without committing, which
+    # rolled the consent row back and made the user tick the box again.
+    await session.commit()
     return True
 
 

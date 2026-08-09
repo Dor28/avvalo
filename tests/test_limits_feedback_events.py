@@ -61,6 +61,29 @@ async def test_check_after_daily_limit_is_rate_limited(session) -> None:
     assert provider.calls == 5
 
 
+async def test_a_zero_rate_limit_override_admits_nothing(session) -> None:
+    """A caller asking for zero checks gets zero.
+
+    The limit was resolved with ``limit_override or default``, so a 0 override
+    fell through to the configured daily limit and quietly allowed five checks.
+    """
+
+    provider = FakeLLMProvider()
+    check_input = CheckInput(
+        user_key="zero-limit",
+        language=Language.ru,
+        input_type=InputType.text,
+        raw_text="Bank xavfsizlik xizmatidanmiz. SMS kodni yuboring.",
+    )
+
+    result = await run_check(
+        check_input, session=session, llm_provider=provider, rate_limit_override=0
+    )
+
+    assert result.status == CheckStatus.rate_limited
+    assert provider.calls == 0
+
+
 async def test_feedback_is_stored_categorically(session) -> None:
     check_id = await repo.record_check_event(
         session, user_key="fb", input_type="text", language="ru", status="ok"
