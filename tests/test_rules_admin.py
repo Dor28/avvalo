@@ -14,9 +14,10 @@ from app.config import Settings
 from app.content import EditorialBase
 from app.data.models import Base
 from app.engine.rules import run_rules
-from app.engine.rules.loader import clear_active_rule_pack
+from app.engine.rules.loader import clear_active_rule_pack, load_yaml_rule_pack
 from app.rules_store import RuleStoreBase
 from app.web.app import create_app
+from app.web.rules_copy import RULES_COPY
 
 ADMIN_KEY = "test-admin-rule-key"
 SAMPLE = "Пришлите мне секретную кодовую фразу прямо сейчас"
@@ -82,6 +83,13 @@ def client():
     with TestClient(app) as test_client:
         yield test_client
     asyncio.run(engine.dispose())
+
+
+def _matched_ids(text: str) -> list[str]:
+    """Rule IDs the active pack fires on one sample."""
+
+    hits, _ = run_rules(text)
+    return [hit.rule_id for hit in hits]
 
 
 def _login(client: TestClient) -> None:
@@ -218,3 +226,79 @@ def test_deleting_an_override_restores_the_baseline_rule(client) -> None:
     assert response.status_code == 303
     restored, _ = run_rules("Пришлите код из смс")
     assert "fs.credential.otp" in {hit.rule_id for hit in restored}
+
+
+# --- baseline visibility ----------------------------------------------------
+
+
+def test_the_listing_shows_shipped_rules_when_no_override_exists(client) -> None:
+    """A fresh database must not render an empty page while rules are matching."""
+
+    _login(client)
+
+    listing = client.get("/admin/rules?language=ru").text
+
+    for rule in load_yaml_rule_pack().rules:
+        assert rule.id in listing, f"{rule.id} is in force but absent from the editor"
+    assert RULES_COPY["ru"]["baseline_pill"] in listing
+
+
+def test_a_baseline_rule_row_offers_no_delete_action(client) -> None:
+    """Only a stored override can be deleted; the shipped rule is not ours to remove."""
+
+    _login(client)
+
+    listing = client.get("/admin/rules?language=ru").text
+
+    assert "/admin/rules/baseline/fs.credential.otp/edit" in listing
+    assert "/admin/rules/baseline/fs.credential.otp/delete" not in listing
+
+
+def test_editing_a_baseline_rule_prefills_its_shipped_patterns(client) -> None:
+    _login(client)
+    baseline = next(
+        rule for rule in load_yaml_rule_pack().rules if rule.id == "fs.credential.otp"
+    )
+
+    response = client.get("/admin/rules/baseline/fs.credential.otp/edit")
+
+    assert response.status_code == 200
+    assert "fs.credential.otp" in response.text
+    assert baseline.family in response.text
+    for pattern in baseline.match["ru"]:
+        assert pattern in response.text
+
+
+def test_saving_an_edited_baseline_rule_overrides_it_by_id(client) -> None:
+    _login(client)
+    assert "fs.credential.otp" in _matched_ids("Пришлите код из смс")
+
+    saved = client.post(
+        "/admin/rules",
+        data=_form(rule_id="fs.credential.otp", disabled="true", patterns_ru=""),
+        follow_redirects=False,
+    )
+
+    assert saved.status_code == 303
+    # The disabled override suppresses the shipped rule of the same ID.
+    assert "fs.credential.otp" not in _matched_ids("Пришлите код из смс")
+
+
+def test_an_overridden_rule_is_listed_once(client) -> None:
+    """The override replaces its baseline row rather than appearing beside it."""
+
+    _login(client)
+    client.post(
+        "/admin/rules", data=_form(rule_id="fs.credential.otp"), follow_redirects=False
+    )
+
+    listing = client.get("/admin/rules?language=ru").text
+
+    assert listing.count("fs.credential.otp") == 1
+    assert "/admin/rules/baseline/fs.credential.otp/edit" not in listing
+
+
+def test_an_unknown_baseline_rule_is_a_404(client) -> None:
+    _login(client)
+
+    assert client.get("/admin/rules/baseline/fs.not.a_real_rule/edit").status_code == 404

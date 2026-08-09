@@ -24,31 +24,38 @@
         </a>
       </header>
 
-      {% if overrides %}
+      {% if rows %}
         <section class="admin-post-list" aria-label="{{ knowledge.title }}">
-          {% for override in overrides %}
+          {% for row in rows %}
             <article class="admin-post-row">
               <div class="admin-post-main">
                 <div class="admin-post-meta">
-                  <span class="status-pill {% if override.status == 'approved' %}published{% else %}draft{% endif %}">
-                    {{ override.status }}
+                  <span class="status-pill {% if row.status == 'approved' %}published{% else %}draft{% endif %}">
+                    {{ row.status }}
                   </span>
-                  <span>v{{ override.card_version }}</span>
-                  <span>{{ override.reviewer }}</span>
+                  {% if row.is_baseline %}<span class="status-pill draft">{{ knowledge.baseline_pill }}</span>{% endif %}
+                  <span>v{{ row.card_version }}</span>
+                  <span>{{ row.reviewer }}</span>
                 </div>
-                <h2><code>{{ override.card_id }}</code></h2>
-                <p>{{ override.mechanism }}</p>
-                <p>{{ knowledge.updated }} {{ override.updated_ts.strftime('%d.%m.%Y · %H:%M') }}</p>
+                <h2><code>{{ row.card_id }}</code></h2>
+                <p>{{ row.mechanism }}</p>
+                {% if row.is_baseline %}
+                  <p class="admin-hint">{{ knowledge.baseline_row_hint }}</p>
+                {% else %}
+                  <p>{{ knowledge.updated }} {{ row.updated_ts.strftime('%d.%m.%Y · %H:%M') }}</p>
+                {% endif %}
               </div>
               <div class="admin-post-actions">
-                <a class="admin-edit-link" href="/admin/cards/{{ override.id }}/edit?language={{ language }}">
-                  {{ knowledge.edit }}
+                <a class="admin-edit-link" href="{{ row.edit_url }}">
+                  {% if row.is_baseline %}{{ knowledge.baseline_edit }}{% else %}{{ knowledge.edit }}{% endif %}
                 </a>
-                <form action="/admin/cards/{{ override.id }}/delete" method="post"
-                      onsubmit="return confirm('{{ knowledge.delete_confirm }}');">
-                  <input type="hidden" name="language" value="{{ language }}">
-                  <button class="admin-logout" type="submit">{{ knowledge.delete }}</button>
-                </form>
+                {% if not row.is_baseline %}
+                  <form action="/admin/cards/{{ row.override_id }}/delete" method="post"
+                        onsubmit="return confirm('{{ knowledge.delete_confirm }}');">
+                    <input type="hidden" name="language" value="{{ language }}">
+                    <button class="admin-logout" type="submit">{{ knowledge.delete }}</button>
+                  </form>
+                {% endif %}
               </div>
             </article>
           {% endfor %}
