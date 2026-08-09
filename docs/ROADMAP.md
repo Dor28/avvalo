@@ -173,6 +173,46 @@ The alpha passes only with at least 35% evidence coverage, at least 98% audited 
 zero critical false facts, at least 70% evidence usefulness, at least 25% decision impact, complete
 source/time attribution, and zero privacy incidents.
 
+## Parked ideas — recorded, not scheduled
+
+Ideas kept here have not passed a product gate, so §0 rule 6 forbids writing an implementation
+task for them. They are recorded because the mechanism already exists and would otherwise be
+rediscovered from scratch. Moving one into a phase requires an explicit founder decision.
+
+### Link a fired knowledge card to its published case
+
+`reviewed_case_ids` is already threaded end to end — `KnowledgeCard.reviewed_case_ids` →
+`RetrievalResult.reviewed_case_ids` → `CheckResult` → the `check_event.reviewed_case_ids` column →
+the leak filter in [app/engine/validate.py](../app/engine/validate.py) — and
+[/admin/cards](../app/web/knowledge_admin.py) already accepts the field. Every baseline card
+sets it to `[]`, and nothing downstream renders it. The slot exists; the connection was never made.
+
+The idea: when a card fires, point the reader at the founder-authored case that explains that
+exact scam, so one check becomes a reason to come back. Phase 3 measures return rate, and this is
+the cheapest lever on it that does not require new detection work.
+
+What it depends on:
+
+- **Phase 2 must land first.** There are no published cases yet, and a card can only cite one that
+  exists. Card IDs are frozen identifiers; case slugs are operator-chosen. Any binding between
+  them needs a validated, non-guessable mapping — a dangling slug must degrade to no link, never
+  to a broken page.
+- **An open product decision.** [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §5 defines the answer as five
+  blocks, none of which is further reading. Adding a link means amending the answer contract, and
+  that belongs with the Phase 3 answer-format work rather than ahead of it.
+
+Two implementation constraints, recorded now so they are not rediscovered later:
+
+- The safety validator strips every URL from model output and bans "open the link" phrasing. A
+  case link therefore has to be appended deterministically in
+  [app/engine/format.py](../app/engine/format.py) *after* validation, from an ID the backend
+  selected. The model must never be allowed to emit it.
+- Cases are currently web-only. The Telegram bot has no cases surface at all, so a link would
+  either be a bare URL out of the bot or a feature only web users see.
+
+A case is education, never evidence: a link must not imply the current situation has been matched
+to a previous one, and must not survive into a shared summary as an accusation.
+
 ## Not on the roadmap
 
 - Avvalo Merchants;
