@@ -264,6 +264,94 @@ def test_validator_rejects_cyrillic_uzbek_reply_script() -> None:
     assert result.reason is ValidationReason.WRONG_LANGUAGE_SCRIPT
 
 
+@pytest.mark.parametrize(
+    ("language", "claim_text"),
+    [
+        (Language.ru, "Деньги пришли, можно отдавать товар."),
+        (Language.ru, "Оплата прошла."),
+        (Language.ru, "Платёж настоящий."),
+        (Language.ru, "Перевод получен."),
+        # A bare negation is not a disclaimer: the sentence still asserts arrival.
+        (Language.ru, "Не волнуйтесь, деньги пришли."),  # noqa: RUF001 - Cyrillic lookalikes
+        (Language.uz_latn, "Pul keldi, tovarni bering."),
+        (Language.uz_latn, "To'lov o'tdi."),
+        (Language.uz_latn, "To‘lov o‘tdi."),  # noqa: RUF001 - curly apostrophe variant
+    ],
+)
+def test_validator_rejects_incoming_payment_represented_as_confirmed(
+    language: Language, claim_text: str
+) -> None:
+    """``prompts/check.txt`` forbids this; the validator must enforce it (§9)."""
+
+    supporting = (
+        ("Проверьте перевод в приложении банка.", "Спросите, почему это срочно.")
+        if language is Language.ru
+        else ("Bank ilovasida o'tkazmani tekshiring.", "Nega shoshilinch ekanini so'rang.")
+    )
+    result = validate(
+        DraftOutput(red_flags=[claim_text], verify=[supporting[0]], ask=[supporting[1]]),
+        [],
+        [],
+        language,
+    )
+
+    assert result.reason is ValidationReason.PAYMENT_CONFIRMED_CLAIM
+
+
+@pytest.mark.parametrize(
+    ("language", "disclaimed_text"),
+    [
+        (Language.ru, "Скриншот не доказывает, что деньги пришли."),
+        (Language.ru, "Скриншот не является доказательством того, что оплата прошла."),
+        (Language.ru, "Скриншот не подтверждает, что перевод получен."),
+        (Language.uz_latn, "Skrinshot pul kelganini isbotlamaydi."),
+    ],
+)
+def test_validator_allows_the_payment_claim_to_be_rejected_in_words(
+    language: Language, disclaimed_text: str
+) -> None:
+    """The guidance the goldens ask for must survive the ban that protects it.
+
+    ``fs_06``'s ``must_include`` is "a screenshot is not proof of payment", so a
+    ban matching the bare phrase would reject the very wording the product wants.
+    """
+
+    supporting = (
+        ("Проверьте перевод в приложении банка.", "Спросите, почему это срочно.")
+        if language is Language.ru
+        else ("Bank ilovasida o'tkazmani tekshiring.", "Nega shoshilinch ekanini so'rang.")
+    )
+    result = validate(
+        DraftOutput(red_flags=[disclaimed_text], verify=[supporting[0]], ask=[supporting[1]]),
+        [],
+        [],
+        language,
+    )
+
+    assert result.reason is None, f"disclaimed wording was rejected as {result.reason}"
+    assert result.ok
+
+
+def test_payment_claim_disclaimer_does_not_carry_across_sentences() -> None:
+    """A disclaimer in one bullet must not license a bare claim in the next."""
+
+    result = validate(
+        DraftOutput(
+            red_flags=[
+                "Скриншот не доказывает оплату.",
+                "Деньги пришли.",
+            ],
+            verify=["Проверьте перевод в приложении банка."],
+            ask=["Спросите, почему это срочно."],
+        ),
+        [],
+        [],
+        Language.ru,
+    )
+
+    assert result.reason is ValidationReason.PAYMENT_CONFIRMED_CLAIM
+
+
 def test_validation_reason_does_not_include_model_controlled_rule_ids() -> None:
     result = validate(
         DraftOutput(
