@@ -180,9 +180,10 @@ audit rows, and hash-only URL reputation entries. `user_key` is derived with HMA
 are not stored or logged.
 
 Founder-authored public cases live in the separate `editorial_post` table and
-`app.content.models.EditorialBase`. Every record contains three deliberately authored language
-versions plus draft/publication metadata. No user key or submitted check content enters this table,
-and editorial rows are not part of `/delete_my_data` because they are operator-owned public content.
+`app.content.models.EditorialBase`. Every record contains two deliberately authored language
+versions plus draft/publication metadata and may contain one normalized WebP cover with bilingual
+alt text. No user key or submitted check content enters this table, and editorial rows are not part
+of `/delete_my_data` because they are operator-owned public content.
 
 `story_submission` is a legacy stewardship-only table:
 
@@ -214,8 +215,9 @@ checks require Turnstile when configured. Session and IP-derived keys are pseudo
 
 `GET /cases` and `GET /cases/{slug}` expose published editorial cases only. `/admin` is disabled
 unless `ADMIN_ACCESS_KEY` is configured. When enabled, a short-lived signed HttpOnly cookie protects
-the founder dashboard and trilingual editor; same-origin checks cover every admin write. Drafts are
-never returned by public routes. Post bodies are rendered as escaped plain text, not trusted HTML.
+the founder dashboard and bilingual editor; same-origin checks cover every admin write. Drafts are
+never returned by public routes. Founder cover uploads are size/dimension bounded, metadata-stripped,
+and re-encoded before persistence. Post bodies are rendered as escaped plain text, not trusted HTML.
 
 `/merchants` is only a `308` compatibility redirect to `/check`. `/scams` and `/sitemap.xml` are not
 product routes. `/healthz` checks process liveness; `/readyz` also checks database connectivity.
