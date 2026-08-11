@@ -4,14 +4,26 @@ import asyncio
 import re
 from pathlib import Path
 
+import pytest
 import yaml
 
+from app.config import Settings
 from app.engine.knowledge import FileKnowledgeStore
 from app.engine.llm.prompt import _CHECK_PROMPT, _SYSTEM_PROMPT
 from app.engine.rules.loader import RULE_PACK_DIR
-from app.main import _run_service_runners
+from app.main import _preflight_ocr, _run_service_runners
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+_REQUIRED_SETTINGS = {
+    "telegram_token": "token",
+    "database_url": "postgresql+asyncpg://avvalo:avvalo@localhost:5432/avvalo",
+    "app_hmac_secret": "test-hmac-secret",
+    "llm_base_url": "http://localhost:11434/v1",
+    "llm_api_key": "ollama",
+    "llm_model": "qwen2.5:7b-instruct",
+    "web_session_secret": "test-web-session-secret",
+}
 
 
 def test_offsite_backups_require_gpg_encryption() -> None:
@@ -137,6 +149,33 @@ def test_production_jobs_are_gated_to_main() -> None:
     assert workflow.count(f"if: github.event_name != 'pull_request' && {main_gate}") == 2
     assert "group: deploy-production" not in workflow
     assert "format('ci-{0}', github.ref)" in workflow
+
+
+def test_pull_requests_build_the_image_and_prove_ocr_needs_no_network() -> None:
+    """Only main builds and pushing main deploys, so a Dockerfile or OCR-warmup
+    break would otherwise first appear during a production deploy."""
+
+    workflow = yaml.safe_load(
+        (REPO_ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+    )
+    build_check = workflow["jobs"]["build-check"]
+    steps = build_check["steps"]
+
+    assert build_check["if"] == "github.event_name == 'pull_request'"
+    assert any(step.get("with", {}).get("push") is False for step in steps)
+    # The offline run is the assertion that weights are baked into the image.
+    assert any("--network none" in step.get("run", "") for step in steps)
+
+
+async def test_ocr_preflight_fails_check_mode_but_never_kills_a_running_process() -> None:
+    """Broken OCR costs image checks; text checks must survive it."""
+
+    settings = Settings(_env_file=None, **_REQUIRED_SETTINGS, ocr_provider="bogus")
+
+    with pytest.raises(ValueError):
+        await _preflight_ocr(settings, fatal=True)
+
+    await _preflight_ocr(settings, fatal=False)
 
 
 def test_remote_update_waits_for_service_health() -> None:

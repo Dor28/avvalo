@@ -43,7 +43,31 @@ jobs:
       - name: Tests
         run: pytest -q                     # the hard gate (in-memory SQLite, no services)
 
-  # ── 2. Build the image once, push to GHCR ───────────────────────────────────
+  # ── 2. PR gate: prove the image still builds and OCR runs offline ───────────
+  # Only `main` builds an image, and pushing to `main` deploys — so without this
+  # a Dockerfile or OCR-warmup break would first surface during a production
+  # deploy. `--network none` is the real assertion: it proves the PP-OCRv5
+  # weights are baked in, exactly as the read-only prod container needs.
+  build-check:
+    needs: test
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - name: Build image (no push)
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          push: false
+          load: true
+          tags: avvalo:pr-check
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: OCR must work with no network
+        run: docker run --rm --network none avvalo:pr-check python -m app.engine.ocr.warmup
+
+  # ── 3. Build the image once, push to GHCR ───────────────────────────────────
   build-and-push:
     needs: test
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -76,7 +100,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── 3. Deploy: sync config, pull the new image, restart ─────────────────────
+  # ── 4. Deploy: sync config, pull the new image, restart ─────────────────────
   deploy:
     needs: build-and-push
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
