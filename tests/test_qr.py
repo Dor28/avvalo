@@ -116,6 +116,14 @@ async def test_qr_goldens_flow_through_the_shared_pipeline() -> None:
             assert f'"kind": "{signal_kind}"' in llm.user_prompt, case["id"]
         for family in case["expected_rule_families"]:
             assert f"family={family}" in llm.user_prompt, case["id"]
+        # The checkable half of must_include: the guidance carrying the
+        # fixture's stated intent has to reach the model. Subset, not equality —
+        # retrieval may legitimately surface more (see test_golden_e2e).
+        missing = set(case["expected_knowledge_card_ids"]) - set(result.knowledge_card_ids)
+        assert not missing, (
+            f"{case['id']}: guidance for {case['must_include']} was not retrieved; "
+            f"missing {sorted(missing)}"
+        )
 
 
 async def test_multiple_qr_codes_are_not_arbitrarily_selected() -> None:
