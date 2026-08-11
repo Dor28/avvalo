@@ -9,6 +9,16 @@ WORKDIR /app
 RUN groupadd --system avvalo \
     && useradd --system --gid avvalo --create-home avvalo
 
+# Local OCR needs system libraries the slim base image omits: PaddleOCR imports
+# OpenCV (libGL, glib) and paddlepaddle needs the OpenMP runtime. Missing these
+# fails at import, not at install, so it surfaces only when OCR actually runs.
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY pyproject.toml README.md requirements.lock ./
 COPY app ./app
 RUN python -m pip install --require-hashes -r requirements.lock \
