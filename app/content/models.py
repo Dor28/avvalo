@@ -9,7 +9,7 @@ explicit and preserves the zero-content contract of ``app.data.models.Base``.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Text, Uuid
+from sqlalchemy import DateTime, LargeBinary, String, Text, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -33,6 +33,13 @@ class EditorialPost(EditorialBase):
     title_ru: Mapped[str] = mapped_column(Text, nullable=False)
     summary_ru: Mapped[str] = mapped_column(Text, nullable=False)
     article_ru: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Founder-uploaded public cover art is isolated from ephemeral checker images.
+    # The binary is deferred so list/detail queries do not pull it from PostgreSQL.
+    cover_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
+    cover_media_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    cover_alt_uz_latn: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cover_alt_ru: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

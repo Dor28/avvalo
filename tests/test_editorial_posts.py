@@ -2,11 +2,13 @@
 
 import asyncio
 import re
+from io import BytesIO
 from pathlib import Path
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -51,6 +53,15 @@ def _post_data(*, state: str = "published", slug: str = "fake-payment-screenshot
         "summary_ru": "Покупатель просит отдать товар до фактического зачисления денег.",
         "article_ru": "<script>alert(1)</script>\n\nПроверьте поступление в приложении своего банка.",
     }
+
+
+def _cover_image_bytes() -> bytes:
+    image = Image.new("RGB", (1800, 1200), color=(14, 112, 118))
+    exif = Image.Exif()
+    exif[0x010E] = "private editorial source note"
+    output = BytesIO()
+    image.save(output, format="JPEG", quality=92, exif=exif)
+    return output.getvalue()
 
 
 @pytest_asyncio.fixture
@@ -108,6 +119,7 @@ def test_editorial_schema_is_separate_from_submitted_user_data_schema() -> None:
     assert "editorial_post" not in Base.metadata.tables
     assert set(EditorialBase.metadata.tables) == {"editorial_post"}
     assert "user_key" not in EditorialBase.metadata.tables["editorial_post"].columns
+    assert "cover_bytes" in EditorialBase.metadata.tables["editorial_post"].columns
 
 
 def test_editorial_interface_copy_has_the_same_shape_in_all_languages() -> None:
@@ -218,6 +230,113 @@ def test_admin_can_publish_edit_and_unpublish_a_trilingual_case(editorial_client
     assert updated.status_code == 303
     assert editorial_client.get("/cases/fake-payment-screenshot?language=ru").status_code == 404
     assert "Обновлённый черновик" in editorial_client.get("/admin/posts?language=ru").text
+
+
+def test_admin_can_attach_preview_and_remove_a_bilingual_cover(editorial_client) -> None:
+    _login(editorial_client)
+    post_data = _post_data()
+    post_data.update(
+        {
+            "cover_alt_uz_latn": "To‘lov holatini ko‘rsatuvchi telefon",
+            "cover_alt_ru": "Телефон с примером оплаты",
+        }
+    )
+
+    created = editorial_client.post(
+        "/admin/posts",
+        data=post_data,
+        files={"cover_image": ("cover.jpg", _cover_image_bytes(), "image/jpeg")},
+        headers={"Origin": "http://testserver"},
+        follow_redirects=False,
+    )
+
+    assert created.status_code == 303
+    listing = editorial_client.get("/cases?language=ru")
+    detail = editorial_client.get("/cases/fake-payment-screenshot?language=ru")
+    assert 'class="case-card-cover"' in listing.text
+    assert 'alt="Телефон с примером оплаты"' in listing.text
+    assert 'property="og:image"' in detail.text
+    assert 'class="article-cover"' in detail.text
+
+    cover = editorial_client.get("/cases/fake-payment-screenshot/cover")
+    assert cover.status_code == 200
+    assert cover.headers["content-type"] == "image/webp"
+    assert cover.headers["x-content-type-options"] == "nosniff"
+    assert cover.headers["cache-control"] == "public, max-age=86400"
+    with Image.open(BytesIO(cover.content)) as normalized:
+        assert normalized.format == "WEBP"
+        assert max(normalized.size) == 1600
+        assert not normalized.getexif()
+
+    unchanged = editorial_client.get(
+        "/cases/fake-payment-screenshot/cover",
+        headers={"If-None-Match": cover.headers["etag"]},
+    )
+    assert unchanged.status_code == 304
+    assert unchanged.content == b""
+
+    admin_listing = editorial_client.get("/admin/posts?language=ru")
+    post_id = re.search(r'/admin/posts/([0-9a-f-]+)/edit', admin_listing.text).group(1)
+    editor = editorial_client.get(f"/admin/posts/{post_id}/edit?language=ru")
+    preview = editorial_client.get(f"/admin/posts/{post_id}/cover")
+    assert f'/admin/posts/{post_id}/cover' in editor.text
+    assert 'value="Телефон с примером оплаты"' in editor.text
+    assert preview.status_code == 200
+    assert preview.headers["cache-control"] == "no-store"
+
+    draft_data = dict(post_data, state="draft")
+    unpublished = editorial_client.post(
+        f"/admin/posts/{post_id}",
+        data=draft_data,
+        headers={"Origin": "http://testserver"},
+        follow_redirects=False,
+    )
+    assert unpublished.status_code == 303
+    assert editorial_client.get("/cases/fake-payment-screenshot/cover").status_code == 404
+    assert editorial_client.get(f"/admin/posts/{post_id}/cover").status_code == 200
+
+    remove_data = dict(post_data, remove_cover="true")
+    removed = editorial_client.post(
+        f"/admin/posts/{post_id}",
+        data=remove_data,
+        headers={"Origin": "http://testserver"},
+        follow_redirects=False,
+    )
+    assert removed.status_code == 303
+    assert editorial_client.get("/cases/fake-payment-screenshot/cover").status_code == 404
+    assert 'class="case-card-cover"' not in editorial_client.get("/cases?language=ru").text
+
+
+@pytest.mark.parametrize(
+    ("file_bytes", "alt_uz", "alt_ru", "error_text"),
+    [
+        (b"not an image", "Rasm", "Фото", "Не удалось прочитать изображение"),
+        (_cover_image_bytes(), "", "Фото", "Добавьте краткое описание обложки"),
+    ],
+    ids=("invalid-file", "missing-alt"),
+)
+def test_admin_rejects_an_invalid_or_unlabelled_cover(
+    editorial_client,
+    file_bytes: bytes,
+    alt_uz: str,
+    alt_ru: str,
+    error_text: str,
+) -> None:
+    _login(editorial_client)
+    post_data = _post_data()
+    post_data.update({"cover_alt_uz_latn": alt_uz, "cover_alt_ru": alt_ru})
+
+    response = editorial_client.post(
+        "/admin/posts",
+        data=post_data,
+        files={"cover_image": ("cover.jpg", file_bytes, "image/jpeg")},
+        headers={"Origin": "http://testserver"},
+    )
+
+    assert response.status_code == 400
+    assert error_text in response.text
+    assert editorial_client.get("/cases?language=ru").status_code == 200
+    assert 'class="case-card-cover"' not in editorial_client.get("/cases?language=ru").text
 
 
 def test_admin_rejects_duplicate_slug_without_losing_the_editor(editorial_client) -> None:

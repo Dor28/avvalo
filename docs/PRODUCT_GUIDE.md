@@ -72,7 +72,7 @@ The repository already contains:
 - localized output in all three language forms;
 - consent, deletion, rate limits, privacy-safe events, and retention controls;
 - a sanitized sharing foundation;
-- a founder-authored, trilingual Cases section with draft/publish administration;
+- a founder-authored, bilingual Cases section with draft/publish administration and optional covers;
 - local hash-based URL-reputation support that may remain disabled until production verification.
 
 The runtime exposes one checker with no internal product-face discriminator. Seller, payment-screenshot,
@@ -85,7 +85,8 @@ are not dormant modes — they are retired surfaces.
 Cases are a supporting education and acquisition surface around the same checker, not another
 product. A founder writes each post manually in `uz_latn` and `ru`, saves it as a draft,
 and explicitly publishes it. A post explains a situation pattern, what deserves attention, and
-what a reader can verify independently; its call to action returns the reader to the checker.
+what a reader can verify independently; its call to action returns the reader to the checker. An
+optional founder-uploaded cover photo may accompany the post, with alt text in both languages.
 
 Editorial posts must never be generated automatically from submitted checks, copied from legacy
 `story_submission` rows, presented as verified evidence, or used as proof about a person or
@@ -178,9 +179,9 @@ failure must fail closed and produce `unavailable`.
 - Raw screenshots stay inside the controlled OCR boundary; only minimized text may reach an
   external LLM.
 - Source snapshots contain public reference data, never user submissions.
-- Editorial-post storage contains only text written deliberately by an authenticated operator. It
-  is a separate data boundary and never receives check input, OCR text, model output, or legacy
-  story content.
+- Editorial-post storage contains only text and optional cover photos deliberately supplied by an
+  authenticated operator. It is a separate data boundary and never receives check input, OCR text,
+  model output, or legacy story content.
 - Avvalo never claims to have checked every database.
 - Avvalo never outputs “safe,” “scammer,” “fraud confirmed,” a trust score, or a risk score.
 - Avvalo never contacts a counterparty or institution for the user.
