@@ -77,16 +77,21 @@ services:
     # http://app:8000. The Telegram bot uses outbound long-polling only.
     expose:
       - "8000"
-    volumes:
-      # Google Cloud Vision service-account key, mounted read-only. The path here
-      # must equal GOOGLE_APPLICATION_CREDENTIALS in .env. Omit if OCR is unused.
-      - ./secrets/gcv.json:/run/secrets/gcv.json:ro
+    # No volumes: OCR runs locally (OCR_PROVIDER=paddleocr) with PP-OCRv5 weights
+    # baked into the image at /opt/paddlex, so there is no service-account key to
+    # mount. Restoring OCR_PROVIDER=gcv means restoring both the
+    # ./secrets/gcv.json:/run/secrets/gcv.json:ro mount and
+    # GOOGLE_APPLICATION_CREDENTIALS in .env — a missing host file silently
+    # becomes a bind-mounted *directory*, so check it if you ever switch back.
     restart: unless-stopped
     stop_grace_period: 20s
     init: true
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=256m
+      # Local OCR reads its baked weights, but give the runtime a writable HOME
+      # so any library scratch write cannot fail against the read-only rootfs.
+      - /home/avvalo:rw,nosuid,nodev,size=64m
     cap_drop:
       - ALL
     security_opt:

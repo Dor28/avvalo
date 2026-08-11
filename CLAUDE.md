@@ -132,9 +132,11 @@ real matcher / real retrieval so a preview cannot drift from production.
 
 **Providers are injectable and env-selected.** LLM = any OpenAI-compatible host
 (`LLM_BASE_URL`/`LLM_MODEL`; OpenRouter Qwen in prod, Ollama locally). OCR = `OCR_PROVIDER` ∈
-gcv | tesseract | paddleocr | local_stub behind `app/engine/ocr/base.py`. Tests pass fake providers
-directly into `run_check(..., llm_provider=, ocr_provider=)` — keep new external dependencies
-injectable the same way.
+paddleocr | tesseract | gcv | local_stub behind `app/engine/ocr/base.py`; prod runs local PaddleOCR,
+whose PP-OCRv5 weights are baked into the image by `app/engine/ocr/warmup.py` because the container
+is read-only and must never download at runtime. Tests pass fake providers directly into
+`run_check(..., llm_provider=, ocr_provider=)` — keep new external dependencies injectable the
+same way.
 
 **Data layer:** async SQLAlchemy + asyncpg on PostgreSQL 16; Alembic owns the schema. Functions in
 `app/data/repo.py` take a caller-provided `AsyncSession` and flush; the caller owns

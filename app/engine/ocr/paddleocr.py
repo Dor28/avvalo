@@ -21,7 +21,9 @@ from app.engine.ocr.base import (
 # Russian (Cyrillic script) — also the closest match for UZ-Cyrillic text, since
 # PaddleOCR has no separate uz-Cyrillic model. Benchmark both against real
 # screenshots before relying on this order.
-_DEFAULT_LANGS: tuple[str, ...] = ("uz", "ru")
+# Public because the build-time warmup in app/engine/ocr/warmup.py pre-fetches
+# exactly these languages' weights — the two lists must never drift apart.
+DEFAULT_LANGS: tuple[str, ...] = ("uz", "ru")
 _GOOD_ENOUGH_CONFIDENCE = 0.8
 
 
@@ -35,7 +37,7 @@ class PaddleOCRProvider:
     latency hitting a real user's first check.
     """
 
-    def __init__(self, *, langs: tuple[str, ...] = _DEFAULT_LANGS) -> None:
+    def __init__(self, *, langs: tuple[str, ...] = DEFAULT_LANGS) -> None:
         self.langs = langs
         self._engines: dict[str, Any] = {}
 
@@ -95,4 +97,4 @@ class PaddleOCRProvider:
         return OCRResult(text=text, confidence=max(0.0, min(1.0, confidence)))
 
 
-__all__ = ["PaddleOCRProvider"]
+__all__ = ["DEFAULT_LANGS", "PaddleOCRProvider"]

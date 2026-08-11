@@ -46,8 +46,9 @@ class Settings(BaseSettings):
     knowledge_unavailable_alert_threshold: float = Field(default=0.2, ge=0, le=1)
     knowledge_unavailable_alert_window_minutes: int = Field(default=30, ge=1, le=1440)
 
+    # Only read when ocr_provider == "gcv"; local OCR needs no credentials.
     google_application_credentials: str | None = None
-    ocr_provider: str = "gcv"
+    ocr_provider: str = "paddleocr"
     ocr_min_confidence: float = Field(default=0.5, ge=0, le=1)
     ocr_timeout_s: float = Field(default=30.0, gt=0)
 

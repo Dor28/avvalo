@@ -162,8 +162,9 @@ state rather than trusting a dated audit table. What the suite does **not** prov
   `reviewed_case_ids`, yet no approved card references a reviewed derivative. Founder-authored
   public posts are an editorial surface, never reviewed-case grounding, and are never injected into
   answers.
-- **On-prem OCR is a deployment choice, not a code guarantee.** The abstraction and confidence
-  gating are real, but the configured default is Google Cloud Vision.
+- **Local OCR quality is not field-benchmarked.** PaddleOCR is the default and its PP-OCRv5 weights
+  are baked into the production image, but Uzbek, Russian, and Cyrillic-Uzbek screenshot accuracy
+  still needs a representative physical-device evaluation.
 - **The validator proves declaration coverage, not wording quality.** `validate()` rejects omitted
   severity-2+ rule IDs in all three languages; whether the prose is *good* Uzbek still needs human
   review.
