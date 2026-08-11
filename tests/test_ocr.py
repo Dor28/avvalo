@@ -1,7 +1,9 @@
 """OCR boundary, preprocessing, provider selection, and pipeline failure tests."""
 
+import inspect
 import logging
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -14,7 +16,10 @@ from app.engine.ocr import (
     OCRProviderError,
     OCRResult,
     PaddleOCRProvider,
+    check_ocr_provider,
     get_provider,
+    probe_image,
+    warmup,
 )
 from app.engine.ocr.base import MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS, strip_image_metadata
 
@@ -143,3 +148,38 @@ def test_provider_selection_is_configurable() -> None:
 def test_paddleocr_provider_selection() -> None:
     provider = get_provider(_settings(ocr_provider="paddleocr"))
     assert isinstance(provider, PaddleOCRProvider)
+
+
+async def test_preflight_rejects_an_unsupported_provider() -> None:
+    with pytest.raises(ValueError):
+        await check_ocr_provider(_settings(ocr_provider="bogus"))
+
+
+async def test_preflight_rejects_a_provider_that_cannot_read_an_image() -> None:
+    """The stub answers config checks but cannot OCR, so startup must not pass."""
+
+    with pytest.raises(NotImplementedError):
+        await check_ocr_provider(_settings(ocr_provider="local_stub"))
+
+
+def test_preflight_probe_image_is_generated_not_user_content() -> None:
+    assert probe_image().startswith(b"\x89PNG")
+
+
+def test_paddleocr_warmup_covers_every_language_the_provider_uses() -> None:
+    """PaddleOCR downloads an uncached model on first use, and production runs
+    read-only — so a language the build never warmed becomes a live ocr_error."""
+
+    warmed = inspect.signature(warmup.main).parameters["langs"].default
+
+    assert warmed == PaddleOCRProvider().langs
+
+
+def test_dockerfile_bakes_paddleocr_weights_at_a_pinned_cache_path() -> None:
+    """paddlex reads PADDLE_PDX_CACHE_HOME into a module constant at import, so
+    the build and the runtime must agree on an absolute path that ignores HOME."""
+
+    dockerfile = (Path(__file__).resolve().parents[1] / "Dockerfile").read_text(encoding="utf-8")
+
+    assert "PADDLE_PDX_CACHE_HOME=/opt/paddlex" in dockerfile
+    assert "python -m app.engine.ocr.warmup" in dockerfile

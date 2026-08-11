@@ -44,6 +44,18 @@ class OCRInvalidImageError(OCRProviderError):
     """The submitted bytes are not a decodable image — an input fault, not an outage."""
 
 
+def probe_image() -> bytes:
+    """One tiny blank PNG for exercising a provider without user content.
+
+    Shared by the build-time warmup and the startup preflight so both prove the
+    same thing: the configured provider can actually run an image end to end.
+    """
+
+    buffer = BytesIO()
+    Image.new("RGB", (64, 32), "white").save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
 def strip_image_metadata(image_bytes: bytes) -> bytes:
     """Return PNG bytes with EXIF/GPS and other metadata removed."""
 

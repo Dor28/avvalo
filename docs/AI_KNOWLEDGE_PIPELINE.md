@@ -156,7 +156,7 @@ This is a dated baseline, not a completion claim. Re-run the audit after T14/R0 
 | Contract area | Current state | Evidence / gap |
 |---|---|---|
 | One engine for Telegram and web | ✅ Implemented and tested | Both channel handlers build `CheckInput` and call `app.engine.pipeline.run_check()`; `test_r0_criterion_10_telegram_and_web_share_run_check` guards the shared call path |
-| Intake, language, and OCR | ⚠️ Partial | Text/image intake, language resolution, OCR abstraction, confidence gating, and metadata stripping exist. The configured default is Google Cloud Vision, so the separate local/on-prem OCR product promise depends on deployment configuration and is not guaranteed by this code default |
+| Intake, language, and OCR | ⚠️ Partial | Text/image intake, language resolution, OCR abstraction, confidence gating, and metadata stripping exist. The default is now local PaddleOCR (PP-OCRv5) with weights baked into the image, so the local/on-prem OCR promise holds by default; `gcv` remains available for operators who opt back in |
 | Rules on raw local text, then minimization | ✅ Implemented and tested | `pipeline._run_stages()` calls `run_rules(text)` before the local URL-artifact lookup and `minimize(text, signals)`; `tests/test_t05_rules_minimize.py` guards minimization |
 | Zero-rule semantic analysis | ✅ Implemented and tested | `test_r0_criterion_01_zero_rule_message_still_reaches_answer_llm` proves `rule_ids=[]` still reaches the answer model |
 | Versioned knowledge-card store | ✅ Implemented and tested | `FileKnowledgeStore.load()` validates the approved cards in `knowledge/cards/` against `knowledge/version.yaml`; deploy tests prove `knowledge/` is copied into the image and the active pack loads |

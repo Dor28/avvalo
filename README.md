@@ -125,8 +125,10 @@ docs/           product, technical, deployment, and roadmap documents
 - Docker with Compose
 - PostgreSQL 16 when running outside Compose
 - Optional for local LLM development: Ollama with `qwen2.5:7b-instruct`
-- Optional for image/OCR checks: Google Cloud Vision credentials, Tesseract, or
-  PaddleOCR depending on `OCR_PROVIDER`
+- Image/OCR checks work out of the box in Docker: `OCR_PROVIDER` defaults to
+  local PaddleOCR and the image bakes the PP-OCRv5 weights. Outside Docker, the
+  first image check downloads them. Tesseract needs its binary plus the
+  `rus`/`uzb`/`uzb_cyrl`/`eng` language packs; `gcv` needs Cloud Vision credentials
 
 ## Quick Start with Docker
 
@@ -265,8 +267,8 @@ Runtime config is loaded from environment variables through
 | `LLM_BASE_URL` | OpenAI-compatible endpoint, for example OpenRouter or Ollama. |
 | `LLM_API_KEY` | LLM provider API key. Keep backend-only. |
 | `LLM_MODEL` | Model ID selected by eval. |
-| `OCR_PROVIDER` | `gcv`, `tesseract`, `paddleocr`, or local stub paths. |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Cloud Vision service-account path when using GCV. |
+| `OCR_PROVIDER` | `paddleocr` (default, local), `tesseract`, `gcv`, or local stub paths. |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Cloud Vision service-account path. Read only when `OCR_PROVIDER=gcv`. |
 | `NOTICE_VERSION` | Consent notice version; bump to force re-consent. |
 | `DAILY_CHECK_LIMIT` | Daily Telegram checks for the Avvalo checker. |
 | `OPERATOR_ALERT_CHAT_ID` | Founder chat for debounced technical alerts. |
