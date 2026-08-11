@@ -1,6 +1,7 @@
 """Public web pages (landing + checker), behavior, and cache-policy tests."""
 
 import re
+from html import unescape
 
 from fastapi.testclient import TestClient
 
@@ -114,17 +115,27 @@ def test_consumer_copy_leads_with_the_check_instead_of_family_branding() -> None
         assert broad_example in landing.text
 
 
-def test_landing_headline_is_simple_and_aligned_in_both_languages() -> None:
+def test_landing_copy_is_simple_and_action_focused_in_both_languages() -> None:
     client = TestClient(create_app())
-    localized_headlines = {
-        "uz_latn": "Vaziyatni Avvalo bilan tekshiring.",
-        "ru": "Проверьте ситуацию \u0441 Avvalo.",
+    localized_copy = {
+        "uz_latn": (
+            "Shubha bormi? Avvalo'ga yuboring.",
+            "Avvalo qanday yordam beradi",
+            "Avvalo tavsiya beradi, natijani kafolatlamaydi",
+        ),
+        "ru": (
+            "Есть сомнения? Отправьте в Avvalo.",
+            "Чем поможет Avvalo",
+            "Avvalo даёт рекомендации, но не гарантирует результат",
+        ),
     }
 
-    for language, headline in localized_headlines.items():
+    for language, expected_copy in localized_copy.items():
         landing = client.get(f"/?language={language}")
+        rendered_text = unescape(landing.text)
 
-        assert headline in landing.text
+        for text in expected_copy:
+            assert text in rendered_text
 
 
 def test_checker_explains_advisory_limit_in_both_languages() -> None:

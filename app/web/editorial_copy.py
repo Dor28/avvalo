@@ -24,7 +24,7 @@ EDITORIAL_COPY = {
         ),
         "case_cta_button": "Vaziyatni tekshirish",
         "latest_title": "Yangi holatlar",
-        "latest_body": "Tahririy misollar orqali nimaga e’tibor berish va nimalarni tekshirish kerakligini bilib oling.",
+        "latest_body": "Qisqa misollar orqali shubhali vaziyatlarda nimaga e’tibor berishni o‘rganing.",
         "all_cases": "Barcha holatlar",
         "categories": {
             "payments": "To‘lovlar",
@@ -88,7 +88,7 @@ EDITORIAL_COPY = {
         ),
         "case_cta_button": "Проверить ситуацию",
         "latest_title": "Новые кейсы",
-        "latest_body": "Узнайте на редакционных примерах, на что обращать внимание и что проверять.",
+        "latest_body": "Разберите короткие примеры и узнайте, на что обращать внимание в сомнительных ситуациях.",
         "all_cases": "Все кейсы",
         "categories": {
             "payments": "Оплата",

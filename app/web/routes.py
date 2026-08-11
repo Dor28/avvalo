@@ -88,8 +88,8 @@ WEB_COPY = {
         "trust_label": "Ishonch",
         "skip_to_check": "Tekshiruvga o‘tish",
         "brand_tagline": "Avval tekshiring, keyin harakat qiling",
-        "hero_kicker": "Shubha tug‘ildimi?",
-        "use_cases_label": "Avvalo'ga nimalarni yuborish mumkin",
+        "hero_kicker": "Qaror qilishdan oldin",
+        "use_cases_label": "Nimani tekshirish mumkin",
         "composer_kicker": "Anonim tekshiruv",
         "composer_title": "Vaziyatni tasvirlab bering",
         "composer_body": (
@@ -97,34 +97,34 @@ WEB_COPY = {
             "Bu to‘lov so‘rovi, taklif, hujjat yoki yozishma bo‘lishi mumkin."
         ),
         "input_hint": "SMS kod, parol va karta ma’lumotlarini yashiring.",
-        "outcome_title": "Javobda nimalar bo‘ladi",
+        "outcome_title": "Avvalo qanday yordam beradi",
         "outcome_body": (
-            "Avvalo yakuniy hukm chiqarmaydi va rasmiy manbani tekshirganini da’vo qilmaydi. "
-            "Javobda vaziyatni mustaqil tekshirish uchun aniq qadamlar bo‘ladi."
+            "Javob tushunarli va amaliy bo‘ladi: vaziyatda nimaga e’tibor berish "
+            "va keyin nima qilish kerak."
         ),
         "outcomes": [
             {
-                "title": "Nimaga e’tibor berish kerak",
-                "body": "Bosim, shoshiltirish va vaziyatdagi nomuvofiqliklar.",
+                "title": "Muhim belgilar",
+                "body": "Shoshiltirish, bosim va bir-biriga mos kelmaydigan tafsilotlar.",
             },
             {
-                "title": "Hozir nima qilish kerak",
-                "body": "Manbani mustaqil tekshirish uchun aniq qadamlar.",
+                "title": "Keyingi qadamlar",
+                "body": "Manbani mustaqil tekshirish va o‘zingizni himoya qilish yo‘llari.",
             },
             {
                 "title": "Nima noaniq qoladi",
-                "body": "Tasdiqlanmagan ma’lumotlar va o‘tkazilmagan tashqi tekshiruvlar.",
+                "body": "Hali tasdiqlanmagan ma’lumotlar.",
             },
             {
-                "title": "Qanday savollar berish kerak",
-                "body": "Suhbatdoshga yoki rasmiy tashkilotga berish mumkin bo‘lgan qisqa savollar.",
+                "title": "Nimani so‘rash",
+                "body": "Suhbatdosh yoki tashkilotga beriladigan qisqa savollar.",
             },
         ],
         "boundary_title": "Vaziyatni tekshiring, odamni emas",
         "boundary_body": (
-            "Avvalo vaziyat, material, jarayon yoki manbadagi belgilarni tahlil qiladi. "
-            "U odamning obro‘siga baho bermaydi, o‘tkazilmagan tashqi tekshiruvni "
-            "o‘tkazilgandek ko‘rsatmaydi va yakuniy hukm chiqarmaydi."
+            "Avvalo vaziyatni tahlil qiladi, odam yoki tashkilotga baho bermaydi. "
+            "Ma’lumotni rasmiy manbadan o‘zingiz tekshiring: Avvalo tavsiya beradi, "
+            "natijani kafolatlamaydi."
         ),
         "footer_note": "Shoshilmang. Avval tekshiring, keyin harakat qiling.",
         "result_ready": "Javob tayyor",
@@ -136,7 +136,7 @@ WEB_COPY = {
         "optional_label": "ixtiyoriy",
         "choose_file": "Rasm tanlash",
         "clear_file": "Faylni olib tashlash",
-        "submit": "Tekshirish",
+        "submit": "Vaziyatni tekshirish",
         "checking": "Tekshirilmoqda...",
         "result_error_title": "Hozir tekshira olmadik",
         "empty_error": "Matn kiriting yoki matni aniq ko‘rinadigan rasm yuklang.",
@@ -144,10 +144,10 @@ WEB_COPY = {
         "consent_error": "Avval maxfiylik shartlariga rozilik bering.",
         "check": {
             "name": "Vaziyat tekshiruvi",
-            "headline": "Vaziyatni Avvalo bilan tekshiring.",
+            "headline": "Shubha bormi? Avvalo'ga yuboring.",
             "subhead": (
-                "Biror qaror qilishdan oldin nimaga e’tibor berish va vaziyatni "
-                "qanday tekshirishni bilib oling."
+                "Shubhali xabar, havola, QR-kod, to‘lov so‘rovi yoki hujjatni yuboring. "
+                "Avvalo nimaga e’tibor berish va keyin nima qilishni tushuntiradi."
             ),
             "prompt": "Matn, havola yoki vaziyat tavsifi",
             "textarea_placeholder": (
@@ -180,8 +180,8 @@ WEB_COPY = {
         "trust_label": "Доверие",
         "skip_to_check": "Перейти к проверке",
         "brand_tagline": "Сначала проверьте, потом действуйте",
-        "hero_kicker": "Возникли сомнения?",
-        "use_cases_label": "Что можно отправить в Avvalo",
+        "hero_kicker": "Перед тем как действовать",
+        "use_cases_label": "Что можно проверить",
         "composer_kicker": "Анонимная проверка",
         "composer_title": "Опишите ситуацию",
         "composer_body": (
@@ -189,34 +189,34 @@ WEB_COPY = {
             "Это может быть запрос на оплату, предложение, документ или переписка."
         ),
         "input_hint": "Скройте SMS-коды, пароли и полные данные карты.",
-        "outcome_title": "Что будет в ответе",
+        "outcome_title": "Чем поможет Avvalo",
         "outcome_body": (
-            "Avvalo не выносит окончательных вердиктов и не утверждает, что проверил "
-            "официальный источник. В ответе будут понятные шаги для самостоятельной проверки."
+            "Ответ будет понятным и практичным: на что обратить внимание "
+            "и что делать дальше."
         ),
         "outcomes": [
             {
-                "title": "На что обратить внимание",
-                "body": "Давление, спешка и несостыковки в ситуации.",
+                "title": "Важные признаки",
+                "body": "Спешка, давление и несостыковки в деталях.",
             },
             {
-                "title": "Что сделать сейчас",
-                "body": "Конкретные шаги для самостоятельной проверки источника.",
+                "title": "Следующие шаги",
+                "body": "Как самостоятельно проверить источник и защитить себя.",
             },
             {
-                "title": "Что останется неизвестным",
-                "body": "Неподтверждённые сведения и внешние проверки, которые не проводились.",
+                "title": "Что пока неясно",
+                "body": "Данные, которые пока нельзя подтвердить.",
             },
             {
                 "title": "Что спросить",
-                "body": "Короткие вопросы собеседнику или официальной организации.",
+                "body": "Короткие вопросы собеседнику или организации.",
             },
         ],
         "boundary_title": "Проверяйте ситуацию, а не человека",
         "boundary_body": (
-            "Avvalo анализирует признаки в ситуации, материале, процессе или источнике. "
-            "Он не оценивает репутацию человека, не заявляет о внешних проверках, "
-            "которых не было, и не выносит окончательных вердиктов."
+            "Avvalo разбирает ситуацию, а не оценивает человека или организацию. "
+            "Проверяйте данные по официальным источникам самостоятельно: Avvalo даёт "
+            "рекомендации, но не гарантирует результат."
         ),
         "footer_note": "Не спешите. Сначала проверьте, потом действуйте.",
         "result_ready": "Ответ готов",
@@ -228,7 +228,7 @@ WEB_COPY = {
         "optional_label": "необязательно",
         "choose_file": "Выбрать фото",
         "clear_file": "Убрать файл",
-        "submit": "Проверить",
+        "submit": "Проверить ситуацию",
         "checking": "Проверяем...",
         "result_error_title": "Сейчас не удалось проверить",
         "empty_error": "Вставьте текст или загрузите изображение с читаемым текстом.",
@@ -236,10 +236,10 @@ WEB_COPY = {
         "consent_error": "Сначала примите условия конфиденциальности.",
         "check": {
             "name": "Проверка ситуации",
-            "headline": "Проверьте ситуацию с Avvalo.",
+            "headline": "Есть сомнения? Отправьте в Avvalo.",
             "subhead": (
-                "Перед тем как принять решение, узнайте, на что обратить внимание "
-                "и как самостоятельно проверить ситуацию."
+                "Отправьте подозрительное сообщение, ссылку, QR-код, запрос на оплату или "
+                "документ. Avvalo подскажет, на что обратить внимание и что делать дальше."
             ),
             "prompt": "Текст, ссылка или описание ситуации",
             "textarea_placeholder": (
