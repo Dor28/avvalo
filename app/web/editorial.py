@@ -34,9 +34,10 @@ from app.web.admin_auth import (
     is_admin_authenticated,
     set_admin_cookie,
 )
+from app.web.copy import WEB_COPY
 from app.web.editorial_copy import EDITORIAL_COPY
 from app.web.knowledge_copy import KNOWLEDGE_COPY
-from app.web.routes import WEB_COPY, templates
+from app.web.routes import templates
 from app.web.rules_copy import RULES_COPY
 
 router = APIRouter()

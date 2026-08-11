@@ -44,9 +44,10 @@ from app.knowledge_store.repo import LANGUAGES as ALIAS_LANGUAGES
 from app.knowledge_store.repo import STATUSES
 from app.web.abuse import require_same_origin
 from app.web.admin_auth import is_admin_authenticated
+from app.web.copy import WEB_COPY
 from app.web.editorial_copy import EDITORIAL_COPY
 from app.web.knowledge_copy import KNOWLEDGE_COPY, SCRIPT_LABELS
-from app.web.routes import WEB_COPY, templates
+from app.web.routes import templates
 from app.web.rules_copy import RULES_COPY
 
 router = APIRouter()

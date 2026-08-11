@@ -217,6 +217,13 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Coding-agent scratch space
+#   .claude/worktrees/ holds full stale checkouts of this repo. Ignoring it keeps duplicate
+#   hits out of grep and keeps `git status` clean; previously this lived only in the
+#   machine-local .git/info/exclude, so it did not protect a fresh clone.
+.claude/worktrees/
+.claude/settings.local.json
+
 # Avvalo
 eval_out/                 # model eval outputs (may contain generated content)
 out/                      # generated aggregate-only operator reports

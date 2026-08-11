@@ -149,23 +149,21 @@ The pipeline is compliant only when automated tests prove all of the following:
 9. Logs and persistence contain only allowlisted metadata and version IDs.
 10. The same behavior is exercised through both Telegram and web because both call `run_check()`.
 
-## 8. Implementation audit snapshot — 2026-07-19
+## 8. Known gaps
 
-This is a dated baseline, not a completion claim. Re-run the audit after T14/R0 changes.
+Every criterion in §7 is implemented and guarded by the suite — run `pytest -q` for the current
+state rather than trusting a dated audit table. What the suite does **not** prove:
 
-| Contract area | Current state | Evidence / gap |
-|---|---|---|
-| One engine for Telegram and web | ✅ Implemented and tested | Both channel handlers build `CheckInput` and call `app.engine.pipeline.run_check()`; `test_r0_criterion_10_telegram_and_web_share_run_check` guards the shared call path |
-| Intake, language, and OCR | ⚠️ Partial | Text/image intake, language resolution, OCR abstraction, confidence gating, and metadata stripping exist. The configured default is Google Cloud Vision, so the separate local/on-prem OCR product promise depends on deployment configuration and is not guaranteed by this code default |
-| Rules on raw local text, then minimization | ✅ Implemented and tested | `pipeline._run_stages()` calls `run_rules(text)` before the local URL-artifact lookup and `minimize(text, signals)`; `tests/test_t05_rules_minimize.py` guards minimization |
-| Zero-rule semantic analysis | ✅ Implemented and tested | `test_r0_criterion_01_zero_rule_message_still_reaches_answer_llm` proves `rule_ids=[]` still reaches the answer model |
-| Versioned knowledge-card store | ✅ Implemented and tested | `FileKnowledgeStore.load()` validates the approved cards in `knowledge/cards/` against `knowledge/version.yaml`; deploy tests prove `knowledge/` is copied into the image and the active pack loads |
-| Rule/signal/cue retrieval | ✅ Implemented and tested | `retrieve_knowledge()` ranks mandatory rule/signal matches and multilingual cues, enforces the three-card ceiling, and has direct tests for all three paths |
-| Allowlisted semantic router | ⚠️ Wiring implemented and tested; recall unmeasured | `OpenAICompatibleKnowledgeRouter` sees minimized text plus a server allowlist only; backend validation rejects invented IDs. Tests cover timeout/failure degradation, default-off config, token-cost aggregation, and an end-to-end inflected-Russian path **against a fake provider**. No eval against a live model exists, so the inflected-recall gap that motivated the router is not yet proven closed |
-| Reviewed cases | ⚠️ Contract present; no intake pipeline | Cards and events carry validated `reviewed_case_ids`, but current approved cards reference no reviewed derivatives. The retired `story_submission` rows are never runtime knowledge and no new story-capture writes are allowed. Founder-authored public posts are an editorial surface, not reviewed-case grounding, and are never injected into answers |
-| Knowledge injected into answer prompt | ✅ Implemented and tested | `build_prompt(..., knowledge_cards=...)` renders at most three reviewed cards; T14 tests inspect the exact provider prompt for selected IDs and empty knowledge |
-| Safety validator | ✅ Structural preservation floor implemented and tested | Knowledge-ID/case-proof/external-lookup checks are active. `DraftOutput.addressed_rule_ids` plus `validate()` now rejects every omitted severity-2+ rule ID in all three languages and exercises retry/fallback. This proves declaration coverage, not semantic quality of the wording |
-| Provider fallback / degraded answer | ✅ Implemented and tested | `_configured_fallback_provider()` and `_call_llm()` use the secondary provider after primary timeout/error; the T14 regression proves the result remains a normal successful answer |
-| Knowledge/version observability | ✅ Implemented and tested | `CheckResult`, `check_event`, logs, migrations, gap reports, and daily metrics carry card/case IDs, retrieval/router status, KB version, coverage, unavailable rate, and approved-card inventory without content |
-| Privacy-safe persistence | ✅ Implemented and tested | Active check, router, and URL-reputation paths persist only IDs, enums, hashes, versions, and metrics. `story_submission.minimized_text` is legacy stewardship only: no new writes or product reads; old rows remain covered by deletion and retention until an authorized purge |
-| Automated verification | ✅ Current contract green | `pytest -q`: 258 passed, 1 skipped and `ruff check .` passed on 2026-07-22 after the product-face removal |
+- **Semantic-router recall is unmeasured.** `OpenAICompatibleKnowledgeRouter` is wired, allowlisted,
+  and covered for timeout/failure degradation and cost aggregation, but only against a fake
+  provider. No eval against a live model exists, so the inflected-Russian recall gap that motivated
+  the router is not yet proven closed.
+- **Reviewed cases have a contract but no intake pipeline.** Cards and events carry validated
+  `reviewed_case_ids`, yet no approved card references a reviewed derivative. Founder-authored
+  public posts are an editorial surface, never reviewed-case grounding, and are never injected into
+  answers.
+- **On-prem OCR is a deployment choice, not a code guarantee.** The abstraction and confidence
+  gating are real, but the configured default is Google Cloud Vision.
+- **The validator proves declaration coverage, not wording quality.** `validate()` rejects omitted
+  severity-2+ rule IDs in all three languages; whether the prose is *good* Uzbek still needs human
+  review.
