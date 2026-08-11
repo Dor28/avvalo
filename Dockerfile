@@ -1,4 +1,6 @@
-FROM python:3.14-slim@sha256:a7fb1e634c4a578f9e0bd6327f11a3cde11b7a9395f48e24360c0988bcc5c2bc
+# PaddlePaddle 3.3.1 and zxing-cpp 2.3.0 do not publish CPython 3.14 Linux wheels.
+# Keep the runtime on the version exercised by CI until both native packages support 3.14.
+FROM python:3.11-slim@sha256:db3ff2e1800a8581e2c48a27c3995339d47bdf046da21c7627accd3d51053a93
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
