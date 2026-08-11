@@ -14,8 +14,8 @@ from app.data import repo
 from app.privacy.consent import grant_consent, is_consent_current
 
 NOTICE = "2026-06-24-v1"
-PREVIOUS_NOTICE = "2026-07-07-v2"
-CURRENT_NOTICE = "2026-07-22-v3"
+PREVIOUS_NOTICE = "2026-07-22-v3"
+CURRENT_NOTICE = "2026-08-11-v4"
 
 
 def _settings(**overrides) -> Settings:
@@ -88,6 +88,8 @@ def test_privacy_copy_matches_ephemeral_content_contract() -> None:
     assert "1 час" not in privacy_copy
     assert "saqlanmaydi" in privacy_copy
     assert "не сохраняются" in privacy_copy
+    assert "ism-familiya va havola" in privacy_copy
+    assert "имена, фамилии и ссылки" in privacy_copy
 
 
 def test_story_capture_copy_is_retired() -> None:

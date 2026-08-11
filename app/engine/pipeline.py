@@ -326,7 +326,19 @@ async def _run_stages(
             rule_hits.extend(
                 hit for hit in reputation_hits if hit.rule_id not in existing_rule_ids
             )
-    minimized_text = minimize(text, signals)
+    # Retrieval and its optional semantic router keep the strict identifier-free
+    # view. Only the answer model receives the explicitly authorized prompt view,
+    # where submitted names and URLs remain ephemeral but visible for context.
+    # Decoded QR payloads retain their older strict prompt boundary because a QR
+    # can conceal sensitive values the user never saw as text.
+    retrieval_text = minimize(text, signals)
+    preserve_answer_identifiers = not content.contains_decoded_qr
+    answer_prompt_text = minimize(
+        text,
+        signals,
+        preserve_names=preserve_answer_identifiers,
+        preserve_urls=preserve_answer_identifiers,
+    )
     resolved_router = knowledge_router
     if (
         resolved_router is None
@@ -340,7 +352,7 @@ async def _run_stages(
             log_error(stage="knowledge", error_type="KnowledgeRouterConfigError")
             resolved_router = _UnavailableKnowledgeRouter()
     retrieval = await retrieve_knowledge(
-        minimized_text=minimized_text,
+        minimized_text=retrieval_text,
         rule_hits=rule_hits,
         signals=signals,
         store=knowledge_store,
@@ -348,7 +360,7 @@ async def _run_stages(
     )
     llm_result = await _call_llm(
         effective_input,
-        minimized_text=minimized_text,
+        minimized_text=answer_prompt_text,
         rule_hits=rule_hits,
         signals=signals,
         knowledge_cards=list(retrieval.cards),
@@ -401,6 +413,7 @@ class _ContentStageResult:
     ocr_ms: int | None = None
     ocr_confidence: float | None = None
     signals: tuple[Signal, ...] = ()
+    contains_decoded_qr: bool = False
 
 
 async def _content_from_input(
@@ -492,6 +505,7 @@ async def _content_from_input(
             return _ContentStageResult(
                 text=_join_content(check_input.caption, check_input.raw_text, qr_text),
                 signals=qr_signals,
+                contains_decoded_qr=True,
             )
         return _ContentStageResult(
             text=None,
@@ -513,6 +527,7 @@ async def _content_from_input(
                 text=_join_content(check_input.caption, check_input.raw_text, qr_text),
                 ocr_ms=failure.ocr_ms,
                 signals=qr_signals,
+                contains_decoded_qr=True,
             )
         return failure
 
@@ -528,6 +543,7 @@ async def _content_from_input(
                 ocr_ms=ocr_ms,
                 ocr_confidence=ocr_result.confidence,
                 signals=qr_signals,
+                contains_decoded_qr=True,
             )
         return _ContentStageResult(
             text=None,
@@ -547,6 +563,7 @@ async def _content_from_input(
         ocr_ms=ocr_ms,
         ocr_confidence=ocr_result.confidence,
         signals=qr_signals,
+        contains_decoded_qr=qr_text is not None,
     )
 
 
