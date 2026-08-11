@@ -34,16 +34,25 @@
                     {% if row.disabled %}{{ rules.status_disabled }}{% else %}{{ rules.status_active }}{% endif %}
                   </span>
                   {% if row.is_baseline %}<span class="status-pill draft">{{ rules.baseline_pill }}</span>{% endif %}
-                  <span>{{ row.family }}</span>
-                  <span>severity {{ row.severity }}</span>
+                  <span>{{ row.family_label }}</span>
+                  <span class="rule-severity severity-{{ row.severity }}">{{ row.severity_label }}</span>
                 </div>
-                <h2><code>{{ row.rule_id }}</code></h2>
-                <p>{{ row.description }}</p>
+                <h2>{{ row.title }}</h2>
+                <p class="admin-rule-summary">{{ row.summary }}</p>
                 {% if row.is_baseline %}
                   <p class="admin-hint">{{ rules.baseline_row_hint }}</p>
                 {% else %}
                   <p>{{ rules.updated }} {{ row.updated_ts.strftime('%d.%m.%Y · %H:%M') }}</p>
                 {% endif %}
+                <details class="admin-rule-technical">
+                  <summary>{{ rules.technical_details }}</summary>
+                  <dl>
+                    <div><dt>{{ rules.rule_name_label }}</dt><dd><code>{{ row.rule_id }}</code></dd></div>
+                    <div><dt>{{ rules.technical_family }}</dt><dd><code>{{ row.family }}</code></dd></div>
+                    <div><dt>{{ rules.technical_severity }}</dt><dd>{{ row.severity }}</dd></div>
+                    <div><dt>{{ rules.technical_description }}</dt><dd>{{ row.description }}</dd></div>
+                  </dl>
+                </details>
               </div>
               <div class="admin-post-actions">
                 <a class="admin-edit-link" href="{{ row.edit_url }}">

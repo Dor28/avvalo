@@ -17,7 +17,7 @@ from app.engine.rules import run_rules
 from app.engine.rules.loader import clear_active_rule_pack, load_yaml_rule_pack
 from app.rules_store import RuleStoreBase
 from app.web.app import create_app
-from app.web.rules_copy import RULES_COPY
+from app.web.rules_copy import FAMILY_PRESENTATION, MESSAGE_LABELS, RULES_COPY
 
 ADMIN_KEY = "test-admin-rule-key"
 SAMPLE = "Пришлите мне секретную кодовую фразу прямо сейчас"
@@ -241,6 +241,52 @@ def test_the_listing_shows_shipped_rules_when_no_override_exists(client) -> None
     for rule in load_yaml_rule_pack().rules:
         assert rule.id in listing, f"{rule.id} is in force but absent from the editor"
     assert RULES_COPY["ru"]["baseline_pill"] in listing
+
+
+def test_the_listing_uses_human_labels_and_keeps_machine_values_in_details(client) -> None:
+    _login(client)
+
+    listing = client.get("/admin/rules?language=uz_latn").text
+
+    assert "Tashkilot yoki yaqin odam nomidan yozish" in listing
+    assert "Muhim ogohlantirish" in listing
+    assert "severity 2" not in listing
+    assert "fs.authority.impersonation" in listing
+    assert "Texnik ma&#39;lumotlar" in listing
+
+
+def test_every_shipped_rule_has_readable_copy_in_both_admin_languages() -> None:
+    baseline = load_yaml_rule_pack().rules
+
+    for language in ("uz_latn", "ru"):
+        assert {rule.family for rule in baseline} <= FAMILY_PRESENTATION[language].keys()
+        assert {rule.message_key for rule in baseline} <= MESSAGE_LABELS[language].keys()
+
+
+def test_new_rule_form_uses_readable_category_and_warning_choices(client) -> None:
+    _login(client)
+
+    form = client.get("/admin/rules/new?language=ru").text
+
+    assert '<select name="family"' in form
+    assert "Сообщение от имени организации или близкого" in form
+    assert '<select name="severity"' in form
+    assert "Важное предупреждение" in form
+    assert "Технические настройки" in form
+
+
+def test_blank_internal_message_key_is_derived_from_rule_id(client) -> None:
+    _login(client)
+
+    saved = client.post(
+        "/admin/rules",
+        data=_form(message_key=""),
+        follow_redirects=False,
+    )
+
+    assert saved.status_code == 303
+    hit = next(hit for hit in run_rules(SAMPLE)[0] if hit.rule_id == "fs.test.adminrule")
+    assert hit.message_key == "adminrule"
 
 
 def test_a_baseline_rule_row_offers_no_delete_action(client) -> None:

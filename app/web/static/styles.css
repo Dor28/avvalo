@@ -1907,6 +1907,67 @@ body.case-detail-page .submit-button:hover svg {
   font-size: 0.75rem;
 }
 
+.admin-post-main > .admin-rule-summary {
+  max-width: 72ch;
+  color: var(--muted-strong);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.rule-severity {
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: var(--muted-strong);
+  background: var(--surface-soft);
+}
+
+.rule-severity.severity-2 {
+  color: var(--amber);
+  background: var(--amber-soft);
+}
+
+.rule-severity.severity-3 {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.admin-rule-technical {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.admin-rule-technical summary {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 740;
+}
+
+.admin-rule-technical dl {
+  display: grid;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding: 12px;
+  border-radius: 9px;
+  background: var(--surface-soft);
+}
+
+.admin-rule-technical dl > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.28fr) 1fr;
+  gap: 12px;
+}
+
+.admin-rule-technical dt {
+  font-weight: 760;
+}
+
+.admin-rule-technical dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .admin-post-actions {
   flex: none;
 }
@@ -1957,6 +2018,59 @@ body.case-detail-page .submit-button:hover svg {
 }
 
 .admin-settings-card .wide {
+  grid-column: 1 / -1;
+}
+
+.admin-rule-section-heading {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 4px;
+}
+
+.admin-rule-section-heading h2 {
+  max-width: none;
+  color: var(--ink-deep);
+  font-size: 1.05rem;
+}
+
+.admin-rule-section-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.admin-advanced-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.admin-advanced-card > summary {
+  display: grid;
+  gap: 4px;
+  padding: 18px 22px;
+  color: var(--ink-deep);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.admin-advanced-card > summary small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 580;
+}
+
+.admin-advanced-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 4px 22px 22px;
+}
+
+.admin-advanced-grid .wide {
   grid-column: 1 / -1;
 }
 
@@ -2011,6 +2125,20 @@ body.case-detail-page .submit-button:hover svg {
   font-size: 0.7rem;
   font-weight: 580;
   line-height: 1.4;
+}
+
+.admin-severity-guide {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 560;
+  line-height: 1.4;
+}
+
+.admin-severity-guide strong {
+  color: var(--muted-strong);
+  font-weight: 760;
 }
 
 .translation-bar {
@@ -2465,6 +2593,15 @@ body.case-detail-page .submit-button:hover svg {
 
   .admin-form-actions {
     justify-content: space-between;
+  }
+
+  .admin-rule-technical dl > div,
+  .admin-advanced-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-advanced-grid .wide {
+    grid-column: auto;
   }
 }
 

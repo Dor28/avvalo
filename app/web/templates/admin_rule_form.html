@@ -15,8 +15,8 @@
       <header class="admin-page-heading">
         <div>
           <p class="eyebrow">Avvalo Editorial</p>
-          <h1>{{ rules.title }}</h1>
-          <p>{{ rules.subtitle }}</p>
+          <h1>{{ rules.form_title }}</h1>
+          <p>{{ rules.form_subtitle }}</p>
         </div>
         <a class="admin-edit-link" href="/admin/rules?language={{ language }}">{{ rules.back }}</a>
       </header>
@@ -42,56 +42,100 @@
         <input type="hidden" name="override_id" value="{{ override_id or '' }}">
 
         <section class="admin-settings-card">
+          <div class="admin-rule-section-heading wide">
+            <h2>{{ rules.main_section_title }}</h2>
+            <p>{{ rules.main_section_hint }}</p>
+          </div>
           <label class="admin-field wide">
-            <span>{{ rules.rule_id_label }}</span>
+            <span>{{ rules.rule_name_label }}</span>
             <input name="rule_id" type="text" required maxlength="120"
+                   placeholder="fs.authority.new_number"
                    value="{{ override.rule_id if override else '' }}"
                    aria-describedby="rule-id-hint">
             <small id="rule-id-hint">{{ rules.rule_id_hint }}</small>
           </label>
           <label class="admin-field">
-            <span>{{ rules.family_label }}</span>
-            <input name="family" type="text" required maxlength="60"
-                   value="{{ override.family if override else '' }}">
-          </label>
-          <label class="admin-field">
-            <span>{{ rules.message_key_label }}</span>
-            <input name="message_key" type="text" required maxlength="60"
-                   value="{{ override.message_key if override else '' }}">
+            <span>{{ rules.category_label }}</span>
+            <select name="family" required aria-describedby="category-hint">
+              <option value="" {% if not override %}selected{% endif %} disabled>—</option>
+              {% for family_key, family_copy in family_options %}
+                <option value="{{ family_key }}"
+                        {% if override and override.family == family_key %}selected{% endif %}>
+                  {{ family_copy.label }}
+                </option>
+              {% endfor %}
+            </select>
+            <small id="category-hint">{{ rules.category_hint }}</small>
           </label>
           <label class="admin-field">
             <span>{{ rules.severity_label }}</span>
-            <input name="severity" type="number" min="1" max="3" required
-                   value="{{ override.severity if override else 2 }}">
-          </label>
-          <label class="admin-field">
-            <span>{{ rules.emits_signal_label }}</span>
-            <input name="emits_signal" type="text" maxlength="60"
-                   value="{{ (override.emits_signal or '') if override else '' }}">
+            <select name="severity" required aria-describedby="severity-hint">
+              {% for severity, severity_copy in severity_options.items() %}
+                <option value="{{ severity }}"
+                        {% if (override and override.severity == severity) or (not override and severity == 2) %}selected{% endif %}>
+                  {{ severity_copy.label }}
+                </option>
+              {% endfor %}
+            </select>
+            <small id="severity-hint">{{ rules.severity_hint }}</small>
+            <span class="admin-severity-guide" aria-label="{{ rules.severity_label }}">
+              {% for severity, severity_copy in severity_options.items() %}
+                <span><strong>{{ severity_copy.label }}:</strong> {{ severity_copy.hint }}</span>
+              {% endfor %}
+            </span>
           </label>
           <label class="admin-field wide">
             <span>{{ rules.description_label }}</span>
-            <textarea name="description" rows="2" required maxlength="400">{{ override.description if override else '' }}</textarea>
-          </label>
-          <label class="admin-field wide admin-toggle-field">
-            <input name="disabled" type="checkbox" value="true"
-                   {% if override and override.disabled %}checked{% endif %}
-                   aria-describedby="disabled-hint">
-            <span>{{ rules.disabled_label }}</span>
-            <small id="disabled-hint">{{ rules.disabled_hint }}</small>
+            <textarea name="description" rows="3" required maxlength="400"
+                      aria-describedby="description-hint">{{ override.description if override else '' }}</textarea>
+            <small id="description-hint">{{ rules.description_hint }}</small>
           </label>
         </section>
 
-        {% for pattern_language in pattern_languages %}
-          <section class="admin-settings-card">
+        <section class="admin-settings-card">
+          <div class="admin-rule-section-heading wide">
+            <h2>{{ rules.patterns_section_title }}</h2>
+            <p>{{ rules.patterns_section_hint }}</p>
+          </div>
+          {% for pattern_language in pattern_languages %}
             <label class="admin-field wide">
               <span>{{ rules.patterns_label.format(language=script_labels[pattern_language]) }}</span>
               <textarea name="patterns_{{ pattern_language }}" rows="6"
                         aria-describedby="patterns-hint-{{ pattern_language }}">{{ patterns[pattern_language] }}</textarea>
               <small id="patterns-hint-{{ pattern_language }}">{{ rules.patterns_hint }}</small>
             </label>
-          </section>
-        {% endfor %}
+          {% endfor %}
+        </section>
+
+        <details class="admin-advanced-card">
+          <summary>
+            <span>{{ rules.technical_title }}</span>
+            <small>{{ rules.technical_hint }}</small>
+          </summary>
+          <div class="admin-advanced-grid">
+            <label class="admin-field">
+              <span>{{ rules.message_key_label }}</span>
+              <input name="message_key" type="text" maxlength="60"
+                     value="{{ override.message_key if override else '' }}"
+                     aria-describedby="message-key-hint">
+              <small id="message-key-hint">{{ rules.message_key_hint }}</small>
+            </label>
+            <label class="admin-field">
+              <span>{{ rules.emits_signal_label }}</span>
+              <input name="emits_signal" type="text" maxlength="60"
+                     value="{{ (override.emits_signal or '') if override else '' }}"
+                     aria-describedby="emits-signal-hint">
+              <small id="emits-signal-hint">{{ rules.emits_signal_hint }}</small>
+            </label>
+            <label class="admin-field wide admin-toggle-field">
+              <input name="disabled" type="checkbox" value="true"
+                     {% if override and override.disabled %}checked{% endif %}
+                     aria-describedby="disabled-hint">
+              <span>{{ rules.disabled_label }}</span>
+              <small id="disabled-hint">{{ rules.disabled_hint }}</small>
+            </label>
+          </div>
+        </details>
 
         <section class="admin-settings-card admin-dry-run">
           <h2>{{ rules.sample_title }}</h2>
