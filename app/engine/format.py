@@ -176,11 +176,11 @@ _STATUS_MESSAGES = {
     },
     CheckStatus.low_ocr: {
         Language.uz_latn: (
-            "Rasmdagi matn yoki QR-kodni aniq o'qiy olmadim. Muhim joyni matn qilib "
+            "Rasmdagi matn yoki QR-kodni to'liq qayta ishlay olmadim. Muhim joyni matn qilib "
             "yoki bitta QR-kodni alohida yuboring."
         ),
         Language.ru: (
-            "Не получилось чётко прочитать текст или QR-код на изображении. "
+            "Не получилось полностью обработать текст или QR-код на изображении. "
             "Пришлите важный фрагмент текстом или один QR-код отдельно."
         ),
     },

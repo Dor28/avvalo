@@ -17,6 +17,8 @@ async def lookup_url_reputation(
     """Return one synthetic authoritative fact when a local hash matches."""
 
     hashes = tuple(hash_domain(domain) for domain in extract_normalized_domains(raw_text))
+    if not hashes:
+        return []
     matches = await store.lookup(hashes)
     if not matches:
         return []
