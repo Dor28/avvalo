@@ -84,20 +84,19 @@ Telegram bot            Anonymous web app
 
 Important design choices:
 
-- The rule engine runs locally on raw text before minimization.
-- Rules are authoritative facts, not a gate: a zero-rule message still reaches
+- The rule engine runs locally on raw text before minimization, and rules are
+  authoritative facts rather than a gate: a zero-rule message still reaches
   semantic analysis.
-- The LLM input is minimized text plus structured rule facts/signals and
-  zero to three backend-selected, reviewed knowledge cards/cases — never raw
-  contact details or unrestricted database access.
-- A retrieved case is guidance, not proof about the current situation or person.
+- The LLM sees minimized text plus structured rule facts and zero to three
+  backend-selected, reviewed knowledge cards — never raw contact details or
+  unrestricted database access. A retrieved case is guidance, not proof.
 - Submitted text, OCR text, images, captions, model prompts, and model outputs
-  are not stored in the database.
-- PostgreSQL stores consent, check metadata, feedback, rate limits, deletion
-  logs, cost, latency, statuses, rule/knowledge IDs, component versions, and
-  public-feed domain hashes only.
-- Web and Telegram both call `app.engine.pipeline.run_check()`; no analysis
-  logic lives in the client/channel layer.
+  are never stored. PostgreSQL holds only consent, check metadata, feedback,
+  rate limits, deletion logs, cost, latency, statuses, rule/knowledge IDs,
+  component versions, and public-feed domain hashes.
+
+[CLAUDE.md](CLAUDE.md) documents the eight pipeline stages and the file that
+owns each one.
 
 ## Repository Layout
 
@@ -105,8 +104,11 @@ Important design choices:
 app/
   bot/          Telegram onboarding, consent, checks, feedback, deletion
   web/          FastAPI routes, Jinja templates, anonymous sessions, abuse gates
-  engine/       OCR, rules, minimization, LLM, validation, formatting pipeline
+  engine/       OCR, QR, rules, minimization, knowledge, LLM, validation, format
   data/         SQLAlchemy models, repo helpers, Alembic-backed persistence
+  content/      founder-authored editorial posts, kept off the user-data schema
+  rules_store/  operator rule overrides that merge onto the shipped YAML
+  knowledge_store/  operator knowledge-card overrides, same merge-by-ID pattern
   obs/          privacy-safe events, metrics, cost accounting
   privacy/      consent and pseudonymous user-key helpers
   tools/        operator CLI modules
@@ -319,20 +321,12 @@ python tools/secret_scan.py --all
 
 ## Engineering Guardrails
 
-- Do not store submitted content. `story_submission.minimized_text` is a legacy
-  stewardship-only exception: no new writes or product reads; old rows remain
-  covered by `/delete_my_data` and retention until a separately authorized purge.
-- Keep one checker and do not reintroduce a product/face/mode discriminator. Merchant payment protections belong in the
-  main checker; do not recreate Merchants, scam-library, story-capture, or
-  Scam-Pulse surfaces.
-- Do not add person, phone, card, or "reported N times" lookup features.
-- Do not weaken the safety prompts, validator, or output contract casually.
-- Do not put analysis logic in Telegram handlers or web routes; call the shared
-  engine.
-- Keep the LLM API key backend-only.
-- Run privacy/schema tests when touching persistence.
-- Extend rule packs and prompts carefully; they are safety-critical product
-  assets.
+The rules that fail the build if broken live in one place: [AGENTS.md](AGENTS.md)
+for any coding agent, with the full architecture and conventions in
+[CLAUDE.md](CLAUDE.md). In short — never persist submitted content, never emit a
+verdict, keep one checker with no product/face/mode discriminator, never add
+person/phone/card "reported N times" lookups, keep analysis in the shared engine
+rather than in channel handlers, and keep the LLM API key backend-only.
 
 ## Key Documentation
 

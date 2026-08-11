@@ -15,8 +15,7 @@ work equally for Claude Code, Codex, or a human.
 
 | ID | Task | Status | Owner | Branch | Depends on |
 |---|---|---|---|---|---|
-| [T-09](T-09-knowledge-cards-store.md) | Move knowledge cards into the database behind the existing sync store protocol | done | claude | `claude/product-overview-explanation-90819c` | — |
-| [T-10](T-10-knowledge-cards-admin.md) | Add the operator-only knowledge card editor with a retrieval dry-run | done | claude | `claude/product-overview-explanation-90819c` | T-09 |
+| — | *(queue empty)* | — | — | — | — |
 
 Do not create an Avvalo Verify implementation task until Phase A in
 [ROADMAP.md](../ROADMAP.md) records a `go` decision.
@@ -24,6 +23,11 @@ Do not create an Avvalo Verify implementation task until Phase A in
 Statuses: `open` · `in_progress` · `blocked` · `done` · `cancelled`.
 The frontmatter in each file is the source of truth; this table is a convenience view — update
 both in the same commit.
+
+**A `done` task file is deleted, not archived here** — git history is the record, matching the
+convention in [../README.md](../README.md). Shipped prompts left in the tree go stale (they cite
+paths that later move) and every agent that greps the repo pays for them. T-09 and T-10, which
+moved knowledge cards into the database and added the operator card editor, are in `cc53f96`.
 
 ## Rules
 

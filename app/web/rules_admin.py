@@ -41,9 +41,10 @@ from app.rules_store import (
 from app.rules_store.repo import LANGUAGES as PATTERN_LANGUAGES
 from app.web.abuse import require_same_origin
 from app.web.admin_auth import is_admin_authenticated
+from app.web.copy import WEB_COPY
 from app.web.editorial_copy import EDITORIAL_COPY
 from app.web.knowledge_copy import KNOWLEDGE_COPY
-from app.web.routes import WEB_COPY, templates
+from app.web.routes import templates
 from app.web.rules_copy import (
     FAMILY_PRESENTATION,
     MESSAGE_LABELS,

@@ -5,3 +5,12 @@ deploy/nginx/templates/*.template text eol=lf
 *.png binary
 *.jpg binary
 *.jpeg binary
+*.ico binary
+*.woff2 binary
+
+# Generated pin files: ~200 KB each. Without `-diff`, a single dependency bump
+# prints ~400 KB of hashes into `git diff` / `git show` / PR review — which
+# blows out a coding agent's context for no information gain. Read the file
+# directly (`git show HEAD:requirements.lock`) when a pinned version matters.
+requirements.lock      linguist-generated=true -diff
+requirements-dev.lock  linguist-generated=true -diff
