@@ -30,8 +30,13 @@ RUN python -m pip install --require-hashes -r requirements.lock \
 # module-level constant at import, so pin an absolute path that the build and
 # the runtime both resolve — this must not depend on HOME. The source check is
 # four outbound HEAD requests made at import; disable it since weights are baked.
+# MKLDNN is off because paddlepaddle 3.3.1 crashes in its oneDNN executor on
+# these models ("ConvertPirAttribute2RuntimeAttribute not support"). It must be
+# disabled for the build and the runtime alike, since both run inference. This
+# costs CPU speed; retry the default after a paddlepaddle upgrade.
 ENV PADDLE_PDX_CACHE_HOME=/opt/paddlex \
-    PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+    PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True \
+    PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT=False
 
 RUN python -m app.engine.ocr.warmup \
     && chmod -R a+rX /opt/paddlex
