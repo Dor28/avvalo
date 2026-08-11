@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from urllib.parse import urlsplit
 
 from openai import APIError, AsyncOpenAI
 from pydantic import BaseModel, Field, SecretStr, ValidationError
@@ -32,6 +33,10 @@ class OpenAICompatibleProvider:
     ) -> None:
         self.model = model
         self.temperature = temperature
+        hostname = (urlsplit(base_url).hostname or "").casefold()
+        self._openrouter_privacy = hostname == "openrouter.ai" or hostname.endswith(
+            ".openrouter.ai"
+        )
         key = api_key.get_secret_value() if isinstance(api_key, SecretStr) else api_key
         self._client = client or AsyncOpenAI(
             base_url=base_url,
@@ -96,15 +101,25 @@ class OpenAICompatibleProvider:
 
         _ = schema  # JSON mode is the common denominator across configured hosts.
         try:
-            response = await self._client.chat.completions.create(
-                model=self.model,
-                messages=[
+            request: dict[str, Any] = {
+                "model": self.model,
+                "messages": [
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
-                temperature=self.temperature,
-                max_tokens=max_output_tokens,
-                response_format={"type": "json_object"},
+                "temperature": self.temperature,
+                "max_tokens": max_output_tokens,
+                "response_format": {"type": "json_object"},
+            }
+            if self._openrouter_privacy:
+                # Names and submitted URLs may now reach the answer prompt. Make
+                # the production router enforce endpoints that neither retain nor
+                # collect prompt data instead of relying on account defaults.
+                request["extra_body"] = {
+                    "provider": {"zdr": True, "data_collection": "deny"}
+                }
+            response = await self._client.chat.completions.create(
+                **request,
             )
         except APIError as exc:
             status_code = getattr(exc, "status_code", None)

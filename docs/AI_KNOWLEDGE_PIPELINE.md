@@ -1,6 +1,6 @@
 # Avvalo — AI + Knowledge Pipeline Contract
 
-> **Status:** Authoritative contract for the built explanation pipeline · 2026-07-22
+> **Status:** Authoritative contract for the built explanation pipeline · 2026-08-11
 > **Authority:** [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) remains the product and safety authority. This document defines how the shared engine must combine local rules, curated knowledge, reviewed cases, and the LLM.
 > **Scope:** Questions and submitted content about suspicious messages, calls, payments, documents, links, deals, and related situations. Avvalo is not a general-purpose assistant for unrelated topics.
 > **Evidence boundary:** A knowledge card or reviewed case is explanatory guidance, never an
@@ -23,17 +23,21 @@ Every Telegram and web check uses the same backend path:
 user text / screenshot / question
     -> local intake, language resolution, and OCR when needed
     -> local rules and structural signals on raw local text
-    -> PII and secret minimization
+    -> strict identifier minimization for retrieval + protected answer-prompt view
     -> retrieval planning from rule IDs, signals, broad retrieval cues,
        and (only when needed) an allowlisted semantic router
     -> backend selects 0-3 versioned knowledge cards / reviewed cases
-    -> answer LLM receives minimized content + rule facts + signals + knowledge
+    -> answer LLM receives protected prompt content + rule facts + signals + knowledge
     -> deterministic safety and grounding validator
     -> localized formatter
     -> response + privacy-safe metadata only
 ```
 
-The external model never receives the raw image, raw phone numbers, card numbers, credentials, or other direct identifiers. Submitted content remains ephemeral.
+The external model never receives the raw image, raw phone numbers, card numbers, credentials,
+codes, passports, precise addresses, or other protected identifiers. Submitted names and full URLs
+may be passed only to the answer model as ephemeral context; retrieval and the semantic router use
+the strict view without names or raw URLs. Decoded QR payloads also remain strictly minimized before
+the answer-model call. Submitted content remains ephemeral.
 
 ## 3. Component responsibilities
 
@@ -53,7 +57,7 @@ The external model never receives the raw image, raw phone numbers, card numbers
 ### Semantic router
 
 - Used only when deterministic rule/signal/cue retrieval is empty or ambiguous.
-- Receives minimized content only.
+- Receives the strict minimized content only, without submitted names or raw URLs.
 - Returns at most three IDs from the server-provided allowlist plus an `unmatched` option; it cannot issue SQL, browse arbitrary storage, or invent a new knowledge ID.
 - The backend validates every returned ID before lookup.
 - A first implementation may omit the router if deterministic retrieval has adequate measured recall, but zero-rule and paraphrase evals must prove that decision.
@@ -81,7 +85,9 @@ mechanism, red_flags[], verify_steps[], questions[], reviewed_case_ids[]
 
 ### Answer LLM
 
-- Always receives the minimized submission, including when `rule_ids=[]` and no card matches.
+- Always receives the protected answer-prompt view, including when `rule_ids=[]` and no card
+  matches. Submitted names and full URLs may remain visible; other protected identifiers stay
+  tokenized.
 - Treats rule hits as mandatory facts and cards/cases as reviewed guidance.
 - May add a red flag that is not represented by a rule only when it is directly grounded in the submitted content.
 - Must not claim that Avvalo checked a person, organization, account, database, website, or external source unless a separate authoritative lookup stage actually supplied that fact.
@@ -108,7 +114,8 @@ The alpha does not require embeddings or a vector database. Versioned files plus
 
 ## 5. Failure behaviour
 
-- **Knowledge lookup unavailable:** continue with minimized content, rule facts, and signals; mark privacy-safe `retrieval_status=unavailable`; never pretend knowledge was consulted.
+- **Knowledge lookup unavailable:** continue with protected prompt content, rule facts, and signals;
+  mark privacy-safe `retrieval_status=unavailable`; never pretend knowledge was consulted.
 - **Semantic router unavailable:** fall back to deterministic retrieval and still run the answer LLM.
 - **Primary answer model unavailable:** retry only within the latency/cost budget, then use a configured fallback provider. If no model is available, render a deterministic degraded response from authoritative rule/card content when possible; otherwise return the existing no-conclusion failure message and allow a retry.
 - **Validator rejection:** retry the answer model once with the rejection reason, then return the existing safety fallback.
@@ -157,7 +164,7 @@ This is a dated baseline, not a completion claim. Re-run the audit after T14/R0 
 |---|---|---|
 | One engine for Telegram and web | ✅ Implemented and tested | Both channel handlers build `CheckInput` and call `app.engine.pipeline.run_check()`; `test_r0_criterion_10_telegram_and_web_share_run_check` guards the shared call path |
 | Intake, language, and OCR | ⚠️ Partial | Text/image intake, language resolution, OCR abstraction, confidence gating, and metadata stripping exist. The configured default is Google Cloud Vision, so the separate local/on-prem OCR product promise depends on deployment configuration and is not guaranteed by this code default |
-| Rules on raw local text, then minimization | ✅ Implemented and tested | `pipeline._run_stages()` calls `run_rules(text)` before the local URL-artifact lookup and `minimize(text, signals)`; `tests/test_t05_rules_minimize.py` guards minimization |
+| Rules on raw local text, then minimization | ✅ Implemented and tested | `pipeline._run_stages()` calls `run_rules(text)` before the local URL-artifact lookup, builds a strict retrieval view, and separately builds the protected answer-prompt view; minimization tests guard both boundaries |
 | Zero-rule semantic analysis | ✅ Implemented and tested | `test_r0_criterion_01_zero_rule_message_still_reaches_answer_llm` proves `rule_ids=[]` still reaches the answer model |
 | Versioned knowledge-card store | ✅ Implemented and tested | `FileKnowledgeStore.load()` validates the approved cards in `knowledge/cards/` against `knowledge/version.yaml`; deploy tests prove `knowledge/` is copied into the image and the active pack loads |
 | Rule/signal/cue retrieval | ✅ Implemented and tested | `retrieve_knowledge()` ranks mandatory rule/signal matches and multilingual cues, enforces the three-card ceiling, and has direct tests for all three paths |

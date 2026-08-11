@@ -176,8 +176,11 @@ failure must fail closed and produce `unavailable`.
 - The existing `story_submission.minimized_text` field is a legacy stewardship-only exception.
   No current flow writes or reads it. Existing rows remain covered by `/delete_my_data` and
   retention until a separately authorized data purge; the table must not become a content source.
-- Raw screenshots stay inside the controlled OCR boundary; only minimized text may reach an
-  external LLM.
+- Raw screenshots stay inside the controlled OCR boundary. The external answer-model prompt may
+  retain submitted person names and full URLs as ephemeral context; phones, cards, credentials,
+  codes, passports, precise addresses, and other protected identifiers remain tokenized. The
+  retrieval/router view does not receive names or raw URLs, and decoded QR payloads remain strictly
+  minimized before any model call.
 - Source snapshots contain public reference data, never user submissions.
 - Editorial-post storage contains only text and optional cover photos deliberately supplied by an
   authenticated operator. It is a separate data boundary and never receives check input, OCR text,
