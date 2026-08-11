@@ -105,9 +105,13 @@ every channel flows through the same stages:
    reference data, deliberately *not* loaded as a rule pack: the URL-reputation feed, and
    `official_domains.yaml`, the founder-reviewed catalog of impersonated organizations,
    shorteners, and public suffixes that `app/engine/url.py` classifies against.
-5. `minimize()` strips PII before anything is sent to the LLM.
-6. LLM call in JSON-schema mode via an OpenAI-compatible provider; prompt = `system_safety.txt` +
-   `check.txt` with rule hits injected as grounded facts.
+5. `minimize()` builds two ephemeral views: strict identifier minimization for knowledge
+   retrieval/routing, and an answer-prompt view that retains submitted names and full URLs while
+   still tokenizing phones, cards, credentials, codes, passports, addresses, and other protected
+   values. Decoded QR payloads remain strictly minimized.
+6. LLM call in JSON-schema mode via an OpenAI-compatible provider; only the answer model receives
+   the name/URL-preserving view. The prompt is `prompts/system_safety.txt` + `prompts/check.txt`
+   with rule hits injected as grounded facts.
 7. Deterministic safety validator ([app/engine/validate.py](app/engine/validate.py)): bans verdict
    words in ru/uz_latn/Cyrillic-Uzbek/English, strips contacts/links/card numbers/OTPs, caps list
    lengths; one corrective retry, then `safety_fallback`.

@@ -46,7 +46,7 @@ Important modules:
 | Rules | `app/engine/rules/`, `rules/*.yaml` | Deterministic local signals |
 | Rule overrides | `app/rules_store/` | Operator-authored patterns merged onto the baseline |
 | Card overrides | `app/knowledge_store/` | Operator-authored cards merged onto the baseline |
-| Minimization | `app/engine/minimize.py` | Removes PII before model calls |
+| Minimization | `app/engine/minimize.py` | Builds strict retrieval text and a protected answer-prompt view |
 | Knowledge | `app/engine/knowledge/`, `knowledge/cards/` | Reviewed explanatory guidance |
 | LLM | `app/engine/llm/` | OpenAI-compatible provider boundary and fallback |
 | Safety | `app/engine/validate.py` | Deterministic output validation |
@@ -66,7 +66,9 @@ Every accepted request follows this order:
 3. Resolve the response language: `uz_latn` or `ru` (Cyrillic-Uzbek resolves to `uz_latn`).
 4. Run local rules and structural signal extraction on local text.
 5. Optionally check URL hashes against the local reputation table.
-6. Minimize PII and identifiers.
+6. Build strict retrieval text, then a protected answer-prompt view that retains submitted names
+   and full URLs while tokenizing phones, cards, credentials, codes, passports, addresses, and
+   other protected identifiers. Decoded QR payloads remain strictly minimized.
 7. Retrieve at most three approved knowledge cards; optionally use the allowlisted semantic router.
 8. Call the configured answer model, with one configured provider fallback.
 9. Validate structure, grounding, prohibited claims, verdict words, contacts, and rule preservation.
@@ -166,9 +168,9 @@ Only approved, versioned cards from `knowledge/cards/` may be retrieved. Cards e
 patterns and verification steps; they are not official-source evidence and cannot establish
 identity, intent, or fraud.
 
-The semantic router is optional and receives minimized text plus a server-generated allowlist. It
-may select only allowed card IDs. Empty or unavailable knowledge must degrade safely to the rule and
-signal context.
+The semantic router is optional and receives the strict minimized text plus a server-generated
+allowlist; it never receives submitted names or raw URLs. It may select only allowed card IDs.
+Empty or unavailable knowledge must degrade safely to the rule and signal context.
 
 The full knowledge contract lives in
 [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md).
