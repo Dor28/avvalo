@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 from app.engine.types import Signal
-from app.engine.url import URL_RE, classify_link
+from app.engine.url import URL_RE, classify_link, split_url_trailing_punctuation
 
 _EMAIL_RE = re.compile(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b")
 _TME_RE = re.compile(r"(?i)\b(?:https?|hxxps?)://t\.me/[a-z0-9_]{4,32}\b")
@@ -65,8 +65,7 @@ def minimize(raw_text: str, signals: list[Signal] | None = None) -> str:
 
 def _replace_link(match: re.Match[str]) -> str:
     value = match.group(0)
-    core = value.rstrip(".,;:!?)]}\"'")
-    suffix = value[len(core) :]
+    core, suffix = split_url_trailing_punctuation(value)
     label = classify_link(core)
     token = f"[LINK: {label}]" if label else "[LINK]"
     return f"{token}{suffix}"

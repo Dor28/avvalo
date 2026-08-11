@@ -276,6 +276,20 @@ async def _run_stages(
             CheckStatus.empty_input,
             text=format_status_message(CheckStatus.empty_input, check_input.language),
         )
+    if len(text) > MAX_SUBMITTED_TEXT_CHARS:
+        status = (
+            CheckStatus.low_ocr
+            if check_input.input_type is InputType.image
+            else CheckStatus.unsupported_media
+        )
+        return _result(
+            check_input,
+            status,
+            text=format_status_message(status, check_input.language),
+            error_class="ExtractedContentTooLong",
+            ocr_ms=content.ocr_ms,
+            ocr_confidence=content.ocr_confidence,
+        )
 
     effective_input = check_input.model_copy(
         update={"language": resolve_content_language(text, fallback=check_input.language)}
