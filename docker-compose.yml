@@ -46,6 +46,9 @@ services:
       KNOWLEDGE_UNAVAILABLE_ALERT_WINDOW_MINUTES: ${KNOWLEDGE_UNAVAILABLE_ALERT_WINDOW_MINUTES:-30}
       OPERATOR_ALERT_CHAT_ID: ${OPERATOR_ALERT_CHAT_ID:-}
       OPERATOR_ALERT_DEBOUNCE_S: ${OPERATOR_ALERT_DEBOUNCE_S:-900}
+      # Local OCR by default: the image ships PP-OCRv5 weights, so image checks
+      # work offline here with no key and no first-use download.
+      OCR_PROVIDER: ${OCR_PROVIDER:-paddleocr}
       WEB_SESSION_SECRET: ${WEB_SESSION_SECRET:-development-only-web-secret-change-me}
       WEB_ENABLED: ${WEB_ENABLED:-false}
       WEB_HOST: ${WEB_HOST:-0.0.0.0}

@@ -15,6 +15,7 @@ from app.data.db import (
     create_session_factory,
 )
 from app.data.retention import RetentionPolicy, start_retention_scheduler
+from app.engine.ocr import check_ocr_provider
 from app.engine.url_reputation import install_url_reputation_job
 from app.knowledge_store import install_knowledge_refresh_job
 from app.obs.alerts import (
@@ -30,6 +31,29 @@ LOGGER = logging.getLogger(__name__)
 PLACEHOLDER_TOKEN = "development-placeholder"
 
 
+async def _preflight_ocr(settings: Settings, *, fatal: bool) -> None:
+    """Prove OCR works at startup instead of on a user's first screenshot.
+
+    ``--check`` fails loudly, but a running process only logs: broken OCR costs
+    image checks, and killing the process would take text checks down with them.
+    Only the exception class name is logged, never a provider message.
+    """
+
+    try:
+        await check_ocr_provider(settings)
+    except Exception as exc:
+        if fatal:
+            raise
+        LOGGER.error(
+            "OCR preflight failed (provider=%s, error_type=%s); "
+            "image checks will return ocr_error until this is fixed",
+            settings.ocr_provider,
+            type(exc).__name__,
+        )
+        return
+    LOGGER.info("OCR preflight ok: provider=%s", settings.ocr_provider)
+
+
 async def run(*, check_only: bool = False) -> None:
     """Validate config, connect to PostgreSQL, then run the bot (or just check)."""
 
@@ -39,6 +63,7 @@ async def run(*, check_only: bool = False) -> None:
         await check_database_connection(engine)
         LOGGER.info("Avvalo booted and connected to PostgreSQL")
         log_knowledge_inventory()
+        await _preflight_ocr(settings, fatal=check_only)
         if check_only:
             return
 
@@ -144,7 +169,11 @@ def main() -> None:
     """Run the service or a one-shot T1 connectivity check."""
 
     parser = argparse.ArgumentParser(description="Avvalo application")
-    parser.add_argument("--check", action="store_true", help="connect to the database and exit")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="check the database connection and the OCR provider, then exit",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     asyncio.run(run(check_only=args.check))

@@ -41,10 +41,17 @@ from app.rules_store import (
 from app.rules_store.repo import LANGUAGES as PATTERN_LANGUAGES
 from app.web.abuse import require_same_origin
 from app.web.admin_auth import is_admin_authenticated
+from app.web.copy import WEB_COPY
 from app.web.editorial_copy import EDITORIAL_COPY
 from app.web.knowledge_copy import KNOWLEDGE_COPY
-from app.web.routes import WEB_COPY, templates
-from app.web.rules_copy import RULES_COPY, SCRIPT_LABELS
+from app.web.routes import templates
+from app.web.rules_copy import (
+    FAMILY_PRESENTATION,
+    MESSAGE_LABELS,
+    RULES_COPY,
+    SCRIPT_LABELS,
+    SEVERITY_PRESENTATION,
+)
 
 router = APIRouter()
 
@@ -63,11 +70,15 @@ def _draft_from_form(
 ) -> RuleOverrideDraft:
     """Build the typed boundary from flat browser form fields."""
 
+    # This key is fallback metadata rather than an editorial decision. The
+    # stable final segment of the required rule ID is a sufficient default.
+    resolved_message_key = message_key or rule_id.rsplit(".", maxsplit=1)[-1]
+
     return RuleOverrideDraft(
         rule_id=rule_id,
         family=family,
         description=description,
-        message_key=message_key,
+        message_key=resolved_message_key,
         severity=severity,
         emits_signal=emits_signal or None,
         disabled=disabled,
@@ -91,8 +102,12 @@ class _RuleRow:
 
     rule_id: str
     family: str
+    family_label: str
+    title: str
+    summary: str
     description: str
     severity: int
+    severity_label: str
     disabled: bool
     edit_url: str
     override_id: str | None
@@ -134,33 +149,80 @@ def _rule_rows(
 
     overridden = {override.rule_id for override in overrides}
     rows = [
-        _RuleRow(
+        _rule_row(
             rule_id=override.rule_id,
             family=override.family,
+            message_key=override.message_key,
             description=override.description,
             severity=override.severity,
             disabled=override.disabled,
             edit_url=f"/admin/rules/{override.id}/edit?language={language}",
             override_id=str(override.id),
             updated_ts=override.updated_ts,
+            language=language,
         )
         for override in overrides
     ]
     rows.extend(
-        _RuleRow(
+        _rule_row(
             rule_id=rule.id,
             family=rule.family,
+            message_key=rule.message_key,
             description=rule.desc,
             severity=rule.severity,
             disabled=False,
             edit_url=f"/admin/rules/baseline/{rule.id}/edit?language={language}",
             override_id=None,
             updated_ts=None,
+            language=language,
         )
         for rule in sorted(baseline, key=lambda rule: rule.id)
         if rule.id not in overridden
     )
     return rows
+
+
+def _rule_row(
+    *,
+    rule_id: str,
+    family: str,
+    message_key: str,
+    description: str,
+    severity: int,
+    disabled: bool,
+    edit_url: str,
+    override_id: str | None,
+    updated_ts: datetime | None,
+    language: str,
+) -> _RuleRow:
+    """Add localized presentation without altering any stored rule value."""
+
+    family_copy = FAMILY_PRESENTATION[language].get(family)
+    family_label = family_copy["label"] if family_copy else _humanize_key(family)
+    summary = family_copy["summary"] if family_copy else description
+    title = MESSAGE_LABELS[language].get(message_key, family_label)
+    severity_copy = SEVERITY_PRESENTATION[language].get(severity)
+    severity_label = severity_copy["label"] if severity_copy else str(severity)
+    return _RuleRow(
+        rule_id=rule_id,
+        family=family,
+        family_label=family_label,
+        title=title,
+        summary=summary,
+        description=description,
+        severity=severity,
+        severity_label=severity_label,
+        disabled=disabled,
+        edit_url=edit_url,
+        override_id=override_id,
+        updated_ts=updated_ts,
+    )
+
+
+def _humanize_key(value: str) -> str:
+    """Readable fallback for custom taxonomy keys not known by this release."""
+
+    return value.replace("_", " ").strip().capitalize()
 
 
 @router.get("/admin/rules", response_class=HTMLResponse, include_in_schema=False)
@@ -394,6 +456,8 @@ def _form_response(
                 override_id=resolved_id,
                 patterns=_patterns_for_form(override),
                 pattern_languages=PATTERN_LANGUAGES,
+                family_options=_family_options(language, override),
+                severity_options=SEVERITY_PRESENTATION[language],
                 error=error,
                 sample=sample,
                 preview_ran=preview_ran,
@@ -402,6 +466,27 @@ def _form_response(
             status_code=status_code,
         )
     )
+
+
+def _family_options(
+    language: str,
+    override: RuleOverride | RuleOverrideDraft | None,
+) -> list[tuple[str, dict[str, str]]]:
+    """Known taxonomy choices plus an existing custom value, if necessary."""
+
+    options = list(FAMILY_PRESENTATION[language].items())
+    current = getattr(override, "family", None)
+    if current and current not in FAMILY_PRESENTATION[language]:
+        options.append(
+            (
+                current,
+                {
+                    "label": _humanize_key(current),
+                    "summary": getattr(override, "description", ""),
+                },
+            )
+        )
+    return options
 
 
 def _patterns_for_form(

@@ -37,6 +37,7 @@ dev = [
     "aiosqlite>=0.20,<1",
     "pytest>=8.3,<10",
     "pytest-asyncio>=0.25,<2",
+    "pytest-cov>=6,<8",
     "ruff>=0.11,<1",
 ]
 
@@ -47,6 +48,24 @@ include = ["app*"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+
+# Coverage is not in the default pytest run: `pytest -q` stays the fast local
+# loop. CI opts in explicitly with `--cov`, which picks up the config below.
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# A floor, not a target. Raise it when coverage rises; never lower it silently
+# to make a red build green — that is the signal doing its job.
+fail_under = 84
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.$",
+]
 
 [tool.ruff]
 target-version = "py311"
@@ -59,6 +78,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 [tool.ruff.lint.per-file-ignores]
 # Translations carry long lines and Cyrillic glyphs that look like Latin ones.
 "app/bot/texts.py" = ["E501", "RUF001"]
+"app/web/copy.py" = ["E501", "RUF001"]
 "app/web/routes.py" = ["E501", "RUF001"]
 "app/web/editorial_copy.py" = ["E501", "RUF001"]
 "app/engine/format.py" = ["RUF001"]

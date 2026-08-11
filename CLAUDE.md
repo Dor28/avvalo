@@ -1,10 +1,17 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Operating manual for coding agents in this repository. [AGENTS.md](AGENTS.md) restates the
+non-negotiables for agents that do not load this file automatically — change both together.
 
 ## What this is
 
-Avvalo — a "check before you commit" assistant for Uzbekistan. Users send a suspicious message, screenshot, link, QR code, payment request, offer, or document (Uzbek Latin/Cyrillic or Russian) through Telegram or an anonymous web page. One shared engine explains red flags and next actions. The next product capability, Avvalo Verify, may add typed source facts only after the validation gate in `docs/VERIFY_VALIDATION.md`. Two rules shape the whole codebase: verify the **situation, never the person**, and never issue "safe"/"scam" **verdicts**.
+Avvalo — a "check before you commit" assistant for Uzbekistan. Users send a suspicious message,
+screenshot, link, QR code, payment request, offer, or document (Uzbek Latin/Cyrillic or Russian)
+through Telegram or an anonymous web page. One shared engine explains red flags and next actions.
+
+Two rules shape the whole codebase: verify the **situation, never the person**, and never issue
+"safe"/"scam" **verdicts**. The next capability, Avvalo Verify, may add typed source facts only
+after the validation gate in [docs/VERIFY_VALIDATION.md](docs/VERIFY_VALIDATION.md).
 
 ## Commands
 
@@ -13,7 +20,12 @@ pip install -e ".[dev]"                 # Python 3.11+
 pytest -q                               # full suite — no services needed (in-memory SQLite)
 pytest tests/test_engine_pipeline.py -q # one file
 pytest -q -k "name_substring"           # one test
+pytest -q --cov                         # + coverage; fails under the floor in pyproject.toml
 ruff check .                            # lint: py311, line length 100, E/F/I/UP/B/SIM/RUF
+
+# Run the same suite against real Postgres, as CI does. Only this exercises the
+# shipped ARRAY(Text) columns; SQLite falls back to JSON (RULE_IDS_TYPE).
+TEST_DATABASE_URL=postgresql+asyncpg://avvalo:avvalo@localhost:5432/avvalo pytest -q
 
 docker compose up --build               # full local stack: Postgres 16 + migrations + app
 docker compose --profile local-llm up -d ollama   # optional offline LLM
@@ -21,40 +33,78 @@ python -m app.main --check              # one-shot config + DB connectivity chec
 alembic upgrade head                    # apply migrations (compose does this on boot)
 ```
 
-**Pushing to `main` deploys to production.** `.github/workflows/deploy.yml` gates on `pytest` only (ruff is non-blocking), builds an image to GHCR, and deploys it to the Hetzner VM on every push to `main`. Work on a branch unless the change should ship.
+**Pushing to `main` deploys to production.** `.github/workflows/deploy.yml` runs two gating jobs — `test` (`ruff check .`, the `S`-rule security lint, and `pytest -q --cov` on SQLite) and `test-postgres` (Alembic `upgrade head`, a `downgrade base` + reapply round trip, then the suite against Postgres 16). Every step is blocking, so a lint failure or a coverage drop below the floor blocks the deploy. Only after both jobs pass does it build an image to GHCR and deploy it to the Hetzner VM. Work on a branch unless the change should ship.
 
-All configuration comes from environment variables via [app/config.py](app/config.py) (pydantic-settings, reads `.env`); [.env.example](.env.example) documents every knob. Never hardcode a tunable — add it to `Settings` and `.env.example`.
+All configuration comes from environment variables via [app/config.py](app/config.py)
+(pydantic-settings, reads `.env`); [.env.example](.env.example) documents every knob. Never
+hardcode a tunable — add it to `Settings` and `.env.example`.
+
+## Where things live
+
+Start here instead of searching; every entry is the file that owns the behavior.
+
+| To change… | Start at |
+|---|---|
+| a pipeline stage | [app/engine/pipeline.py](app/engine/pipeline.py) — `run_check` → `_run_stages` |
+| what counts as a red flag | `rules/*.yaml` + [app/engine/rules/engine.py](app/engine/rules/engine.py) |
+| URL / domain classification | [app/engine/url.py](app/engine/url.py) + `rules/shared/official_domains.yaml` |
+| the URL-reputation feed | `app/engine/url_reputation/` |
+| QR decoding | `app/engine/qr/` |
+| OCR behavior | `app/engine/ocr/` (one module per provider, `base.py` is the contract) |
+| the model prompt | `prompts/system_safety.txt`, `prompts/check.txt`, [app/engine/llm/prompt.py](app/engine/llm/prompt.py) |
+| what the safety validator bans | [app/engine/validate.py](app/engine/validate.py) |
+| knowledge cards and retrieval | `knowledge/cards/cards.yaml` + `app/engine/knowledge/` |
+| answer wording and layout | [app/engine/format.py](app/engine/format.py) |
+| Telegram chrome (buttons, prompts) | [app/bot/texts.py](app/bot/texts.py), [app/bot/handlers.py](app/bot/handlers.py) |
+| web pages | [app/web/routes.py](app/web/routes.py) (routing) + `app/web/copy.py` (wording) + `templates/` |
+| operator override editors | `app/web/{rules,knowledge}_admin.py` + `app/{rules,knowledge}_store/` |
+| editorial case posts | [app/web/editorial.py](app/web/editorial.py) + `app/content/` |
+| the database schema | [app/data/models.py](app/data/models.py) + a new `alembic/versions/` migration |
+| persistence helpers | [app/data/repo.py](app/data/repo.py) |
+| metrics, events, alerts | `app/obs/` |
+| a config knob | [app/config.py](app/config.py) + [.env.example](.env.example) |
+
+Tests are named for the behavior they guard (`tests/test_<behavior>.py`), so
+`pytest -q -k <topic>` is usually faster than reading them. The end-to-end golden fixtures are
+`tests/fixtures/golden/checks.json`.
 
 ## Architecture
 
-One process ([app/main.py](app/main.py)) runs everything: the aiogram Telegram bot (polling), the FastAPI anonymous web channel (when `WEB_ENABLED=true`), and the retention scheduler, sharing one async SQLAlchemy engine.
+One process ([app/main.py](app/main.py)) runs everything: the aiogram Telegram bot (polling), the
+FastAPI anonymous web channel (when `WEB_ENABLED=true`), and the retention scheduler, sharing one
+async SQLAlchemy engine.
 
-**One public product, one checker — and no product-face concept.** There is a single consumer
-checker with a single rule pack (`rules/`), prompt (`prompts/check.txt`), and daily limit
-(`DAILY_CHECK_LIMIT`). Seller, payment-screenshot, courier, and refund situations all use it.
-The former `merchants` face, scam library, story-capture flow, and Scam Pulse are retired and must
-not be restored from git history.
+**One public product, one checker — and no product-face concept.** A single consumer checker with
+one rule pack (`rules/`), one prompt (`prompts/check.txt`), one daily limit (`DAILY_CHECK_LIMIT`);
+seller, payment-screenshot, courier, and refund situations all use it. The former `merchants` face,
+scam library, story-capture flow, and Scam Pulse are retired and must not be restored from git
+history.
 
-The `face` discriminator that used to select between products is **gone** — from the code and from
-the database (migration `0007_drop_face`). Do not reintroduce it, and do not add a "mode" or
-"product" parameter in its place. Two names survive and mean something different:
+The `face` discriminator is **gone** from both the code and the database (migration
+`0007_drop_face`). Never reintroduce it, under that name or as a "mode"/"product" parameter. Two
+surviving names mean something else:
 
 - `RuleHit.family` / `rules/families.yaml` — the **scam-family taxonomy** (`credential_theft`,
-  `urgency_secrecy`, …). Nothing to do with products.
-- `fs.` / `sg.` rule-ID prefixes and `family.*` knowledge-card IDs — frozen opaque identifiers kept
-  stable because they are persisted in `check_event.rule_ids` / `knowledge_card_ids` and matched by
-  the leak filter in `validate.py`. Never renamed; never parsed for meaning.
+  `urgency_secrecy`, …), unrelated to products.
+- `fs.` / `sg.` rule-ID prefixes and `family.*` card IDs — frozen opaque identifiers, persisted in
+  `check_event.rule_ids` / `knowledge_card_ids` and matched by the leak filter in `validate.py`.
+  Never renamed, never parsed for meaning.
 
 Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` and call
 `run_check()` — new product behavior belongs in the engine, not in a channel handler.
 
-**The pipeline** ([app/engine/pipeline.py](app/engine/pipeline.py), `run_check`) is the core; every check from every channel flows through the same stages:
+**The pipeline** ([app/engine/pipeline.py](app/engine/pipeline.py)) is the core; every check from
+every channel flows through the same stages:
 
 1. Rate limit per (user, day); statuses that never reached the model refund the slot. The web
    channel's per-IP guard shares `rate_limit` under `scope="web_ip"`.
 2. Content: text as-is, or image → OCR provider with a confidence gate (`low_ocr` below threshold).
 3. Language resolution — the reply language follows the content, not the UI.
-4. Deterministic rules (`app/engine/rules/`): keyword packs in `rules/*.yaml` (per-script keyword groups, matched on raw text) plus regex extractors → `RuleHit`s and `Signal`s. `rules/shared/` holds reference data and is deliberately *not* loaded as a rule pack: the URL-reputation feed, and `official_domains.yaml` — the founder-reviewed catalog of impersonated organizations, shorteners, and public suffixes that [app/engine/url.py](app/engine/url.py) classifies against.
+4. Deterministic rules (`app/engine/rules/`): keyword packs in `rules/*.yaml` (per-script groups,
+   matched on raw text) plus regex extractors → `RuleHit`s and `Signal`s. `rules/shared/` is
+   reference data, deliberately *not* loaded as a rule pack: the URL-reputation feed, and
+   `official_domains.yaml`, the founder-reviewed catalog of impersonated organizations,
+   shorteners, and public suffixes that `app/engine/url.py` classifies against.
 5. `minimize()` builds two ephemeral views: strict identifier minimization for knowledge
    retrieval/routing, and an answer-prompt view that retains submitted names and full URLs while
    still tokenizing phones, cards, credentials, codes, passports, addresses, and other protected
@@ -62,37 +112,54 @@ Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` an
 6. LLM call in JSON-schema mode via an OpenAI-compatible provider; only the answer model receives
    the name/URL-preserving view. The prompt is `prompts/system_safety.txt` + `prompts/check.txt`
    with rule hits injected as grounded facts.
-7. Deterministic safety validator ([app/engine/validate.py](app/engine/validate.py)): bans verdict words in ru/uz_latn/Cyrillic-Uzbek/English, strips contacts/links/card numbers/OTPs, caps list lengths; one corrective retry, then `safety_fallback`.
+7. Deterministic safety validator ([app/engine/validate.py](app/engine/validate.py)): bans verdict
+   words in ru/uz_latn/Cyrillic-Uzbek/English, strips contacts/links/card numbers/OTPs, caps list
+   lengths; one corrective retry, then `safety_fallback`.
 8. `format_result` renders the reply in the resolved language.
 
-Boundary contracts are Pydantic models in [app/engine/types.py](app/engine/types.py) (`CheckInput`, `CheckResult`, `CheckStatus`, `DraftOutput`); extend those instead of passing loose dicts. New statuses must also be added to the allow-set in [app/data/repo.py](app/data/repo.py).
+Boundary contracts are Pydantic models in [app/engine/types.py](app/engine/types.py) (`CheckInput`,
+`CheckResult`, `CheckStatus`, `DraftOutput`); extend those instead of passing loose dicts. New
+statuses must also be added to the allow-set in [app/data/repo.py](app/data/repo.py).
 
 **Detection assets are database-backed with a YAML fallback.** The repo is public, so new keyword
 and card work lives in `rule_override` / `knowledge_card_override` (`app/rules_store/`,
 `app/knowledge_store/`) rather than in git; `rules/*.yaml` and `knowledge/cards/` are the shipped
-fallback baseline. Overrides merge onto the baseline **by ID**, are served from process-level
-snapshots so `load_rule_pack()` / `KnowledgeStore.load()` stay synchronous, and fail *safe* — an
-unreachable database falls back to the shipped YAML, never to an empty pack. Operators edit them at
-`/admin/rules` and `/admin/cards` (needs `ADMIN_ACCESS_KEY`), each with a dry-run that calls the real
-matcher / real retrieval so a preview cannot drift from production.
+baseline. Overrides merge onto the baseline **by ID**, are served from process-level snapshots so
+`load_rule_pack()` / `KnowledgeStore.load()` stay synchronous, and fail *safe* — an unreachable
+database falls back to the shipped YAML, never to an empty pack. Operators edit them at
+`/admin/rules` and `/admin/cards` (needs `ADMIN_ACCESS_KEY`), each with a dry-run that calls the
+real matcher / real retrieval so a preview cannot drift from production.
 
-**Providers are injectable and env-selected.** LLM = any OpenAI-compatible host (`LLM_BASE_URL`/`LLM_MODEL`; OpenRouter Qwen in prod, Ollama locally). OCR = `OCR_PROVIDER` ∈ gcv | tesseract | paddleocr | local_stub behind `app/engine/ocr/base.py`. Tests pass fake providers directly into `run_check(..., llm_provider=, ocr_provider=)` — keep new external dependencies injectable the same way.
+**Providers are injectable and env-selected.** LLM = any OpenAI-compatible host
+(`LLM_BASE_URL`/`LLM_MODEL`; OpenRouter Qwen in prod, Ollama locally). OCR = `OCR_PROVIDER` ∈
+paddleocr | tesseract | gcv | local_stub behind `app/engine/ocr/base.py`; prod runs local PaddleOCR,
+whose PP-OCRv5 weights are baked into the image by `app/engine/ocr/warmup.py` because the container
+is read-only and must never download at runtime. Tests pass fake providers directly into
+`run_check(..., llm_provider=, ocr_provider=)` — keep new external dependencies injectable the
+same way.
 
-**Data layer:** async SQLAlchemy + asyncpg on PostgreSQL 16; Alembic owns the schema. Functions in `app/data/repo.py` take a caller-provided `AsyncSession` and flush; the caller owns commit/rollback. Unit tests run on in-memory aiosqlite (see `RULE_IDS_TYPE` variant pattern in models.py for Postgres-only column types).
+**Data layer:** async SQLAlchemy + asyncpg on PostgreSQL 16; Alembic owns the schema. Functions in
+`app/data/repo.py` take a caller-provided `AsyncSession` and flush; the caller owns
+commit/rollback. Unit tests run on in-memory aiosqlite (see the `RULE_IDS_TYPE` variant pattern in
+`models.py` for Postgres-only column types).
 
 ## Privacy invariants (do not weaken)
 
-The legal posture depends on these; several are enforced by tests that will fail the build:
+The legal posture depends on these; several are enforced by tests that will fail the build.
 
-- **Submitted content is never persisted or logged.** `raw_text` / `image_bytes` / `caption` on `CheckInput` are ephemeral. `check_event` rows and `log_event()` output carry only IDs, enums, rule IDs, and metrics.
+- **Submitted content is never persisted or logged.** `raw_text` / `image_bytes` / `caption` on
+  `CheckInput` are ephemeral. `check_event` rows and `log_event()` output carry only IDs, enums,
+  rule IDs, and metrics.
 - **Active product writes have no content columns.** `tests/test_schema_privacy.py` rejects new
   content-like persistence. The existing `story_submission.minimized_text` column is legacy
   stewardship only: no new writes or product reads, while `/delete_my_data` and retention continue
   to cover old rows until a separately authorized purge removes the table.
 - **`CheckInput` carries no product discriminator.** `tests/test_types_contract.py` asserts `face`
   stays absent, so the retired concept can't creep back through the boundary type.
-- **Users are pseudonymous:** `user_key = HMAC_SHA256(APP_HMAC_SECRET, telegram_id)[:32]` ([app/privacy/user_key.py](app/privacy/user_key.py)); raw Telegram IDs are never stored or logged.
-- Retention ([app/data/retention.py](app/data/retention.py)) prunes aged rows; `/delete_my_data` is audited in `deletion_log`.
+- **Users are pseudonymous:** `user_key = HMAC_SHA256(APP_HMAC_SECRET, telegram_id)[:32]`
+  ([app/privacy/user_key.py](app/privacy/user_key.py)); raw Telegram IDs are never stored or logged.
+- Retention ([app/data/retention.py](app/data/retention.py)) prunes aged rows; `/delete_my_data` is
+  audited in `deletion_log`.
 - `tests/test_secret_scan.py` scans the tree for committed secrets.
 
 ## Conventions
@@ -104,7 +171,22 @@ The legal posture depends on these; several are enforced by tests that will fail
   (§5.1, §9, …) — keep those references in sync.
 - Test modules are named for current behavior and product boundaries, not historical milestones;
   the active golden end-to-end fixtures live in `tests/fixtures/golden/checks.json`.
-- **Every user-facing string exists in both languages** (`uz_latn`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. Uzbek replies are Latin-script only. Cyrillic-Uzbek *input* is still supported: `app/engine/language.py` detects it and resolves it to `uz_latn`, the `uz_cyrl` keyword groups in `rules/` and `knowledge/` still match it, and `app/engine/validate.py` still bans Cyrillic verdict words. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
+- **A golden fixture is executed, not just declared.** `tests/test_golden_e2e.py` runs every case
+  through `run_check()`: `expected_rule_families` must fire, `expected_knowledge_card_ids` must be
+  retrieved, and no `must_not_contain` phrase may reach the user in an `ok` reply — asserted by
+  driving an adversarial model that tries to emit each one. `must_include` stays English
+  reviewer-facing rationale (replies are `uz_latn`/`ru`, so it can never be a substring match);
+  `expected_knowledge_card_ids` is its checkable form. Adding a case therefore buys reply-content
+  cover, so add the hardest Phase 2 material here.
+- **Every user-facing string exists in both languages** (`uz_latn`, `ru`): `app/bot/texts.py`,
+  `app/web/copy.py`, `app/engine/format.py`. Uzbek replies are Latin-script only. Cyrillic-Uzbek
+  *input* is still supported: `app/engine/language.py` resolves it to `uz_latn`, the `uz_cyrl`
+  keyword groups in `rules/` and `knowledge/` still match it, and `app/engine/validate.py` still
+  bans Cyrillic verdict words. These files carry E501/RUF001 lint exemptions for long lines and
+  Cyrillic lookalike glyphs — don't "fix" those.
 - Async end-to-end; pytest runs with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed).
-- Style follows ruff config in [pyproject.toml](pyproject.toml): 100-char lines, import sorting (I), modern syntax (UP). Module docstrings state purpose and spec section; internal helpers use frozen dataclasses, boundary types use Pydantic.
-- `.claude/worktrees/` can hold stale checkouts with pre-rename names (family_shield/seller_guard, and the retired `face` plumbing) — exclude it when searching the repo.
+- Style follows the ruff config in [pyproject.toml](pyproject.toml): 100-char lines, import
+  sorting (I), modern syntax (UP). Module docstrings state purpose and spec section; internal
+  helpers use frozen dataclasses, boundary types use Pydantic.
+- `requirements*.lock` are marked `-diff` in `.gitattributes`: a dependency bump shows as one line
+  instead of ~400 KB of hashes. Read a pinned version with `git show HEAD:requirements.lock`.
