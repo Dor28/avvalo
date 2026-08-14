@@ -253,6 +253,20 @@ def test_ocr_models_are_baked_into_the_image() -> None:
     assert dockerfile.index("pip install --require-hashes") < dockerfile.index("warmup()")
 
 
+def test_runtime_image_uses_headless_opencv() -> None:
+    """rapidocr imports cv2, and opencv-python links X11 that slim lacks."""
+
+    runtime_lock = (REPO_ROOT / "requirements.lock").read_text(encoding="utf-8")
+    dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert "\nopencv-python-headless==" in runtime_lock
+    # Both wheels install the same `cv2`, so the X11-linked one is kept out by a
+    # marker that is never true rather than by being absent from the closure.
+    assert "sys_platform == 'never'" in runtime_lock
+    # ...which only holds if pip installs the lock instead of re-resolving it.
+    assert "--require-hashes --no-deps" in dockerfile
+
+
 def test_runtime_image_excludes_the_paddle_dependency_tree() -> None:
     """paddlepaddle and paddlex dominate image size and memory; keep them out."""
 

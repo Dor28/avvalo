@@ -11,7 +11,11 @@ RUN groupadd --system avvalo \
 
 COPY pyproject.toml README.md requirements.lock ./
 COPY app ./app
-RUN python -m pip install --require-hashes -r requirements.lock \
+# --no-deps: requirements.lock is the complete resolved closure, so pip installs
+# exactly it rather than re-resolving from each wheel's metadata. That is what
+# lets opencv-python-headless stand in for the X11-linked opencv-python that
+# rapidocr names in its own requirements.
+RUN python -m pip install --require-hashes --no-deps -r requirements.lock \
     && python -m pip install --no-deps --no-build-isolation .
 
 # Download the OCR models into the image through the provider's own warmup, so
