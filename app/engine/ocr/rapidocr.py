@@ -132,7 +132,10 @@ class RapidOCRProvider:
             "Det.engine_type": EngineType.ONNXRUNTIME,
             # One detector serves every script: detection finds text boxes and
             # is script-agnostic, only recognition needs the per-script model.
-            "Det.lang_type": LangDet.MULTI,
+            # PP-OCRv5 publishes exactly one — ch_PP-OCRv5_det_{mobile,server} —
+            # so `ch` here is the general detector, not a language choice, and
+            # any other value fails model lookup with "Invalid OCR configuration".
+            "Det.lang_type": LangDet.CH,
             "Det.model_type": ModelType.MOBILE,
             "Det.ocr_version": OCRVersion.PPOCRV5,
             "Rec.engine_type": EngineType.ONNXRUNTIME,
