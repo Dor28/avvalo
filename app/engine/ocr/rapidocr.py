@@ -21,6 +21,7 @@ from app.engine.ocr.base import (
     OCRInvalidImageError,
     OCRProviderError,
     OCRResult,
+    script_match_score,
     strip_image_metadata,
 )
 
@@ -31,18 +32,20 @@ from app.engine.ocr.base import (
 # Ukrainian/English only) because Cyrillic-Uzbek input is still supported at
 # intake and needs ў/қ/ғ/ҳ in the character set.
 _DEFAULT_SCRIPTS: tuple[str, ...] = ("latin", "cyrillic")
-_GOOD_ENOUGH_CONFIDENCE = 0.8
 
 
 class RapidOCRProvider:
     """Run PP-OCRv5 models locally through ONNX Runtime.
 
-    Tries each configured script and keeps the highest-confidence result,
-    stopping early once one is clearly good enough. Engines are built once and
-    reused; :meth:`warmup` loads them at boot so no user pays the first-load
-    cost. ``model_root_dir`` overrides where weights are read from — the
-    default is the ``rapidocr`` package directory, which the image populates at
-    build time.
+    Runs every configured script and keeps the best result by
+    :func:`_script_score`. Both always run: which script a screenshot is in is
+    not known before OCR, and the pipeline resolves language from the OCR text
+    afterwards, so there is nothing earlier to select on.
+
+    Engines are built once and reused; :meth:`warmup` loads them at boot so no
+    user pays the first-load cost. ``model_root_dir`` overrides where weights
+    are read from — the default is the ``rapidocr`` package directory, which
+    the image populates at build time.
     """
 
     def __init__(
@@ -97,6 +100,7 @@ class RapidOCRProvider:
             ) from exc
 
         best: OCRResult | None = None
+        best_score = -1.0
         for script in self.scripts:
             try:
                 candidate = self._run_engine(script, array)
@@ -106,10 +110,9 @@ class RapidOCRProvider:
                     error_code=type(exc).__name__,
                 ) from exc
 
-            if best is None or candidate.confidence > best.confidence:
-                best = candidate
-            if best.text and best.confidence >= _GOOD_ENOUGH_CONFIDENCE:
-                break
+            score = script_match_score(candidate)
+            if score > best_score:
+                best, best_score = candidate, score
 
         return best or OCRResult(text="", confidence=0.0)
 

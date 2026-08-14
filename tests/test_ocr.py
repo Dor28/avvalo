@@ -21,7 +21,12 @@ from app.engine.ocr import (
     reset_provider_cache,
     warmup_provider,
 )
-from app.engine.ocr.base import MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS, strip_image_metadata
+from app.engine.ocr.base import (
+    MAX_IMAGE_DIMENSION,
+    MAX_IMAGE_PIXELS,
+    script_match_score,
+    strip_image_metadata,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -180,6 +185,56 @@ def test_provider_cache_keys_on_configuration() -> None:
 
     assert rapid is not stub
     assert isinstance(stub, LocalStubOCRProvider)
+
+
+def _png_bytes() -> bytes:
+    payload = BytesIO()
+    Image.new("RGB", (40, 20), "white").save(payload, format="PNG")
+    return payload.getvalue()
+
+
+async def test_rapidocr_prefers_the_script_that_recovered_more_text(monkeypatch) -> None:
+    """A Latin model reading Cyrillic returns short, *confident* nonsense.
+
+    Measured: on a rendered Russian screenshot the Latin model reported 0.90 on
+    14 characters of garbage, so picking on confidence alone silently returned
+    it and the Cyrillic model never ran.
+    """
+
+    provider = RapidOCRProvider()
+    attempts = {
+        "latin": OCRResult(text="Baa\n15\nMHyT", confidence=0.90),
+        "cyrillic": OCRResult(
+            text="Ваша карта заблокирована.\nСрочно подтвердите код 4821",
+            confidence=0.88,
+        ),
+    }
+    monkeypatch.setattr(provider, "_run_engine", lambda script, image: attempts[script])
+
+    result = await provider.extract(_png_bytes())
+
+    assert result.text.startswith("Ваша")
+    assert result.confidence == 0.88
+
+
+async def test_rapidocr_still_prefers_higher_confidence_at_equal_length(monkeypatch) -> None:
+    provider = RapidOCRProvider()
+    attempts = {
+        "latin": OCRResult(text="Kartani tasdiqlang", confidence=0.95),
+        "cyrillic": OCRResult(text="Kaptahn tacdnqlang", confidence=0.61),
+    }
+    monkeypatch.setattr(provider, "_run_engine", lambda script, image: attempts[script])
+
+    result = await provider.extract(_png_bytes())
+
+    assert result.text == "Kartani tasdiqlang"
+
+
+def test_script_match_score_weighs_recovered_characters() -> None:
+    confident_garbage = OCRResult(text="Baa 15", confidence=0.99)
+    full_read = OCRResult(text="Ваша карта заблокирована сегодня", confidence=0.70)
+
+    assert script_match_score(full_read) > script_match_score(confident_garbage)
 
 
 def test_rapidocr_covers_both_scripts_avvalo_accepts() -> None:

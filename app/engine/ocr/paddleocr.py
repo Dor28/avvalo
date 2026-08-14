@@ -13,6 +13,7 @@ from app.engine.ocr.base import (
     OCRInvalidImageError,
     OCRProviderError,
     OCRResult,
+    script_match_score,
     strip_image_metadata,
 )
 
@@ -23,14 +24,14 @@ from app.engine.ocr.base import (
 # PaddleOCR has no separate uz-Cyrillic model. Benchmark both against real
 # screenshots before relying on this order.
 _DEFAULT_LANGS: tuple[str, ...] = ("uz", "ru")
-_GOOD_ENOUGH_CONFIDENCE = 0.8
 
 
 class PaddleOCRProvider:
     """Run local PaddleOCR on metadata-stripped images.
 
-    Tries each configured language and keeps the highest-confidence result,
-    stopping early once one is clearly good enough. Model weights download
+    Runs every configured language and keeps the best result by
+    ``script_match_score``; see that helper for why confidence alone cannot
+    choose between scripts. Model weights download
     from Hugging Face on first use per language (not from PaddleOCR's Chinese
     BOS mirror, which is the fallback only) — :meth:`warmup` at boot avoids
     that latency hitting a real user's first check.
@@ -75,6 +76,7 @@ class PaddleOCRProvider:
             ) from exc
 
         best: OCRResult | None = None
+        best_score = -1.0
         for lang in self.langs:
             try:
                 candidate = self._run_engine(lang, array)
@@ -84,13 +86,11 @@ class PaddleOCRProvider:
                     error_code=type(exc).__name__,
                 ) from exc
 
-            if best is None or candidate.confidence > best.confidence:
-                best = candidate
-            if best.text and best.confidence >= _GOOD_ENOUGH_CONFIDENCE:
-                break
+            score = script_match_score(candidate)
+            if score > best_score:
+                best, best_score = candidate, score
 
-        assert best is not None
-        return best
+        return best or OCRResult(text="", confidence=0.0)
 
     def _engine(self, lang: str) -> Any:
         engine = self._engines.get(lang)
