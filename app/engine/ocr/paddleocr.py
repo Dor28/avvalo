@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from io import BytesIO
 from typing import Any
 
@@ -31,19 +32,36 @@ class PaddleOCRProvider:
     Tries each configured language and keeps the highest-confidence result,
     stopping early once one is clearly good enough. Model weights download
     from Hugging Face on first use per language (not from PaddleOCR's Chinese
-    BOS mirror, which is the fallback only) — build-time warmup avoids that
-    latency hitting a real user's first check.
+    BOS mirror, which is the fallback only) — :meth:`warmup` at boot avoids
+    that latency hitting a real user's first check.
+
+    ``paddlex`` also creates ``$HOME/.paddlex`` at *import* time, so the
+    process needs a writable home directory even before any model is loaded.
+    The production container mounts a volume there because its root filesystem
+    is read-only.
     """
 
     def __init__(self, *, langs: tuple[str, ...] = _DEFAULT_LANGS) -> None:
         self.langs = langs
         self._engines: dict[str, Any] = {}
+        # Engines are built in worker threads and shared across concurrent
+        # checks; the lock keeps two callers from loading the same model twice.
+        self._engine_lock = threading.Lock()
 
     async def extract(self, image_bytes: bytes) -> OCRResult:
         """Extract text with local PaddleOCR in a worker thread."""
 
         stripped = strip_image_metadata(image_bytes)
         return await asyncio.to_thread(self._extract_sync, stripped)
+
+    async def warmup(self) -> None:
+        """Load every configured language model before the first check."""
+
+        await asyncio.to_thread(self._load_engines)
+
+    def _load_engines(self) -> None:
+        for lang in self.langs:
+            self._engine(lang)
 
     def _extract_sync(self, image_bytes: bytes) -> OCRResult:
         try:
@@ -74,13 +92,22 @@ class PaddleOCRProvider:
         assert best is not None
         return best
 
-    def _run_engine(self, lang: str, image: Any) -> OCRResult:
+    def _engine(self, lang: str) -> Any:
         engine = self._engines.get(lang)
-        if engine is None:
-            from paddleocr import PaddleOCR
+        if engine is not None:
+            return engine
 
-            engine = PaddleOCR(lang=lang, use_textline_orientation=True)
-            self._engines[lang] = engine
+        with self._engine_lock:
+            engine = self._engines.get(lang)
+            if engine is None:
+                from paddleocr import PaddleOCR
+
+                engine = PaddleOCR(lang=lang, use_textline_orientation=True)
+                self._engines[lang] = engine
+            return engine
+
+    def _run_engine(self, lang: str, image: Any) -> OCRResult:
+        engine = self._engine(lang)
 
         texts: list[str] = []
         scores: list[float] = []

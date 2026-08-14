@@ -15,12 +15,14 @@ from app.data.db import (
     create_session_factory,
 )
 from app.data.retention import RetentionPolicy, start_retention_scheduler
+from app.engine.ocr import warmup_provider
 from app.engine.url_reputation import install_url_reputation_job
 from app.knowledge_store import install_knowledge_refresh_job
 from app.obs.alerts import (
     install_knowledge_availability_alert_job,
     install_operator_alerts,
 )
+from app.obs.events import log_error
 from app.obs.metrics import log_knowledge_inventory
 from app.rules_store import install_rule_pack_refresh_job
 from app.web.app import create_app
@@ -53,6 +55,7 @@ async def run(*, check_only: bool = False) -> None:
         install_knowledge_availability_alert_job(scheduler, session_factory, settings)
         install_rule_pack_refresh_job(scheduler, session_factory, settings)
         install_knowledge_refresh_job(scheduler, session_factory, settings)
+        warmup = asyncio.ensure_future(_warm_ocr_provider(settings))
         try:
             runners = []
             if settings.web_enabled:
@@ -89,9 +92,30 @@ async def run(*, check_only: bool = False) -> None:
 
             await _run_service_runners(runners)
         finally:
+            warmup.cancel()
+            await asyncio.gather(warmup, return_exceptions=True)
             scheduler.shutdown(wait=False)
     finally:
         await engine.dispose()
+
+
+async def _warm_ocr_provider(settings: Settings) -> None:
+    """Load OCR models at boot so the first image check does not pay for it.
+
+    Runs alongside the service runners rather than blocking startup: the bot
+    and web channel answer text checks while models load. A failed warmup is
+    logged and left alone — the next image check reports the same provider
+    fault through the normal ``ocr_error`` path.
+    """
+
+    try:
+        await warmup_provider(settings)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:
+        log_error(stage="ocr", error_type=type(exc).__name__)
+    else:
+        LOGGER.info("OCR provider ready (%s)", settings.ocr_provider)
 
 
 def configured_bot_token(settings: Settings) -> str | None:

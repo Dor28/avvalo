@@ -81,6 +81,8 @@ services:
       # Google Cloud Vision service-account key, mounted read-only. The path here
       # must equal GOOGLE_APPLICATION_CREDENTIALS in .env. Omit if OCR is unused.
       - ./secrets/gcv.json:/run/secrets/gcv.json:ro
+      # No volume is needed for OCR: the default rapidocr provider reads model
+      # weights baked into the image at build time, so nothing writes to disk.
     restart: unless-stopped
     stop_grace_period: 20s
     init: true
