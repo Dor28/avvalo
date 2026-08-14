@@ -119,7 +119,8 @@ WEB_COPY = {
         "boundary_title": "Vaziyatni tekshiring, odamni emas",
         "boundary_body": (
             "Avvalo vaziyatni tahlil qiladi — odamga yoki tashkilotga baho bermaydi. "
-            "Oxirgi so‘z sizniki: rasmiy manbadan o‘zingiz tekshiring."
+            "Oxirgi so‘z sizniki: rasmiy manbadan o‘zingiz tekshiring. "
+            "Avvalo yo‘l ko‘rsatadi, kafolat bermaydi."
         ),
         "footer_note": "Shoshilmang. Avval tekshiring, keyin ishoning.",
         "result_ready": "Javob tayyor",
@@ -158,9 +159,9 @@ WEB_COPY = {
                 "Hujjat yoki so‘rov",
             ],
             "trust": [
-                "Vaziyatni tekshiradi — odamni emas",
-                "Hukm chiqarmaydi: qaror sizniki",
-                "Tavsiya beradi, kafolat bermaydi",
+                "Ko‘zdan qochadigan tafsilotni topamiz",
+                "Umumiy gap emas — aniq qadamlar",
+                "Nimani so‘rash va qayerdan tekshirishni aytamiz",
                 "Matn ham, rasm ham saqlanmaydi",
             ],
         },
@@ -206,7 +207,8 @@ WEB_COPY = {
         "boundary_title": "Проверяйте ситуацию, а не человека",
         "boundary_body": (
             "Avvalo разбирает ситуацию, а не выставляет оценку человеку или компании. "
-            "Последнее слово за вами: проверьте по официальному источнику."
+            "Последнее слово за вами: сверьтесь с официальным источником. "
+            "Avvalo подсказывает, но не гарантирует."
         ),
         "footer_note": "Не спешите. Сначала проверьте — потом доверяйте.",
         "result_ready": "Ответ готов",
@@ -245,9 +247,9 @@ WEB_COPY = {
                 "Документ или запрос",
             ],
             "trust": [
-                "Разбирает ситуацию, а не человека",
-                "Вердикта не выносит — решаете вы",
-                "Советует, но не гарантирует",
+                "Заметим то, что легко пропустить",
+                "Не общие советы, а конкретные шаги",
+                "Подскажем, что спросить и где проверить",
                 "Ни текст, ни фото не сохраняются",
             ],
         },

@@ -140,9 +140,11 @@ def test_landing_copy_is_simple_and_action_focused_in_both_languages() -> None:
 
 def test_checker_explains_advisory_limit_in_both_languages() -> None:
     client = TestClient(create_app())
+    # The advisory limit is stated once, in the boundary block at the foot of the
+    # page — not repeated beside the form where it only reads as self-protection.
     localized_limits = {
-        "uz_latn": "Tavsiya beradi, kafolat bermaydi",
-        "ru": "Советует, но не гарантирует",
+        "uz_latn": "kafolat bermaydi",
+        "ru": "но не гарантирует",
     }
 
     for language, limitation in localized_limits.items():
