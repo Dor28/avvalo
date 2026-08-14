@@ -72,11 +72,22 @@ def test_start_intro_is_short_and_explains_the_flow() -> None:
     intro = t("start_intro", DEFAULT_LANGUAGE)
     assert "O'zbekcha" in intro
     assert "Русский" in intro
-    assert "Xabar, rasm yoki vaziyatni yuboring" in intro
-    assert "Пришлите сообщение, изображение или опишите ситуацию" in intro
     assert "QR-kod" in intro
     assert "QR-код" in intro
-    assert len(intro) < 700
+    assert len(intro) < 600
+
+
+def test_no_verdict_promise_lives_in_the_consent_notice_not_the_intro() -> None:
+    # The intro sells what to send; the "we never label it" contract is part of
+    # what the user consents to, so it belongs on the consent screen.
+    intro = t("start_intro", DEFAULT_LANGUAGE)
+    assert "hukm" not in intro
+    assert "вердикт" not in intro
+
+    # Both channels' consent screens must carry it, in both languages.
+    for key in ("privacy_notice", "web_privacy_notice"):
+        assert "avvalo tekshiring" in t(key, "uz_latn")
+        assert "сначала проверьте" in t(key, "ru")
 
 
 def test_privacy_copy_matches_ephemeral_content_contract() -> None:

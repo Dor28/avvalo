@@ -16,32 +16,24 @@ LANGUAGE_LABELS = {
 
 _CHOOSE_LANGUAGE = "🌐 Tilni tanlang · Тилни танланг · Выберите язык"
 
+# Shown before the user picks a language, so it carries both languages at once.
+# Three beats each: the moment they are in, what to send, what they get back. What
+# Avvalo will *not* say belongs in the consent notice, not here.
+_START_INTRO = (
+    "\U0001f1fa\U0001f1ff O'zbekcha\n"
+    "Shubhali xabar keldimi? Javob berish yoki pul o'tkazishga shoshilmang.\n"
+    "Shu yerga tashlang: matn, skrinshot, havola yoki QR-kod — farqi yo'q.\n"
+    "Nimasi shubhali va buni qanday tekshirish mumkinligini aytamiz.\n\n"
+    "\U0001f1f7\U0001f1fa Русский\n"
+    "Пришло что-то подозрительное? Не спешите отвечать и платить.\n"
+    "Скиньте сюда: текст, скрин, ссылку или QR-код — что угодно.\n"
+    "Расскажем, что здесь настораживает и как это проверить."
+)
+
 TEXTS: dict[str, dict[str, str]] = {
     "start_intro": {
-        "uz_latn": (
-            "\U0001f1fa\U0001f1ff O'zbekcha\n"
-            "Avvalo — harakatdan oldin shubhali vaziyatni tekshirishga yordam beradi.\n"
-            "Xabar, rasm yoki vaziyatni yuboring: havola, QR-kod, to'lov so'rovi, "
-            "taklif yoki hujjat ham bo'lishi mumkin. Avvalo nimaga e'tibor berish va "
-            "nimani mustaqil tekshirishni ko'rsatadi.\n\n"
-            "\U0001f1f7\U0001f1fa Русский\n"
-            "Avvalo помогает разобраться в сомнительной ситуации до того, как вы начнёте действовать.\n"
-            "Пришлите сообщение, изображение или опишите ситуацию: это может быть ссылка, "
-            "QR-код, запрос на оплату, предложение или документ. Avvalo покажет, на что "
-            "обратить внимание и что проверить самостоятельно."
-        ),
-        "ru": (
-            "\U0001f1fa\U0001f1ff O'zbekcha\n"
-            "Avvalo — harakatdan oldin shubhali vaziyatni tekshirishga yordam beradi.\n"
-            "Xabar, rasm yoki vaziyatni yuboring: havola, QR-kod, to'lov so'rovi, "
-            "taklif yoki hujjat ham bo'lishi mumkin. Avvalo nimaga e'tibor berish va "
-            "nimani mustaqil tekshirishni ko'rsatadi.\n\n"
-            "\U0001f1f7\U0001f1fa Русский\n"
-            "Avvalo помогает разобраться в сомнительной ситуации до того, как вы начнёте действовать.\n"
-            "Пришлите сообщение, изображение или опишите ситуацию: это может быть ссылка, "
-            "QR-код, запрос на оплату, предложение или документ. Avvalo покажет, на что "
-            "обратить внимание и что проверить самостоятельно."
-        ),
+        "uz_latn": _START_INTRO,
+        "ru": _START_INTRO,
     },
     "choose_language": {
         "uz_latn": _CHOOSE_LANGUAGE,
@@ -54,7 +46,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "oldin tekshirishga yordam beradi.\n\n"
             "Qisqasi:\n"
             "• Avvalo siz yuborgan vaziyat, material yoki jarayonni tahlil qiladi — odamning "
-            "obro'sini emas. «Xavfsiz», «firibgar» yoki yakuniy hukm bermaydi.\n"
+            "obro'sini emas. «Firibgar» yoki «hammasi joyida» degan hukmni kutmang: "
+            "avvalo tekshiring — keyin ishoning.\n"
             "• Javob e'tibor talab qiladigan belgilar, mustaqil tekshiruv qadamlari va "
             "beriladigan savollardan iborat. Bu yuridik, moliyaviy yoki rasmiy xulosa emas.\n"
             "• Yuborgan matn, rasm, havola va tayyorlangan javob saqlanmaydi hamda logga yozilmaydi.\n"
@@ -70,7 +63,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "установки приложения, подписания документа или передачи личных данных.\n\n"
             "Коротко:\n"
             "• Avvalo разбирает присланную ситуацию, материал или процесс, а не репутацию "
-            "человека. Мы не ставим ярлыки «безопасно» или «мошенник» и не выносим вердикт.\n"
+            "человека. Вердикта «мошенник» или «всё чисто» не ждите: сначала проверьте — "
+            "потом доверяйте.\n"
             "• В ответе будут признаки, требующие внимания, шаги независимой проверки и "
             "вопросы. Это не юридическое, финансовое или официальное заключение.\n"
             "• Присланные текст, изображение, ссылка и подготовленный ответ не сохраняются "
@@ -89,7 +83,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "oldin tushunishga yordam beradi.\n\n"
             "Davom etishdan oldin:\n"
             "• Avvalo vaziyat, material yoki jarayonni tahlil qiladi — odamning "
-            "obro'sini emas. «Xavfsiz», «firibgar» yoki yakuniy hukm bermaydi.\n"
+            "obro'sini emas. «Firibgar» yoki «hammasi joyida» degan hukmni "
+            "kutmang: avvalo tekshiring — keyin ishoning.\n"
             "• Yuborgan matn, rasm, havola va tayyorlangan javob saqlanmaydi hamda "
             "logga yozilmaydi.\n"
             "• Rasm faqat matnni aniqlash uchun qayta ishlanadi. Tashqi tahlil "
@@ -107,8 +102,8 @@ TEXTS: dict[str, dict[str, str]] = {
             "документ или передадите личные данные.\n\n"
             "Перед продолжением:\n"
             "• Avvalo анализирует ситуацию, материал или процесс, а не репутацию "
-            "человека. Мы не ставим ярлыки «безопасно» или «мошенник» и не выносим "
-            "вердикт.\n"
+            "человека. Вердикта «мошенник» или «всё чисто» не ждите: сначала "
+            "проверьте — потом доверяйте.\n"
             "• Присланные текст, изображение, ссылка и подготовленный ответ не "
             "сохраняются и не записываются в журналы.\n"
             "• Изображение используется только для распознавания текста. Сервис "
