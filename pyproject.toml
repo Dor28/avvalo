@@ -83,5 +83,9 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 "app/web/routes.py" = ["E501", "RUF001"]
 "app/web/editorial_copy.py" = ["E501", "RUF001"]
 "app/engine/format.py" = ["RUF001"]
+# Both document why cross-script OCR confidence is unusable: the Cyrillic
+# lookalikes ARE the subject, so flagging them defeats the explanation.
+"app/engine/ocr/base.py" = ["RUF002"]
+"tests/test_ocr.py" = ["RUF001"]
 "app/engine/validate.py" = ["RUF001"]
 "tests/test_editorial_posts.py" = ["E501", "RUF001"]
