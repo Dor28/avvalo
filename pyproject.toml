@@ -18,21 +18,32 @@ dependencies = [
     "jinja2>=3.1,<4",
     "langdetect>=1.0.9,<2",
     "numpy>=1.26,<3",
+    "onnxruntime>=1.20,<2",
     "openai>=2,<3",
-    "paddleocr>=3.0,<4",
-    "paddlepaddle>=3.0,<4",
     "pillow>=11,<13",
     "pydantic>=2.10,<3",
     "pydantic-settings>=2.8,<3",
     "pytesseract>=0.3.13,<0.4",
     "python-multipart>=0.0.20,<1",
     "pyyaml>=6,<7",
+    "rapidocr>=3,<4",
     "sqlalchemy[asyncio]>=2.0.38,<3",
     "uvicorn[standard]>=0.34,<1",
-    "zxing-cpp>=2.3,<4",
+    # Held at 2.x: 3.0 reworked BarcodeFormat/BarcodeFormats and broke the
+    # C-API. app/engine/qr/zxing.py passes `formats=BarcodeFormat.QRCode`, so
+    # that major deserves its own change with QR fixtures, not a drive-by bump.
+    "zxing-cpp>=2.3,<3",
 ]
 
 [project.optional-dependencies]
+# OCR_PROVIDER=paddleocr runs the same PP-OCRv5 models as the default
+# rapidocr provider, but through paddlepaddle. Kept installable for accuracy
+# comparisons and left out of the runtime image, where paddle and paddlex
+# dominate both the dependency tree and the memory footprint.
+paddle = [
+    "paddleocr>=3.0,<4",
+    "paddlepaddle>=3.0,<4",
+]
 dev = [
     "aiosqlite>=0.20,<1",
     "pytest>=8.3,<10",

@@ -20,7 +20,7 @@ def test_settings_load_required_values() -> None:
     settings = Settings(_env_file=None, **REQUIRED_SETTINGS)
 
     assert settings.max_output_tokens == 600
-    assert settings.ocr_provider == "gcv"
+    assert settings.ocr_provider == "rapidocr"
     assert settings.daily_check_limit == 5
     assert settings.web_enabled is False
     assert settings.admin_access_key is None
