@@ -105,7 +105,7 @@ def test_ci_uses_hash_locked_dependencies_and_pinned_actions() -> None:
 
     assert action_refs
     assert all(re.fullmatch(r"[0-9a-f]{40}", ref) for ref in action_refs)
-    assert "pip install --require-hashes -r requirements-dev.lock" in workflow
+    assert "pip install --require-hashes --no-deps -r requirements-dev.lock" in workflow
     assert "continue-on-error: true" not in workflow
     assert "ruff check app --select S" in workflow
 

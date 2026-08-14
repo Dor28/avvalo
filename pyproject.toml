@@ -20,6 +20,10 @@ dependencies = [
     "numpy>=1.26,<3",
     "onnxruntime>=1.20,<2",
     "openai>=2,<3",
+    # rapidocr imports cv2. The default opencv-python wheel links X11 (libxcb,
+    # libGL, …), which python:*-slim does not carry and which has no business in
+    # a headless container; the headless wheel is the same cv2 without them.
+    "opencv-python-headless>=4.10,<6",
     "pillow>=11,<13",
     "pydantic>=2.10,<3",
     "pydantic-settings>=2.8,<3",
@@ -50,6 +54,12 @@ dev = [
     "pytest-asyncio>=0.25,<2",
     "ruff>=0.11,<1",
 ]
+
+[tool.uv]
+# rapidocr requires opencv-python by name. Both wheels install the same `cv2`
+# module, so they cannot coexist — this drops the X11-linked one (the marker is
+# never true) and leaves opencv-python-headless above as the sole provider.
+override-dependencies = ["opencv-python; sys_platform == 'never'"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]
