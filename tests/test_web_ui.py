@@ -119,14 +119,14 @@ def test_landing_copy_is_simple_and_action_focused_in_both_languages() -> None:
     client = TestClient(create_app())
     localized_copy = {
         "uz_latn": (
-            "Shubha bormi? Avvalo'ga yuboring.",
-            "Avvalo qanday yordam beradi",
-            "Avvalo tavsiya beradi, natijani kafolatlamaydi",
+            "Shubha bormi? Avvalo'ga tashlang.",
+            "Umumiy maslahat emas",
+            "Avvalo vaziyatni tahlil qiladi",
         ),
         "ru": (
-            "Есть сомнения? Отправьте в Avvalo.",
-            "Чем поможет Avvalo",
-            "Avvalo даёт рекомендации, но не гарантирует результат",
+            "Есть сомнения? Скиньте в Avvalo.",
+            "Что будет в ответе",
+            "Последнее слово за вами",
         ),
     }
 
@@ -141,8 +141,8 @@ def test_landing_copy_is_simple_and_action_focused_in_both_languages() -> None:
 def test_checker_explains_advisory_limit_in_both_languages() -> None:
     client = TestClient(create_app())
     localized_limits = {
-        "uz_latn": "Tavsiya beradi, natijani kafolatlamaydi",
-        "ru": "Даёт рекомендации, но не гарантирует результат",
+        "uz_latn": "Tavsiya beradi, kafolat bermaydi",
+        "ru": "Советует, но не гарантирует",
     }
 
     for language, limitation in localized_limits.items():

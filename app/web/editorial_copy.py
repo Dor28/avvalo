@@ -3,10 +3,10 @@
 EDITORIAL_COPY = {
     "uz_latn": {
         "cases_kicker": "Avvalo holatlari",
-        "cases_title": "Shubhali vaziyatlarni sodda misollar orqali tushunib oling",
+        "cases_title": "Boshqalarda ishlagan sxemalar",
         "cases_lead": (
-            "Avvalo tahririyati to‘lov, havola, ish takliflari va boshqa vaziyatlarda nimaga "
-            "e’tibor berish va nimani mustaqil tekshirishni tushuntiradi."
+            "Qadamma-qadam ko‘rsatamiz: sxema qanday qurilgan va uni qaysi tafsilotdan "
+            "oldinroq payqash mumkin."
         ),
         "cases_empty": "Hozircha e’lon qilingan holatlar yo‘q.",
         "read_time": "{minutes} daqiqa",
@@ -19,12 +19,11 @@ EDITORIAL_COPY = {
         ),
         "case_cta_title": "Shunga o‘xshash vaziyat bormi?",
         "case_cta_body": (
-            "Vaziyatga oid matn, havola yoki rasmni Avvalo'ga yuboring. To‘lov so‘rovi, "
-            "taklif, hujjat yoki yozishma bo‘lishi mumkin."
+            "Matn, havola yoki skrinshotni tashlang — sizinikini ko‘rib chiqamiz."
         ),
         "case_cta_button": "Vaziyatni tekshirish",
         "latest_title": "Yangi holatlar",
-        "latest_body": "Qisqa misollar orqali shubhali vaziyatlarda nimaga e’tibor berishni o‘rganing.",
+        "latest_body": "Qisqa tahlillar: nima bo‘lgan va birinchi shubhali belgi qayerda edi.",
         "all_cases": "Barcha holatlar",
         "categories": {
             "payments": "To‘lovlar",
@@ -78,10 +77,10 @@ EDITORIAL_COPY = {
     },
     "ru": {
         "cases_kicker": "Кейсы Avvalo",
-        "cases_title": "Разберитесь в сомнительных ситуациях на понятных примерах",
+        "cases_title": "Схемы, которые уже сработали на других",
         "cases_lead": (
-            "Редакция Avvalo объясняет, на что обращать внимание и что проверять "
-            "самостоятельно в ситуациях с оплатой, ссылками, вакансиями и документами."
+            "Разбираем по шагам: как устроена схема и по какой детали её видно "
+            "заранее."
         ),
         "cases_empty": "Опубликованных кейсов пока нет.",
         "read_time": "{minutes} мин",
@@ -94,12 +93,11 @@ EDITORIAL_COPY = {
         ),
         "case_cta_title": "Столкнулись с похожей ситуацией?",
         "case_cta_body": (
-            "Отправьте в Avvalo текст, ссылку или изображение, связанные с вашей ситуацией. "
-            "Это может быть запрос на оплату, предложение, документ или переписка."
+            "Скиньте текст, ссылку или скрин — разберём вашу."
         ),
         "case_cta_button": "Проверить ситуацию",
         "latest_title": "Новые кейсы",
-        "latest_body": "Разберите короткие примеры и узнайте, на что обращать внимание в сомнительных ситуациях.",
+        "latest_body": "Короткие разборы: что произошло и где был первый тревожный сигнал.",
         "all_cases": "Все кейсы",
         "categories": {
             "payments": "Оплата",
