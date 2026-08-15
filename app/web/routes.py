@@ -95,7 +95,7 @@ WEB_COPY = {
         "composer_body": (
             "Matn yoki havolani qo‘ying. Kerak bo‘lsa, skrinshot qo‘shing."
         ),
-        "input_hint": "SMS kod, parol va karta ma’lumotlarini yashiring.",
+        "input_hint": "SMS kod, parol va karta raqamini yashiring.",
         "outcome_title": "Javobda nima bo‘ladi",
         "outcome_body": "Umumiy maslahat emas — aynan siz yuborgan vaziyat bo‘yicha.",
         "outcomes": [
@@ -135,7 +135,7 @@ WEB_COPY = {
         "submit": "Vaziyatni tekshirish",
         "checking": "Tekshirilmoqda...",
         "result_error_title": "Hozir tekshira olmadik",
-        "empty_error": "Matn kiriting yoki matni aniq ko‘rinadigan rasm yuklang.",
+        "empty_error": "Matn kiriting yoki matni o‘qiladigan rasm yuklang.",
         "too_long_error": "Matn juda uzun. Uni qisqartirib, qayta yuboring.",
         "consent_error": "Avval maxfiylik shartlariga rozilik bering.",
         "check": {
@@ -150,7 +150,7 @@ WEB_COPY = {
                 "Masalan: menga to‘lov skrinshotini yuborib, pul tushmasidan oldin "
                 "tovarni berishimni so‘rashyapti..."
             ),
-            "image_hint": "Yozishma, chek, QR-kod yoki hujjat rasmda aniq ko‘rinsin.",
+            "image_hint": "Asosiysi — rasmdagi matn o‘qilsin.",
             "use_cases": [
                 "Xabar yoki yozishma",
                 "Havola yoki QR-kod",
@@ -183,7 +183,7 @@ WEB_COPY = {
         "composer_body": (
             "Вставьте текст или ссылку. Если есть скриншот — добавьте."
         ),
-        "input_hint": "Скройте SMS-коды, пароли и полные данные карты.",
+        "input_hint": "SMS-коды, пароли и номер карты — скройте.",
         "outcome_title": "Что будет в ответе",
         "outcome_body": "Не общие советы, а разбор именно вашей ситуации.",
         "outcomes": [
@@ -223,7 +223,7 @@ WEB_COPY = {
         "submit": "Проверить ситуацию",
         "checking": "Проверяем...",
         "result_error_title": "Сейчас не удалось проверить",
-        "empty_error": "Вставьте текст или загрузите изображение с читаемым текстом.",
+        "empty_error": "Вставьте текст или загрузите фото, где текст читается.",
         "too_long_error": "Текст получился слишком длинным. Сократите его и отправьте ещё раз.",
         "consent_error": "Сначала примите условия конфиденциальности.",
         "check": {
@@ -238,7 +238,7 @@ WEB_COPY = {
                 "Например: мне прислали скрин оплаты и просят отдать товар до "
                 "зачисления денег..."
             ),
-            "image_hint": "На изображении должны быть хорошо видны переписка, чек, QR-код или документ.",
+            "image_hint": "Главное — чтобы текст на фото читался.",
             "use_cases": [
                 "Сообщение или переписка",
                 "Ссылка или QR-код",
