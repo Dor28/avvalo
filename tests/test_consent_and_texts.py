@@ -84,10 +84,16 @@ def test_no_verdict_promise_lives_in_the_consent_notice_not_the_intro() -> None:
     assert "hukm" not in intro
     assert "вердикт" not in intro
 
-    # Both channels' consent screens must carry it, in both languages.
-    for key in ("privacy_notice", "web_privacy_notice"):
-        assert "avvalo tekshiring" in t(key, "uz_latn")
-        assert "сначала проверьте" in t(key, "ru")
+    assert "avvalo tekshiring" in t("privacy_notice", "uz_latn")
+    assert "сначала проверьте" in t("privacy_notice", "ru")
+
+    # The web page states the same limit once, in the boundary block at the foot
+    # of the page (tests/test_web_ui.py), so its consent screen must not repeat
+    # it — on one scrollable page the repetition reads as self-protection.
+    for language in LANGUAGES:
+        web_notice = t("web_privacy_notice", language).casefold()
+        assert "hukm" not in web_notice
+        assert "вердикт" not in web_notice
 
 
 def test_privacy_copy_matches_ephemeral_content_contract() -> None:
