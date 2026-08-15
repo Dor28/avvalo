@@ -78,9 +78,8 @@ TEXTS: dict[str, dict[str, str]] = {
     },
     "web_privacy_notice": {
         "uz_latn": (
-            "👋 Assalomu alaykum. Avvalo shubhali vaziyatni javob berish, pul to'lash, "
-            "ilova o'rnatish yoki hujjat imzolash yoxud shaxsiy ma'lumot yuborishdan "
-            "oldin tushunishga yordam beradi.\n\n"
+            "👋 Assalomu alaykum. Avvalo shubhali vaziyatni javob berish yoki pul "
+            "o'tkazishdan oldin tushunishga yordam beradi.\n\n"
             "Davom etishdan oldin:\n"
             "• Avvalo vaziyat, material yoki jarayonni tahlil qiladi — odamning "
             "obro'sini emas.\n"
@@ -97,8 +96,7 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "ru": (
             "👋 Здравствуйте. Avvalo помогает разобраться в сомнительной ситуации "
-            "до того, как вы ответите, заплатите, установите приложение, подпишете "
-            "документ или передадите личные данные.\n\n"
+            "до того, как вы ответите или заплатите.\n\n"
             "Перед продолжением:\n"
             "• Avvalo анализирует ситуацию, материал или процесс, а не репутацию "
             "человека.\n"
