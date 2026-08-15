@@ -157,6 +157,54 @@ async def test_openrouter_requests_zero_retention_and_denies_data_collection() -
     }
 
 
+async def test_openrouter_request_disables_reasoning_when_configured() -> None:
+    """Reasoning tokens are spent from max_tokens and truncate the JSON draft.
+
+    Measured on deepseek-v4-flash: 519 of 600 completion tokens went to
+    reasoning, so the draft was cut mid-object and failed to parse.
+    """
+
+    client = FakeOpenAIClient()
+    provider = OpenAICompatibleProvider(
+        base_url="https://openrouter.ai/api/v1",
+        api_key="test-key",
+        model="test-model",
+        reasoning_effort="none",
+        client=client,
+    )
+
+    await provider.analyze(
+        system="system",
+        user="user",
+        schema=draft_output_schema(),
+        max_output_tokens=100,
+    )
+
+    extra_body = client.completions.calls[0]["extra_body"]
+    assert extra_body["reasoning"] == {"effort": "none"}
+    # The privacy constraint must survive alongside it.
+    assert extra_body["provider"] == {"zdr": True, "data_collection": "deny"}
+
+
+async def test_openrouter_request_omits_reasoning_when_unset() -> None:
+    client = FakeOpenAIClient()
+    provider = OpenAICompatibleProvider(
+        base_url="https://openrouter.ai/api/v1",
+        api_key="test-key",
+        model="test-model",
+        client=client,
+    )
+
+    await provider.analyze(
+        system="system",
+        user="user",
+        schema=draft_output_schema(),
+        max_output_tokens=100,
+    )
+
+    assert "reasoning" not in client.completions.calls[0]["extra_body"]
+
+
 async def test_non_openrouter_provider_request_is_unchanged() -> None:
     client = FakeOpenAIClient()
     provider = OpenAICompatibleProvider(

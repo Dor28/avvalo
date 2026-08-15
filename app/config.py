@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     llm_out_rate_per_m: float = Field(default=0.0, ge=0)
     llm_timeout_s: float = Field(default=30.0, gt=0)
     max_output_tokens: int = Field(default=600, ge=1, le=600)
+    # OpenRouter reasoning budget. Reasoning tokens are spent from the SAME
+    # completion budget as the answer, so on a reasoning model they starve the
+    # JSON draft: measured on deepseek-v4-flash, 519 of 600 tokens went to
+    # reasoning and the reply truncated mid-object. Filling a fixed JSON shape
+    # needs no chain of thought, so this defaults to off. "none" disables it;
+    # "low"/"medium"/"high" re-enable it; empty leaves the provider default.
+    llm_reasoning_effort: str | None = "none"
     llm_fallback_base_url: str | None = None
     llm_fallback_api_key: SecretStr | None = None
     llm_fallback_model: str | None = None
