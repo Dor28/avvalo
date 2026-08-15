@@ -87,46 +87,42 @@ WEB_COPY = {
         "nav_cases": "Holatlar",
         "trust_label": "Ishonch",
         "skip_to_check": "Tekshiruvga o‘tish",
-        "brand_tagline": "Avval tekshiring, keyin harakat qiling",
+        "brand_tagline": "Avval tekshiring, keyin ishoning",
         "hero_kicker": "Qaror qilishdan oldin",
         "use_cases_label": "Nimani tekshirish mumkin",
         "composer_kicker": "Anonim tekshiruv",
         "composer_title": "Vaziyatni tasvirlab bering",
         "composer_body": (
-            "Matn yoki havolani kiriting. Kerak bo‘lsa, skrinshot yoki rasm qo‘shing. "
-            "Bu to‘lov so‘rovi, taklif, hujjat yoki yozishma bo‘lishi mumkin."
+            "Matn yoki havolani qo‘ying. Kerak bo‘lsa, skrinshot qo‘shing."
         ),
         "input_hint": "SMS kod, parol va karta ma’lumotlarini yashiring.",
-        "outcome_title": "Avvalo qanday yordam beradi",
-        "outcome_body": (
-            "Javob tushunarli va amaliy bo‘ladi: vaziyatda nimaga e’tibor berish "
-            "va keyin nima qilish kerak."
-        ),
+        "outcome_title": "Javobda nima bo‘ladi",
+        "outcome_body": "Umumiy maslahat emas — aynan siz yuborgan vaziyat bo‘yicha.",
         "outcomes": [
             {
                 "title": "Muhim belgilar",
-                "body": "Shoshiltirish, bosim va bir-biriga mos kelmaydigan tafsilotlar.",
+                "body": "Shoshiltirish, bosim, bir-biriga mos kelmaydigan tafsilotlar.",
             },
             {
                 "title": "Keyingi qadamlar",
-                "body": "Manbani mustaqil tekshirish va o‘zingizni himoya qilish yo‘llari.",
+                "body": "Manbani qayerdan va qanday tekshirish mumkin.",
             },
             {
                 "title": "Nima noaniq qoladi",
-                "body": "Hali tasdiqlanmagan ma’lumotlar.",
+                "body": "Tekshirmasdan turib aytib bo‘lmaydigan narsalar.",
             },
             {
                 "title": "Nimani so‘rash",
-                "body": "Suhbatdosh yoki tashkilotga beriladigan qisqa savollar.",
+                "body": "Bir-ikki savol — javobi ko‘p narsani ochadi.",
             },
         ],
         "boundary_title": "Vaziyatni tekshiring, odamni emas",
         "boundary_body": (
-            "Avvalo vaziyatni tahlil qiladi, odam yoki tashkilotga baho bermaydi. "
-            "Ma’lumotni rasmiy manbadan o‘zingiz tekshiring: Avvalo tavsiya beradi, "
-            "natijani kafolatlamaydi."
+            "Avvalo vaziyatni tahlil qiladi — odamga yoki tashkilotga baho bermaydi. "
+            "Oxirgi so‘z sizniki: rasmiy manbadan o‘zingiz tekshiring. "
+            "Avvalo yo‘l ko‘rsatadi, kafolat bermaydi."
         ),
-        "footer_note": "Shoshilmang. Avval tekshiring, keyin harakat qiling.",
+        "footer_note": "Shoshilmang. Avval tekshiring, keyin ishoning.",
         "result_ready": "Javob tayyor",
         "result_title": "Vaziyat bo‘yicha qadamlar",
         "title": "Avvalo",
@@ -144,10 +140,10 @@ WEB_COPY = {
         "consent_error": "Avval maxfiylik shartlariga rozilik bering.",
         "check": {
             "name": "Vaziyat tekshiruvi",
-            "headline": "Shubha bormi? Avvalo'ga yuboring.",
+            "headline": "Shubha bormi? Avvalo'ga tashlang.",
             "subhead": (
-                "Shubhali xabar, havola, QR-kod, to‘lov so‘rovi yoki hujjatni yuboring. "
-                "Avvalo nimaga e’tibor berish va keyin nima qilishni tushuntiradi."
+                "Matn, skrinshot, havola yoki QR-kod — farqi yo‘q. Nimasi shubhali va "
+                "buni qanday tekshirish mumkinligini aytamiz."
             ),
             "prompt": "Matn, havola yoki vaziyat tavsifi",
             "textarea_placeholder": (
@@ -163,10 +159,10 @@ WEB_COPY = {
                 "Hujjat yoki so‘rov",
             ],
             "trust": [
-                "Odamni emas, vaziyatni tekshiradi",
-                "Hukm chiqarmaydi, tekshiruv qadamlarini ko‘rsatadi",
-                "Tavsiya beradi, natijani kafolatlamaydi",
-                "Matn, rasm va javob saqlanmaydi",
+                "Ko‘zdan qochadigan tafsilotni topamiz",
+                "Umumiy gap emas — aniq qadamlar",
+                "Nimani so‘rash va qayerdan tekshirishni aytamiz",
+                "Matn ham, rasm ham saqlanmaydi",
             ],
         },
     },
@@ -179,46 +175,42 @@ WEB_COPY = {
         "nav_cases": "Кейсы",
         "trust_label": "Доверие",
         "skip_to_check": "Перейти к проверке",
-        "brand_tagline": "Сначала проверьте, потом действуйте",
+        "brand_tagline": "Сначала проверьте — потом доверяйте",
         "hero_kicker": "Перед тем как действовать",
         "use_cases_label": "Что можно проверить",
         "composer_kicker": "Анонимная проверка",
         "composer_title": "Опишите ситуацию",
         "composer_body": (
-            "Вставьте текст или ссылку. При необходимости добавьте скриншот или фото. "
-            "Это может быть запрос на оплату, предложение, документ или переписка."
+            "Вставьте текст или ссылку. Если есть скриншот — добавьте."
         ),
         "input_hint": "Скройте SMS-коды, пароли и полные данные карты.",
-        "outcome_title": "Чем поможет Avvalo",
-        "outcome_body": (
-            "Ответ будет понятным и практичным: на что обратить внимание "
-            "и что делать дальше."
-        ),
+        "outcome_title": "Что будет в ответе",
+        "outcome_body": "Не общие советы, а разбор именно вашей ситуации.",
         "outcomes": [
             {
                 "title": "Важные признаки",
-                "body": "Спешка, давление и несостыковки в деталях.",
+                "body": "Спешка, давление, несостыковки в деталях.",
             },
             {
                 "title": "Следующие шаги",
-                "body": "Как самостоятельно проверить источник и защитить себя.",
+                "body": "Где и как проверить источник.",
             },
             {
                 "title": "Что пока неясно",
-                "body": "Данные, которые пока нельзя подтвердить.",
+                "body": "То, чего нельзя утверждать без проверки.",
             },
             {
                 "title": "Что спросить",
-                "body": "Короткие вопросы собеседнику или организации.",
+                "body": "Один-два вопроса — по ответу многое станет понятно.",
             },
         ],
         "boundary_title": "Проверяйте ситуацию, а не человека",
         "boundary_body": (
-            "Avvalo разбирает ситуацию, а не оценивает человека или организацию. "
-            "Проверяйте данные по официальным источникам самостоятельно: Avvalo даёт "
-            "рекомендации, но не гарантирует результат."
+            "Avvalo разбирает ситуацию, а не выставляет оценку человеку или компании. "
+            "Последнее слово за вами: сверьтесь с официальным источником. "
+            "Avvalo подсказывает, но не гарантирует."
         ),
-        "footer_note": "Не спешите. Сначала проверьте, потом действуйте.",
+        "footer_note": "Не спешите. Сначала проверьте — потом доверяйте.",
         "result_ready": "Ответ готов",
         "result_title": "Шаги по вашей ситуации",
         "title": "Avvalo",
@@ -236,10 +228,10 @@ WEB_COPY = {
         "consent_error": "Сначала примите условия конфиденциальности.",
         "check": {
             "name": "Проверка ситуации",
-            "headline": "Есть сомнения? Отправьте в Avvalo.",
+            "headline": "Есть сомнения? Скиньте в Avvalo.",
             "subhead": (
-                "Отправьте подозрительное сообщение, ссылку, QR-код, запрос на оплату или "
-                "документ. Avvalo подскажет, на что обратить внимание и что делать дальше."
+                "Текст, скрин, ссылка или QR-код — что угодно. Расскажем, что здесь "
+                "настораживает и как это проверить."
             ),
             "prompt": "Текст, ссылка или описание ситуации",
             "textarea_placeholder": (
@@ -255,10 +247,10 @@ WEB_COPY = {
                 "Документ или запрос",
             ],
             "trust": [
-                "Проверяет ситуацию, а не человека",
-                "Не выносит вердиктов, а подсказывает шаги проверки",
-                "Даёт рекомендации, но не гарантирует результат",
-                "Текст, изображения и ответ не сохраняются",
+                "Заметим то, что легко пропустить",
+                "Не общие советы, а конкретные шаги",
+                "Подскажем, что спросить и где проверить",
+                "Ни текст, ни фото не сохраняются",
             ],
         },
     },
