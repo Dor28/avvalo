@@ -29,10 +29,12 @@ class OpenAICompatibleProvider:
         model: str,
         timeout_s: float = 30.0,
         temperature: float = 0.2,
+        reasoning_effort: str | None = None,
         client: Any | None = None,
     ) -> None:
         self.model = model
         self.temperature = temperature
+        self.reasoning_effort = (reasoning_effort or "").strip() or None
         hostname = (urlsplit(base_url).hostname or "").casefold()
         self._openrouter_privacy = hostname == "openrouter.ai" or hostname.endswith(
             ".openrouter.ai"
@@ -54,6 +56,7 @@ class OpenAICompatibleProvider:
             api_key=settings.llm_api_key,
             model=settings.llm_model,
             timeout_s=settings.llm_timeout_s,
+            reasoning_effort=settings.llm_reasoning_effort,
         )
 
     async def analyze(
@@ -115,9 +118,15 @@ class OpenAICompatibleProvider:
                 # Names and submitted URLs may now reach the answer prompt. Make
                 # the production router enforce endpoints that neither retain nor
                 # collect prompt data instead of relying on account defaults.
-                request["extra_body"] = {
+                extra_body: dict[str, Any] = {
                     "provider": {"zdr": True, "data_collection": "deny"}
                 }
+                if self.reasoning_effort is not None:
+                    # Reasoning tokens come out of max_tokens, so on a reasoning
+                    # model they crowd out the JSON draft and it truncates
+                    # mid-object. "none" turns them off; see llm_reasoning_effort.
+                    extra_body["reasoning"] = {"effort": self.reasoning_effort}
+                request["extra_body"] = extra_body
             response = await self._client.chat.completions.create(
                 **request,
             )
