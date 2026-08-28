@@ -1,256 +1,241 @@
 # Avvalo — Product Guide
 
 > **Status:** Canonical product direction
-> **Last updated:** 2026-07-22
+> **Last updated:** 2026-08-28
 > **Rule:** If another document conflicts with this guide on product scope, this guide wins.
 
 ## 1. Product in one sentence
 
-Avvalo helps people in Uzbekistan check a suspicious situation before they reply, pay,
-install something, sign, or share personal information.
+Avvalo helps people in Uzbekistan check a suspicious link, QR code, message, or situation
+before they pay, reply, install, sign, or share personal information — and tells them what
+to do when it has already happened.
 
-> **Verify the situation, artifact, process, or source — never the reputation of a person.**
+> **Verify the situation, artifact, or process — never the reputation of a person.**
 
-Avvalo is one consumer product. Links, QR codes, payment requests, job offers, documents, and
-messages are different inputs to the same flow, not separate products.
+The promise, in the form the user reads it:
 
-The habit we want to create is simple:
+> **Avvalo does not tell you something is safe. Avvalo makes you hard to deceive.**
 
-> **Have doubts? Send it to Avvalo before you act.**
+That sentence is the product. The refusal to issue verdicts is not a limitation worked
+around — it is the positioning, and it is the one property a competitor built as a wrapper
+around a language model does not have and cannot retrofit.
 
-## 2. The complete product loop
+## 2. What changed, and why this document was rewritten
 
-> **Send → Understand → Verify → Act → Share**
+Avvalo was previously scoped as an incident helper: a person arrives frightened, submits one
+situation, reads one answer, leaves. That framing is now retired. The unit of value is no
+longer a resolved case but the user's own acquired ability to notice what is wrong.
 
-### Send
+Concretely, three things changed:
 
-The user can submit pasted or forwarded text, a screenshot or photo, a link, a QR code, or a
-suspicious payment request, offer, document, or conversation. The channels are Telegram and the
-anonymous web checker. The supported reply languages are `uz_latn` and `ru`. Cyrillic-Uzbek
-content is still understood and matched, but it is always answered in `uz_latn`.
+1. **One reactive flow became three surfaces at three tempos** (§4).
+2. **The answer became decisive** — about the action, never about the object (§5).
+3. **The product became an application inside Telegram**, not only a bot and a web form (§6).
 
-### Understand
+Removed from scope in the same pass, deliberately and not by omission: the digital-hygiene
+checklist, the phishing trainer, the personal counter, voice answers, an answer variant
+addressed to a third party, result-as-image export, Telegram account verification, and a
+second on-device implementation of the URL analyzer. §9 holds the full list.
 
-Avvalo explains the details that deserve attention, pressure or manipulation patterns, claims that
-need independent confirmation, and questions the user should ask. This is an explanation, not a
-verdict about a person or organization.
+## 3. Audience
 
-### Verify
+Deliberately broad: any person in Uzbekistan whose daily life runs through Telegram, Click
+and Payme, OLX and Uzum, bank SMS, and QR payments. The product is not narrowed to a
+segment.
 
-**Avvalo Verify** is the signature capability. It checks only facts that can be established safely
-through an approved official source, curated official-contact catalog, or versioned local snapshot.
+Reply languages are `uz_latn` and `ru`. Cyrillic-Uzbek input is detected and understood
+today but is always answered in `uz_latn`; adding Cyrillic-Uzbek **output** is scheduled
+work (ROADMAP Phase 3) because the group most exposed to fraud reads Cyrillic fluently and
+Latin with difficulty. Until that ships, the audience is not broad — it is truncated by age.
 
-Each displayed fact states what was established, the named source, when it was observed, and what
-it does not prove. A failed check is `unavailable`. An artifact absent from one source is only
-`not_found` in that named source; absence is never a conclusion about legitimacy.
+## 4. Three tempos
 
-### Act
+One promise, served at three frequencies. The tempo determines what the surface is, what it
+costs to run, and why a person opens it.
 
-Avvalo gives the safest useful next action: independently open the official site or app, call an
-official number, inspect a register, delay payment or data sharing, or ask a trusted relative.
+### Second — Scanner
 
-### Share
+A pasted link or a QR code, answered immediately from deterministic analysis with no model
+call. This is the daily utility: it is what a person reaches for while paying by QR or
+after receiving a link in a chat.
 
-The user may share a sanitized warning or invite another person to check with Avvalo. Shared output
-contains only deterministic, non-identifying metadata and safe advice. It never reproduces submitted
-content, contacts, payment details, or an accusation.
+### Minute — Check
 
-Share is distribution support, not a public allegation page, story network, or content community.
-The separate Cases section contains only founder-authored educational posts; it does not republish
-checks or accept public submissions.
+The full situation analysis in chat: a message, a screenshot, a forwarded conversation, an
+offer, a payment request. It also covers the "it already happened" situations — money
+already transferred, a code already received, an account already stolen, a call in progress,
+a deal about to close. Those are inputs to the same chat, never separate screens.
 
-## 3. What exists and what comes next
+### Event — Knowledge
 
-### Built baseline
+Founder-written explanations of real schemes, a rare notification about a circulating wave,
+and a forwardable one-screen reminder. This is what a person reads when they recognise their
+own story in someone else's.
 
-The repository already contains:
+**Cost follows tempo.** The Scanner performs no model call, so it is generous and bounded
+only by abuse protection. The Check costs a model call and stays under `DAILY_CHECK_LIMIT`
+(default 5). The Scanner is the funnel into the Check: one button, "need a full analysis?".
 
-- Telegram and anonymous web intake;
-- text and image processing with OCR;
-- local rules and signals, PII minimization, and reviewed knowledge retrieval;
-- LLM explanation behind a deterministic safety validator;
-- localized output in all three language forms;
-- consent, deletion, rate limits, privacy-safe events, and retention controls;
-- a sanitized sharing foundation;
-- a founder-authored, bilingual Cases section with draft/publish administration and optional covers;
-- local hash-based URL-reputation support that may remain disabled until production verification.
+## 5. The answer contract
 
-The runtime exposes one checker with no internal product-face discriminator. Seller, payment-screenshot,
-courier, and refund situations enter this same checker; the relevant payment protections are part
-of the main rule and safety path. Avvalo Merchants, the scam library, story capture, and Scam Pulse
-are not dormant modes — they are retired surfaces.
+### 5.1 The core decision: decisive about the action, not about the object
 
-### Editorial cases
+A user wants to know whether they can tap. The product may not say "safe". Both are
+satisfied by moving the decisiveness: **a verdict describes the object; a recommendation
+describes the action.**
 
-Cases are a supporting education and acquisition surface around the same checker, not another
-product. A founder writes each post manually in `uz_latn` and `ru`, saves it as a draft,
-and explicitly publishes it. A post explains a situation pattern, what deserves attention, and
-what a reader can verify independently; its call to action returns the reader to the checker. An
-optional founder-uploaded cover photo may accompany the post, with alt text in both languages.
+"This site is fraudulent" is unprovable and legally exposed. "Do not enter your card here —
+open your bank's app yourself" is always correct, concrete, and actionable.
 
-Editorial posts must never be generated automatically from submitted checks, copied from legacy
-`story_submission` rows, presented as verified evidence, or used as proof about a person or
-organization. There is no public authoring, commenting, accusation, rating, or searchable person
-database.
+The screen may look categorical — a large state, colour. What is categorical is the
+recommended action, never a claim about the site.
 
-This baseline can explain what is suspicious and what the user should verify. It must not be
-described as having checked an official source unless a typed Avvalo Verify result exists.
+### 5.2 Scanner answer (short form)
 
-### Next product capability
+Three states, all decisive:
 
-The next capability is the strict Avvalo Verify MVP in §4. It is **not yet authorized for
-implementation**. First it must pass [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md).
+| Finding | What the user sees |
+|---|---|
+| A specific signal | Name the signal in plain language → **the safe action to take instead** |
+| Nothing found | "Nothing suspicious in this address" → **this does not mean the site is genuine**; what to check |
+| Could not parse | "Could not read this address" → **what to do instead** |
 
-## 4. Avvalo Verify MVP
+The "nothing found" state must never be phrased as an absence of risk. It reports the
+absence of a *finding*, which is a different statement.
 
-Only three verification families belong to the MVP.
+### 5.3 Check answer (long form)
 
-### 4.1 Official identity match
+Unchanged from the existing implementation, in this order:
 
-Maintain a founder-reviewed catalog for commonly impersonated organizations: official name,
-domains, support pages, published Telegram handles, source URL, and last-reviewed time.
-
-Avvalo may report an exact match or exact mismatch. A match never makes the whole situation safe.
-
-### 4.2 Link and QR evidence
-
-Avvalo may decode a QR code locally, normalize the destination domain including punycode and
-deceptive subdomains, compare it with the official catalog, and consult a local cached
-URL-reputation dataset.
-
-By founder decision (2026-07-24, recorded in [ROADMAP.md](ROADMAP.md) Phase 1), the deterministic
-part of this family — local QR decoding, URL normalization, and the local reputation lookup — is
-authorized as explainer capability with shape-based wording and no official-source claims. Only
-the official-catalog comparison and other sourced facts remain gated behind
-[VERIFY_VALIDATION.md](VERIFY_VALIDATION.md).
-
-Avvalo must not open, render, or execute an arbitrary submitted page. Submitted URLs and domains
-remain ephemeral and are not echoed back by default.
-
-### 4.3 Regulated organization and license routing
-
-Use only named official sources appropriate to the claim, such as Central Bank registers, official
-license search, or another permitted state register.
-
-Prefer scheduled local snapshots. When a source has no permitted API or requires authentication,
-provide a sourced official deep link and a safe extracted search value instead of scraping the site
-or pretending the check succeeded.
-
-### Outside the MVP
-
-- general autonomous web search or reverse-image search;
-- arbitrary announcement search;
-- screenshot, receipt, document, or deepfake authenticity verdicts;
-- person, phone, card, account, or handle reputation lookup;
-- automatic reports or messages to third parties.
-
-## 5. User-visible answer contract
-
-A completed answer contains these blocks, in order:
-
-1. **What Avvalo could establish** — at most three decision-relevant source facts.
-2. **What deserves attention** — red flags in the submitted situation.
-3. **What to do now** — concrete independent action.
-4. **What remains unknown** — limitations and unavailable checks.
-5. **What to ask** — short questions for the counterparty or official organization.
-
-Allowed evidence statuses are `supported`, `exact_mismatch`, `not_found`, and `unavailable`.
-The answer never aggregates them into a score or verdict.
-
-## 6. Evidence rules
-
-Evidence is structured data, not model prose. Every adapter result contains a stable fact ID,
-status, deterministic claim template, source name, source URL, observation time, and limitations.
-
-The LLM may explain allowlisted facts. It may not browse unrestricted sources; invent a fact,
-citation, lookup, or timestamp; turn `not_found` into “does not exist”; turn a match into “safe”;
-or combine facts into a person-level judgment.
-
-Unknown fact IDs, missing source metadata, stale data outside its freshness window, or an adapter
-failure must fail closed and produce `unavailable`.
-
-## 7. Privacy and safety
-
-- Submitted text, OCR text, captions, images, URLs, contacts, and generated answers are ephemeral
-  and are not persisted or logged.
-- The existing `story_submission.minimized_text` field is a legacy stewardship-only exception.
-  No current flow writes or reads it. Existing rows remain covered by `/delete_my_data` and
-  retention until a separately authorized data purge; the table must not become a content source.
-- Raw screenshots stay inside the controlled OCR boundary. The external answer-model prompt may
-  retain submitted person names and full URLs as ephemeral context; phones, cards, credentials,
-  codes, passports, precise addresses, and other protected identifiers remain tokenized. The
-  retrieval/router view does not receive names or raw URLs, and decoded QR payloads remain strictly
-  minimized before any model call.
-- Source snapshots contain public reference data, never user submissions.
-- Editorial-post storage contains only text and optional cover photos deliberately supplied by an
-  authenticated operator. It is a separate data boundary and never receives check input, OCR text,
-  model output, or legacy story content.
-- Avvalo never claims to have checked every database.
-- Avvalo never outputs “safe,” “scammer,” “fraud confirmed,” a trust score, or a risk score.
-- Avvalo never contacts a counterparty or institution for the user.
-- Every user-facing string exists in `uz_latn` and `ru`.
-
-## 8. Validation gates
-
-Before implementation, the manual test must show:
-
-- at least 40% of representative scenarios produce a decision-relevant source fact;
-- at least 70% of participants prefer the evidence-backed answer to advice alone;
-- zero invented, overstated, unsourced, or person-level facts.
-
-After implementation, the measured alpha must show:
-
-- at least 60 activated users and 150 completed real checks;
-- evidence coverage of at least 35%;
-- audited fact precision of at least 98%, with zero critical false facts;
-- at least 70% evidence usefulness and at least 25% decision impact;
-- 100% of displayed facts carry source and observation time;
-- zero privacy incidents and zero person-level verdicts.
-
-Definitions and the procedure live in [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md).
-
-## 9. Current sequence
-
-1. Extend the founder-reviewed official-domain catalog to the most impersonated organizations.
-2. Encode real circulating Uzbek scam material as rules and knowledge cards, and publish the first
-   small set of founder-authored educational cases drawn from it.
-3. Put the checker in front of real users, watch several of them read an answer, and record whether
-   they return.
-4. Produce the 30-scenario Avvalo Verify validation packet.
-5. Run paired advice-only versus evidence-backed sessions.
-6. Make one explicit `go`, `revise once`, or `stop` decision.
-7. Only after `go`, write one executor-ready task for the three-family MVP.
-8. Build and audit the narrow MVP.
-9. Run the measured alpha before expanding scope.
-
-Steps 1–3 are founder work, not engineering. They come first because the explanation quality and
-the decision to build Verify at all both depend on them.
-
-The executable order is maintained in [ROADMAP.md](ROADMAP.md).
-
-## 10. Non-goals
-
-- Avvalo Merchants or any merchant-first direction;
-- separate products for jobs, deals, links, documents, or payments;
-- an accusation database, public allegation pages, or an open forum;
-- user-generated posts, an accusation feed, an automated story flywheel, or training on checks;
-- voice, group monitoring, family accounts, a mobile app, or new product faces;
-- general-purpose browsing or an agent that “checks everything”;
-- collecting submitted content so a model can learn;
-- payment, escrow, or marketplace infrastructure;
-- choosing a revenue model before the core evidence behavior is validated.
-
-## 11. Documentation authority
-
-- This file defines the product and safety boundary.
+1. **What deserves attention** — red flags grounded in a detected rule, signal, or card.
+2. **What to do now** — concrete independent action.
+3. **What remains unknown** — limits of what was checked.
+4. **What to ask** — short questions for the counterparty or the organisation.
+
+A red flag that cannot name the rule, signal, or card it rests on is dropped rather than
+shown (`ANSWER_GROUNDING_ENABLED`, default on).
+
+Both forms pass through the same deterministic validator
+([app/engine/validate.py](../app/engine/validate.py)), which bans verdict words in `ru`,
+`uz_latn`, Cyrillic-Uzbek and English, strips contacts, links, card numbers and OTPs, and
+caps list lengths. One corrective retry, then `safety_fallback`.
+
+## 6. Product surfaces
+
+| Surface | Carries | State |
+|---|---|---|
+| **Telegram Mini App** | Three tabs: Scanner · Check · Knowledge. QR capture uses Telegram's built-in scanner; we do not write our own camera | To build |
+| **Telegram bot** | Conversational entry: send a screenshot, get an analysis. Later, family-group use and in-conversation checks | Built |
+| **Web** | Anonymous entry without Telegram, plus the published Knowledge pages | Built |
+
+Free-form input stays the default and largest door on every surface. Specialised entries are
+shortcuts for a person who already knows what they are holding — never a fork every user
+must pass through. **An entry point configures the input field; it never changes the engine
+or the shape of the answer.** There is no product discriminator on `CheckInput`; the absence
+of `face` is asserted by `tests/test_types_contract.py`.
+
+## 7. What is built today
+
+Verified against the repository, not assumed:
+
+- Telegram bot and anonymous web intake; `/privacy` and `/delete_my_data`.
+- OCR (`OCR_PROVIDER`, default `rapidocr`) with a confidence gate, and local in-process QR
+  decoding via `zxing-cpp` ([app/engine/qr/](../app/engine/qr/)).
+- One URL analyzer ([app/engine/url.py](../app/engine/url.py)) shared by rule matching,
+  minimization and reputation lookup, producing six shape labels: `shortened`,
+  `lookalike-domain`, `domain-in-subdomain`, `mixed-script-domain`, `credentials-in-url`,
+  `ip-address`.
+- The full check pipeline ([app/engine/pipeline.py](../app/engine/pipeline.py)) with rate
+  limiting, language resolution, deterministic rules, PII minimization, an LLM call in
+  JSON-schema mode, the safety validator, and localized formatting.
+- Database-backed rule and card overrides with founder editors at `/admin/rules` and
+  `/admin/cards`, each with a dry run against the real matcher.
+- A founder-authored Knowledge section (`/cases`) with draft/publish administration.
+- Retention, deletion auditing, pseudonymous user keys, privacy-safe events.
+
+**Detection assets are thin.** The shipped baseline is 13 rules, 10 knowledge cards, 14
+organizations in the official-domain catalog, and 13 golden end-to-end cases. All of the
+rules and cards describe *universal* patterns — OTP requests, urgency, prepayment. None is
+specific to Uzbekistan. `rules/shared/uz_phishing_domains.yaml` contains zero domains and
+`URL_REPUTATION_ENABLED` is off, so the reputation store currently changes no answer.
+
+This baseline can explain what is suspicious. It cannot yet explain a local scheme better
+than a general-purpose assistant can, and no product surface compensates for that.
+
+**Not built:** the Mini App, the short scanner answer, redirect resolution, Cyrillic-Uzbek
+output, wave notifications (there is no broadcast infrastructure of any kind today),
+first-run examples, the forwardable reminder, family-group behaviour, and inline mode.
+
+## 8. Privacy and safety invariants
+
+These carry the legal posture and are enforced by tests that fail the build.
+
+- **Submitted content is never persisted or logged.** `raw_text`, `image_bytes` and
+  `caption` on `CheckInput` are ephemeral. `check_event` rows and `log_event()` output carry
+  only IDs, enums, rule IDs, and metrics.
+- **Active product writes have no content columns.** `tests/test_schema_privacy.py` rejects
+  new content-like persistence. `story_submission.minimized_text` is legacy stewardship
+  only: no new writes, no product reads.
+- **Users are pseudonymous.** `user_key = HMAC_SHA256(APP_HMAC_SECRET, telegram_id)[:32]`;
+  raw Telegram IDs are never stored or logged.
+- **No verdicts.** The product never outputs "safe", "scammer", "fraud confirmed", a trust
+  score, or a risk score, in any supported language.
+- **Situation, not person.** No dossier on a person, phone number, card, account, or handle
+  — not now and not as an extension.
+- **We do not open submitted pages.** No code path fetches, renders, or executes a submitted
+  destination.
+
+### 8.1 The one bounded exception: redirect resolution
+
+Resolving where a shortened link leads is a product feature (§4, Scanner). It is a
+deliberate, narrow exception to the rule above, and its boundaries are part of the spec:
+
+- **`HEAD` only.** No response body is downloaded, no page is rendered, no script executes.
+- **`https` only, public addresses only.** Private, loopback, and link-local ranges are
+  refused before the request is made. This is what closes SSRF.
+- **Bounded.** Hard timeout, at most five redirect hops, no cookies, no credentials.
+- **Explicit.** Runs only on a user's deliberate tap ("show where this leads"), only for
+  hosts the analyzer classified as shorteners — never automatically on every submitted URL.
+- **Egress is separated** from the application's primary address.
+- The resolved destination is shown to the user and then discarded. It is not persisted, not
+  logged, and not sent to a model.
+
+Anything beyond this — fetching page content, rendering, screenshots, sandboxed browsing —
+is out of scope and requires a new founder decision recorded in this file. The exception
+must not widen by drift.
+
+## 9. Non-goals
+
+Cut deliberately during scope planning, not forgotten. A one-person, evenings-only build
+pays for every extra surface with emptiness in the others.
+
+Cut from this plan: digital-hygiene checklist · phishing trainer · personal check counter ·
+voice answers · an answer variant written for a third party · result-as-image export ·
+Telegram account verification against the catalog · a second on-device URL analyzer · PDF
+and voice-message input · a clarifying-dialogue answer mode · an "I'm on a call right now"
+screen · rule-attribution display · home-screen install.
+
+Permanently out of scope: Avvalo Merchants or any merchant-first direction · separate
+products for jobs, deals, links, documents, or payments · an accusation database, public
+allegation pages, or an open forum · user-generated posts, comments, ratings, or an
+accusation feed · a searchable person database · person, phone, card, or handle reputation
+lookup · screenshot, receipt, document, or deepfake authenticity verdicts · general
+autonomous browsing or reverse-image search · training a model on submitted checks ·
+payment, escrow, or marketplace infrastructure.
+
+**Avvalo Verify** — verified facts from official registries, specified in
+[VERIFY_VALIDATION.md](VERIFY_VALIDATION.md) — is parked, not cancelled. It is not part of
+this plan and no implementation task may be written for it. The official-domain catalog it
+depends on is being built anyway, as lookalike detection, so parking costs nothing.
+
+## 10. Documentation authority
+
+- This file defines the product and the safety boundary.
 - [ROADMAP.md](ROADMAP.md) defines the order of work.
-- [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md) defines the experiment.
-- [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) defines the current implemented architecture.
-- [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) defines explanation knowledge; a knowledge
-  card is not official-source evidence.
+- [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) describes the implemented architecture.
+- [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) defines explanation knowledge; a
+  knowledge card is not official-source evidence.
+- [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md) is parked; see §9.
 
-Superseded ideas and implementation records belong in Git history, not the active documentation
-tree.
-
-Any new feature stays outside the active roadmap until evidence shows it is more important than
-improving this core loop.
+Superseded ideas and implementation records belong in Git history, not in the active
+documentation tree.

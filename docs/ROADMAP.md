@@ -1,260 +1,206 @@
 # Avvalo — Current Roadmap
 
 > **Status:** Active order of work
-> **Last updated:** 2026-07-25
+> **Last updated:** 2026-08-28
 > **Product authority:** [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md)
 
-## Why this order
+## 0. The constraint this plan is built around
 
-The engine is built and deployed. The safety chassis — deterministic validator, PII minimization,
-pseudonymous keys, retention, no-verdict rule — is the hard, unglamorous half, and it is done.
+One person, evenings, alongside other work. Planning capacity is **60–70 evenings of roughly
+three hours** across three to six months. The engineering below totals **48–67 evenings**.
 
-Two things are not built, and neither is code:
+That fits, but only just, and only because content is counted separately (§6). Estimates are
+planning figures with normal uncertainty, not commitments; the ranges are the honest spread,
+not padding to be removed.
 
-1. **Local knowledge.** The shipped baseline is 13 rules and 10 knowledge cards describing
-   *universal* scam patterns — OTP requests, urgency, prepayment. Nothing in them is specifically
-   Uzbek. Until real circulating Uzbek scam material is encoded, a user gets an answer a
-   general-purpose assistant could also produce, and Avvalo has no reason to exist.
-2. **Users.** Nothing downstream can be decided without them. The Verify gates require 60 activated
-   users and 150 real checks; distribution is currently at zero.
+Two facts shape the order:
 
-So the order below puts the founder-only work first and treats code as the *support* for it, not
-the other way round. Phase 1 is deliberately small: it closes real correctness gaps and makes the
-detection assets editable as data, so Phase 2 does not require an engineer.
+1. **The scanner engine is already written.** [app/engine/url.py](../app/engine/url.py)
+   produces six deterministic shape labels with no model call, and
+   [app/engine/qr/](../app/engine/qr/) decodes QR codes locally. Today both run only as
+   invisible stages before an LLM call. Exposing them is the cheapest work in this document
+   and the most visible.
+2. **The Mini App is a hard dependency for camera capture, and nothing else.** Photo-based
+   QR and link analysis already work through the existing bot and web. So Phase 1 ships real
+   product before any new shell exists.
 
-Everything about the Verify gate stays as it was — the discipline there is right. What changed is
-what comes *before* it.
-
-## 0. Rules for every work session
+### Rules for every work session
 
 1. Read [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) first.
-2. Work on one phase and one acceptance boundary at a time.
-3. Never persist or log submitted content — decoded QR payloads and extracted URLs are submitted
-   content.
-4. Never output a verdict or score.
-5. Never claim an official source was checked without a typed Avvalo Verify result. Link and QR
-   wording is shape-based only ("this address imitates…", "shortened links hide…"); the sole
-   sourced URL fact remains `shared.link.blocklisted`.
-6. Do not create an implementation task for a feature that has not passed its product gate.
+2. Work one phase and one acceptance boundary at a time.
+3. Never persist or log submitted content — decoded QR payloads, extracted URLs, and
+   resolved redirect destinations are submitted content.
+4. Never output a verdict or a score. Decisiveness goes into the recommended action.
+5. Redirect resolution stays inside the boundaries in PRODUCT_GUIDE §8.1. It must not widen
+   into fetching page content.
+6. Do not create an implementation task for anything in §8 or §9.
 7. `main` deploys to production; merge only with explicit founder authorization and passing
    automated checks.
 
-## Phase 1 — Make the checker's assets editable and its link analysis correct (code)
+## 1. Phase 1 — The scanner answer (11–15 evenings)
 
-### 1.1 QR decoding at intake — **done**
+Ships through the **existing** bot and web. No Mini App required. This is the first time a
+user sees an answer that costs nothing and returns instantly.
 
-- [x] Local in-process QR decoding beside OCR in the content stage, via `zxing-cpp`. No system
-      packages, no network, no external service.
-- [x] Decoded payload treated exactly like submitted text; EMVCo-style payment payloads raise a
-      typed `Signal`, never a parsed merchant claim.
-- [x] Unreadable and multi-QR images degrade honestly.
-- [x] Golden fixtures for payment-page URL, shortened URL, lookalike domain, non-URL text, and an
-      unreadable code.
-- [x] Decoded payloads are ephemeral: minimized before the LLM, never persisted, logged, or fetched.
+| # | Task | Evenings |
+|---|---|---|
+| 1 | Short scanner answer path: a submitted link resolves through the existing analyzer and returns the three-state answer (PRODUCT_GUIDE §5.2) without a model call and without consuming `DAILY_CHECK_LIMIT` | 3–4 |
+| 2 | Surface the official-domain catalog comparison in that answer — the classification already runs, it just never reaches the user | 1–2 |
+| 3 | Payment-QR handling: recognise the EMVCo-shaped payload already detected as a `payment_qr` signal and return what to check before paying, never a parsed merchant claim | 3–4 |
+| 4 | Redirect resolution for shorteners, exactly to the boundaries in PRODUCT_GUIDE §8.1 | 3–4 |
+| 5 | "Need a full analysis?" — one action from the short answer into the existing chat check | 1 |
 
-### 1.2 One URL analyzer — **done**
+**Wording is the real work in tasks 1–3.** Six labels × two languages × three states, each
+phrased as a shape observation plus a safe action, none of them a verdict. Draft in
+`uz_latn` and `ru`, and have the Uzbek reviewed by a native speaker before release.
 
-- [x] A single normalizer ([app/engine/url.py](../app/engine/url.py)) shared by rule matching,
-      `minimize()`, and reputation lookup. The three stages previously disagreed: a punycode or
-      Cyrillic imitation was a lookalike to one and invisible to another.
-- [x] Coverage: punycode and mixed-script lookalikes, IP-literal hosts, `userinfo@` tricks,
-      public suffixes used as interior labels (`click.uz.evil.example`), shorteners, `hxxp`
-      defanging.
-- [x] The no-fetch invariant is tested: no code path performs a network request to a submitted
-      destination.
-- [x] A regression guard fails the build if a submitted-content stage grows its own host pattern
-      again.
+**Exit:** a real lookalike URL, a real shortened URL, and a photographed payment QR each
+return the short answer end to end in production; suite and `ruff check .` green; no new
+code path fetches a submitted destination outside §8.1.
 
-### 1.3 The official-domain catalog — **the highest-value asset in this document**
+## 2. Phase 2 — The application (17–25 evenings)
 
-Ships as data at [rules/shared/official_domains.yaml](../rules/shared/official_domains.yaml),
-loaded by the analyzer with an in-code floor so detection can never fall to zero.
+| # | Task | Evenings |
+|---|---|---|
+| 6 | Telegram Mini App shell: three tabs (Scanner · Check · Knowledge), shared session, one engine behind all entries | 8–12 |
+| 7 | QR capture through Telegram's built-in scanner | 4–6 |
+| 8 | Onboarding in both languages: first screen, consent, language choice | 3–4 |
+| 9 | Return and funnel metrics — scanner-to-check conversion, repeat visits within 14 days | 2–3 |
 
-- [x] Mechanism built and tested; the 14 organizations already in the codebase were migrated into
-      it unchanged.
-- [ ] **Founder:** extend to the ~20 most impersonated organizations in Uzbekistan. Each entry
-      needs every real domain the organization uses, confirmed from the organization's own
-      published materials. A missing real domain produces false "lookalike" labels.
+**Confirm before scheduling task 7:** the exact Mini App scanner API and its minimum Bot API
+version, against current Telegram documentation. The plan assumes Telegram exposes its
+scanner to Mini Apps and that we never write our own camera; if that assumption is wrong the
+estimate changes materially.
 
-This one file does three jobs: it is lookalike detection today, it is the seed for Avvalo Verify
-§4.1 (official identity match) later, and it is a large part of the Phase 3 validation packet.
-Build it once, early. It requires no code change and no deploy of new logic.
+**Task 9 is not optional instrumentation.** It is the only thing in this roadmap that
+produces the evidence an investor actually reads. A feature list is not traction.
 
-### 1.4 Answer grounding and rule precision — **done**
+**Exit:** the three tabs work on a real phone in both languages; a check started in the
+Scanner can be continued in the Check tab; return rate is being recorded.
 
-Specified in [PIPELINE_V2.md](PIPELINE_V2.md). Reviewed detection assets used to reach the user only
-as a suggestion to the model, and the validator only ever checked for forbidden content, never for
-grounded content — so a draft could satisfy every safety rule and still say nothing.
+## 3. Phase 3 — Reach (11–15 evenings)
 
-- [x] Every red flag names the detected rule, signal, or card it rests on; one that cannot is
-      dropped rather than shown. Behind `ANSWER_GROUNDING_ENABLED`.
-- [x] Whole-bullet filler ("be careful", "always verify sources") is removed deterministically.
-- [x] Rules gained `exclude`, `match_mode: word_prefix`, and `requires` co-occurrence gates,
-      editable at `/admin/rules` (migration `0012`).
-- [x] `tools/eval_rules.py` measures per-rule precision and the benign false-positive rate.
-- [x] Cards can carry reviewed `uz_latn` / `ru` wording that is emitted verbatim; inert until 1.5.
+| # | Task | Evenings |
+|---|---|---|
+| 10 | **Cyrillic-Uzbek output.** Detection and matching already handle it; only the reply is Latin-only. This opens the product to the group most exposed to fraud | 4–5 |
+| 11 | First-run examples: three real cases in one tap, for the user who arrives with nothing suspicious in hand | 2 |
+| 12 | Wave notification: opt-in storage, a throttled sender, an opt-out command, and a founder compose surface | 4–6 |
+| 13 | Forwardable one-screen reminder ("five things a bank never asks") | 1–2 |
 
-### 1.5 Reviewed card wording and a real eval corpus
+**Task 10 is the highest-value item in this phase** and the only one that adds no capability
+at all. It converts "deliberately broad audience" from a statement into a fact.
 
-- [ ] **Founder:** the first `exclude` entry — a legitimate bank SMS ("kod … hech kimga aytmang")
-      currently trips `fs.secrecy.tell_nobody`. One line at `/admin/rules`, once the phrasing to
-      carve out is confirmed by a native reviewer.
-- [ ] **Founder:** `uz_latn` / `ru` wording on the highest-traffic cards, which turns each one from
-      a model paraphrase into reviewed text the user reads verbatim.
-- [ ] **Founder:** real circulating scam messages for the eval corpus's positive half. The benign
-      half ships; the positive half is Phase 2 material.
+**Task 12 is larger than it looks.** There is no broadcast infrastructure in the codebase
+today — no opt-in column, no sender, no rate limiting against Telegram's delivery limits.
+The estimate covers building it small: a boolean per `user_key` (no content), a throttled
+loop, and an explicit opt-out. Two to three sends a month, founder-authored, never
+automatically generated from user checks.
 
-### 1.6 Truthful copy
+**Exit:** an older Cyrillic-reading user can complete a check start to finish; one wave
+notification has been sent and opted out of successfully.
 
-- [ ] Align `image_hint` texts with what the checker actually does now.
-- [ ] Review link/QR knowledge cards in both reply languages (`uz_latn`, `ru`).
+## 4. Phase 4 — Distribution (9–12 evenings)
 
-### Deferred out of Phase 1
+Both items multiply what already exists, so neither is worth building before answer quality
+is confirmed by Phase 2 metrics.
 
-**URL reputation enablement.** `rules/shared/uz_phishing_domains.yaml` currently contains zero
-domains, so the store has nothing to match and enabling it would change no answer. It stays behind
-`URL_REPUTATION_ENABLED=false` until there is a maintained feed worth consulting. Reconsider after
-Phase 2 produces real scam material — the domains found there are the natural first entries.
+| # | Task | Evenings |
+|---|---|---|
+| 14 | Family-group behaviour: the bot answers **only** on a direct mention or a forwarded message. It never reads a group passively — that would be chat surveillance and is incompatible with PRODUCT_GUIDE §8 | 5–7 |
+| 15 | Inline mode: check a link inside an ongoing conversation without leaving it | 4–5 |
 
-**Phase 1 exit:** suite + ruff green; deployed; founder verifies a real QR photo and a lookalike
-URL end-to-end in the production bot; the catalog covers the top ~20 organizations.
+**Exit:** the bot has been added to a real family group and answered correctly without
+responding to unrelated traffic.
 
-## Phase 2 — Real Uzbek scam material (founder, no code)
+## 5. Budget
 
-This is the moat. Nothing here needs an engineer.
+| Phase | Evenings |
+|---|---|
+| 1 — Scanner answer | 11–15 |
+| 2 — Application | 17–25 |
+| 3 — Reach | 11–15 |
+| 4 — Distribution | 9–12 |
+| **Engineering total** | **48–67** |
+| Capacity | 60–70 |
 
-- [ ] Collect **30–40 scam messages actually circulating in Uzbekistan** — from personal networks,
-      Telegram channels, and public warnings. Never from user submissions: those are ephemeral by
-      design and must stay that way.
-- [ ] Encode each one as rules and knowledge cards through `/admin/rules` and `/admin/cards`
-      (needs `ADMIN_ACCESS_KEY` configured in production — do this first). Both editors have a
-      dry-run against the real matcher, so a preview cannot drift from production.
-- [ ] Add the hardest cases to `tests/fixtures/golden/checks.json` so detection quality cannot
-      silently regress.
-- [ ] Write the first three to five educational cases in both reply languages, drawn from the same
-      material.
+Content (§6) is not in this table and is a comparable body of work.
 
-Cases are manually authored education. They are not Avvalo Verify evidence, a public allegation
-database, public submissions, comments, ratings, or automatic derivatives of user checks.
+## 6. Content track — runs in parallel, founder only, no engineer
 
-**Phase 2 exit:** the rule pack covers materially more than the universal patterns it ships with,
-and the founder can name the local scam types Avvalo explains better than a general assistant.
+This is the moat, and no phase above compensates for its absence. The shipped baseline is 13
+rules, 10 knowledge cards, 14 catalog organizations, and 13 golden cases — all universal
+patterns, nothing specific to Uzbekistan.
 
-## Phase 3 — Distribution and the answer format (founder, no code)
+- [ ] **Extend the official-domain catalog** at
+      [rules/shared/official_domains.yaml](../rules/shared/official_domains.yaml) from 14 to
+      the ~20 most impersonated organizations. Every real domain an organization uses,
+      confirmed from its own published materials — a missing real domain produces false
+      "lookalike" labels. Data only: no code change, no deploy of new logic.
+- [ ] **Collect 30–40 scam messages actually circulating in Uzbekistan** and encode them as
+      rules and cards through `/admin/rules` and `/admin/cards` (set `ADMIN_ACCESS_KEY` in
+      production first). Both editors dry-run against the real matcher. Never source this
+      from user submissions — those are ephemeral by design.
+- [ ] **Write the "it already happened" knowledge**: money transferred, code received,
+      account stolen, a call from "the bank", an OLX deal. These are chat inputs, not
+      screens — but the engine has no recovery knowledge at all today, and the answer shape
+      there is recovery steps rather than red flags.
+- [ ] **Publish the first three to five Knowledge posts** in both reply languages, drawn from
+      the same material.
+- [ ] **Add the hardest cases** to `tests/fixtures/golden/checks.json` so detection quality
+      cannot silently regress.
+- [ ] **Reviewed `uz_latn`/`ru` wording** on the highest-traffic cards, and the first
+      `exclude` entry — a legitimate bank SMS ("kod … hech kimga aytmang") currently trips
+      `fs.secrecy.tell_nobody`.
 
-Runs alongside Phase 2 and gates everything after it.
+## 7. The open question this plan does not answer
 
-- [ ] **30 real users.** Seed the bot where the scams actually circulate.
-- [ ] **Sit with five of them while they read a real answer.** Did they read to the end? What did
-      they do next? Was anything confusing? The answer contract has never been tested against a
-      person under time pressure on a phone; if it needs to change, better to learn it now than
-      after Verify is built on top of it.
-- [ ] **Measure return rate within 14 days.** At this scale it is the only number that means
-      anything — it says whether the habit is forming. Coverage and completion rates are vanity
-      until then.
+**Where the first few hundred users come from is undecided.** No surface in this roadmap
+solves it, and it is a larger risk than any feature in it.
 
-**Phase 3 exit:** a written founder judgment on whether people come back, and any answer-format
-changes that came out of watching them read.
+Two items work on it directly — the forwardable reminder (task 13) and family-group
+behaviour (task 14), where one add reaches a whole family. Neither replaces a channel; they
+amplify one once it exists.
 
-## Phase 4 — Official registry verification (Avvalo Verify)
+This belongs on the founder's list before Phase 4, not after it.
 
-Unchanged in substance. Starts after Phase 3. No feature code before a recorded `go`.
+## 8. Parked
 
-### 4a. Manual validation packet ([VERIFY_VALIDATION.md](VERIFY_VALIDATION.md))
+Recorded so they are not rediscovered from scratch. Moving one into a phase requires an
+explicit founder decision.
 
-- [ ] 30 representative scenarios: 10 per family — official identity match; official domain and
-      QR-destination catalog match; regulated organization and license routing. Draw them from the
-      Phase 2 material; do not invent scenarios that no one has actually encountered.
-- [ ] Founder-reviewed source inventory (registries, regulator lists, official domain catalogs).
-- [ ] Deterministic evidence wording in both reply languages.
-- [ ] Advice-only and evidence-backed answer pair for every scenario; paired user sessions with
-      categorical results.
-- [ ] Explicit `go`, `revise once`, or `stop` decision, recorded in writing.
+- **Avvalo Verify** — official-registry facts, specified in
+  [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md). Parked, not cancelled; the catalog it needs
+  is being built anyway as lookalike detection.
+- **URL reputation enablement** — `rules/shared/uz_phishing_domains.yaml` holds zero domains
+  and `URL_REPUTATION_ENABLED` is off, so enabling it would change no answer. Reconsider once
+  the content track produces real material; those domains are the natural first entries.
+- **Linking a fired knowledge card to a published Knowledge post** — `reviewed_case_ids` is
+  already threaded end to end and every baseline card sets it to `[]`. Two constraints if it
+  is ever taken up: the validator strips every URL from model output, so the link must be
+  appended deterministically in [app/engine/format.py](../app/engine/format.py) after
+  validation; and Knowledge is web-only, so the bot has no surface for it.
+- Cut during scope planning: digital-hygiene checklist · phishing trainer · personal counter
+  · voice answers · third-party-addressed answers · result-as-image · Telegram account
+  verification · on-device URL analyzer · PDF and voice input · clarifying dialogue ·
+  "I'm on a call now" screen · rule-attribution display · home-screen install.
 
-Gate for `go`: at least 40% decision-relevant evidence coverage, at least 70% preference for the
-evidence-backed answer, and zero invented, overstated, unsourced, or person-level facts.
+## 9. Not on the roadmap
 
-> **Expect an uneven result.** The curated official-contact catalog is likely to clear the bar;
-> live register integrations may not, on permissions and access rather than on engineering. If the
-> packet says "the catalog works, the registers do not", that is a real answer — ship the catalog
-> half rather than reaching for a fourth family to rescue the average.
+- Avvalo Merchants; user-generated stories, comments, ratings, or accusation feeds.
+- Person, phone, card, or handle lookup; authenticity verdicts; pattern classifiers or
+  training on submissions.
+- Fetching, rendering, or executing a submitted destination beyond PRODUCT_GUIDE §8.1.
+- Autonomous browsing or reverse-image search.
+- Bank, telco, marketplace, payment, escrow, or white-label integrations.
+- Billing or a final revenue model.
 
-### 4b. Strict MVP (only after a recorded `go`)
+These require a new founder decision backed by evidence, and must not be pulled into a task
+because they appear in Git history or a superseded document.
 
-One executor-ready task under `docs/tasks/`. It defines typed evidence (stable ID, source,
-retrieved-at, limitations), approved sources, refresh and failure behavior, privacy boundaries,
-wording in both reply languages, adversarial tests, migrations if required, and rollout flags.
-It must not include general web browsing or another product feature.
+## 10. Definition of roadmap complete
 
-### 4c. Measured alpha
-
-- [ ] 60 activated users; 150 completed real checks; 30 users with a full 14-day return window.
-- [ ] At least 30 consented or supervised fact-quality audits.
-- [ ] Metrics calculated exactly as defined in `VERIFY_VALIDATION.md`.
-- [ ] Founder records `continue`, `revise once`, or `stop`.
-
-The alpha passes only with at least 35% evidence coverage, at least 98% audited fact precision,
-zero critical false facts, at least 70% evidence usefulness, at least 25% decision impact, complete
-source/time attribution, and zero privacy incidents.
-
-## Parked ideas — recorded, not scheduled
-
-Ideas kept here have not passed a product gate, so §0 rule 6 forbids writing an implementation
-task for them. They are recorded because the mechanism already exists and would otherwise be
-rediscovered from scratch. Moving one into a phase requires an explicit founder decision.
-
-### Link a fired knowledge card to its published case
-
-`reviewed_case_ids` is already threaded end to end — `KnowledgeCard.reviewed_case_ids` →
-`RetrievalResult.reviewed_case_ids` → `CheckResult` → the `check_event.reviewed_case_ids` column →
-the leak filter in [app/engine/validate.py](../app/engine/validate.py) — and
-[/admin/cards](../app/web/knowledge_admin.py) already accepts the field. Every baseline card
-sets it to `[]`, and nothing downstream renders it. The slot exists; the connection was never made.
-
-The idea: when a card fires, point the reader at the founder-authored case that explains that
-exact scam, so one check becomes a reason to come back. Phase 3 measures return rate, and this is
-the cheapest lever on it that does not require new detection work.
-
-What it depends on:
-
-- **Phase 2 must land first.** There are no published cases yet, and a card can only cite one that
-  exists. Card IDs are frozen identifiers; case slugs are operator-chosen. Any binding between
-  them needs a validated, non-guessable mapping — a dangling slug must degrade to no link, never
-  to a broken page.
-- **An open product decision.** [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §5 defines the answer as five
-  blocks, none of which is further reading. Adding a link means amending the answer contract, and
-  that belongs with the Phase 3 answer-format work rather than ahead of it.
-
-Two implementation constraints, recorded now so they are not rediscovered later:
-
-- The safety validator strips every URL from model output and bans "open the link" phrasing. A
-  case link therefore has to be appended deterministically in
-  [app/engine/format.py](../app/engine/format.py) *after* validation, from an ID the backend
-  selected. The model must never be allowed to emit it.
-- Cases are currently web-only. The Telegram bot has no cases surface at all, so a link would
-  either be a bare URL out of the bot or a feature only web users see.
-
-A case is education, never evidence: a link must not imply the current situation has been matched
-to a previous one, and must not survive into a shared summary as an accusation.
-
-## Not on the roadmap
-
-- Avvalo Merchants;
-- user-generated stories, comments, ratings, accusation feeds, or aggregate trend feeds;
-- voice, group monitoring, family accounts, or new product faces;
-- pattern similarity, classifiers, or training on submissions;
-- autonomous browsing, reverse-image search, or authenticity verdicts;
-- fetching, rendering, or executing any submitted URL or QR destination;
-- bank, telco, marketplace, payment, escrow, or white-label integrations;
-- billing or a final revenue model.
-
-These items require a new founder decision backed by evidence. They must not be pulled into a task
-because they appear in git history or a superseded document.
-
-## Definition of roadmap complete
-
-The roadmap is complete when Phase 1 is live and verified in production, the catalog covers the
-top organizations, real Uzbek scam material is encoded and covered by goldens, the first cases are
-published, 30 users have been observed and a return rate recorded, the Phase 4a packet has a
-recorded decision, and — on `go` — the strict MVP is live and audited and the measured alpha
-reaches its sample with a written decision from the agreed metrics.
+Phases 1–4 are live and verified in production; the catalog covers the top organizations;
+real Uzbek material is encoded and covered by golden fixtures; recovery knowledge answers
+the "it already happened" situations; Cyrillic-Uzbek output ships; the first Knowledge posts
+are published; and a 14-day return rate has been recorded from real users rather than
+estimated.
