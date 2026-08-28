@@ -45,11 +45,72 @@ jobs:
       - name: Security lint
         run: ruff check app --select S --ignore S101,S104,S105,S310
       - name: Tests
-        run: pytest -q                     # the hard gate (in-memory SQLite, no services)
+        # The hard gate: in-memory SQLite, no services. --cov enforces the floor
+        # in pyproject.toml, so coverage erosion fails the build like any test.
+        run: pytest -q --cov
+
+  # ── 1b. Same suite on the database production actually runs ─────────────────
+  # SQLite cannot express the shipped column types: rule_ids, knowledge_card_ids,
+  # and reviewed_case_ids are ARRAY(Text) on Postgres and fall back to JSON under
+  # SQLite (RULE_IDS_TYPE in app/data/models.py), so the default job never
+  # exercises the production type. This job also proves the Alembic chain applies
+  # to a clean Postgres 16 and can be rolled back — nothing else runs migrations.
+  test-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: avvalo
+          POSTGRES_DB: avvalo
+          # This container is reachable only from this job and is destroyed with
+          # it, so there is no password to hardcode, leak, or rotate. Secret
+          # scanners flag a literal one here as a finding; trust auth removes it.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U avvalo"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Alembic reads DATABASE_URL; the suite reads TEST_DATABASE_URL. They point
+      # at the same database: the migration steps run first and assert on their
+      # own, then the suite rebuilds the product tables from the models.
+      DATABASE_URL: postgresql+asyncpg://avvalo@localhost:5432/avvalo
+      TEST_DATABASE_URL: postgresql+asyncpg://avvalo@localhost:5432/avvalo
+      TELEGRAM_TOKEN: ci-placeholder
+      APP_HMAC_SECRET: ci-placeholder-hmac-secret
+      LLM_BASE_URL: http://localhost:11434/v1
+      LLM_API_KEY: ci-placeholder
+      LLM_MODEL: ci-placeholder
+      WEB_SESSION_SECRET: ci-placeholder-web-session-secret
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      # --no-deps for the same reason as the `test` job above: the lock is the
+      # complete resolved closure, and pip's own resolution fights the uv
+      # opencv-python override.
+      - run: pip install --require-hashes --no-deps -r requirements-dev.lock
+      - run: pip install --no-deps --no-build-isolation -e .
+      - name: Migrations apply to a clean Postgres 16
+        run: alembic upgrade head
+      - name: Migrations roll back and reapply
+        # A migration that cannot be undone leaves no way out of a bad deploy.
+        run: |
+          alembic downgrade base
+          alembic upgrade head
+      - name: Tests against Postgres
+        run: pytest -q
 
   # ── 2. Build the image once, push to GHCR ───────────────────────────────────
   build-and-push:
-    needs: test
+    needs: [test, test-postgres]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

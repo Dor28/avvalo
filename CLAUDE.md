@@ -13,7 +13,12 @@ pip install -e ".[dev]"                 # Python 3.11+
 pytest -q                               # full suite — no services needed (in-memory SQLite)
 pytest tests/test_engine_pipeline.py -q # one file
 pytest -q -k "name_substring"           # one test
+pytest -q --cov                         # + coverage; fails under the floor in pyproject.toml
 ruff check .                            # lint: py311, line length 100, E/F/I/UP/B/SIM/RUF
+
+# Run the same suite against real Postgres, as CI does. Only this exercises the
+# shipped ARRAY(Text) columns; SQLite falls back to JSON (RULE_IDS_TYPE).
+TEST_DATABASE_URL=postgresql+asyncpg://avvalo:avvalo@localhost:5432/avvalo pytest -q
 
 docker compose up --build               # full local stack: Postgres 16 + migrations + app
 docker compose --profile local-llm up -d ollama   # optional offline LLM
@@ -21,7 +26,7 @@ python -m app.main --check              # one-shot config + DB connectivity chec
 alembic upgrade head                    # apply migrations (compose does this on boot)
 ```
 
-**Pushing to `main` deploys to production.** `.github/workflows/deploy.yml` gates on `pytest` only (ruff is non-blocking), builds an image to GHCR, and deploys it to the Hetzner VM on every push to `main`. Work on a branch unless the change should ship.
+**Pushing to `main` deploys to production.** `.github/workflows/deploy.yml` runs two gating jobs — `test` (`ruff check .`, the `S`-rule security lint, and `pytest -q --cov` on SQLite) and `test-postgres` (Alembic `upgrade head`, a `downgrade base` + reapply round trip, then the suite against Postgres 16). Every step is blocking, so a lint failure or a coverage drop below the floor blocks the deploy. Only after both jobs pass does it build an image to GHCR and deploy it to the Hetzner VM. Work on a branch unless the change should ship.
 
 All configuration comes from environment variables via [app/config.py](app/config.py) (pydantic-settings, reads `.env`); [.env.example](.env.example) documents every knob. Never hardcode a tunable — add it to `Settings` and `.env.example`.
 
@@ -104,6 +109,13 @@ The legal posture depends on these; several are enforced by tests that will fail
   (§5.1, §9, …) — keep those references in sync.
 - Test modules are named for current behavior and product boundaries, not historical milestones;
   the active golden end-to-end fixtures live in `tests/fixtures/golden/checks.json`.
+- **A golden fixture is executed, not just declared.** `tests/test_golden_e2e.py` runs every case
+  through `run_check()`: `expected_rule_families` must fire, `expected_knowledge_card_ids` must be
+  retrieved, and no `must_not_contain` phrase may reach the user in an `ok` reply — asserted by
+  driving an adversarial model that tries to emit each one. `must_include` stays English
+  reviewer-facing rationale (replies are `uz_latn`/`ru`, so it can never be a substring match);
+  `expected_knowledge_card_ids` is its checkable form. Adding a case therefore buys reply-content
+  cover, so add the hardest Phase 2 material here.
 - **Every user-facing string exists in both languages** (`uz_latn`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. Uzbek replies are Latin-script only. Cyrillic-Uzbek *input* is still supported: `app/engine/language.py` detects it and resolves it to `uz_latn`, the `uz_cyrl` keyword groups in `rules/` and `knowledge/` still match it, and `app/engine/validate.py` still bans Cyrillic verdict words. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
 - Async end-to-end; pytest runs with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed).
 - Style follows ruff config in [pyproject.toml](pyproject.toml): 100-char lines, import sorting (I), modern syntax (UP). Module docstrings state purpose and spec section; internal helpers use frozen dataclasses, boundary types use Pydantic.

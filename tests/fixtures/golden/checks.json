@@ -9,6 +9,10 @@
       "urgency_secrecy",
       "authority_impersonation"
     ],
+    "expected_knowledge_card_ids": [
+      "family.credential_theft",
+      "family.authority_impersonation"
+    ],
     "must_include": [
       "do not share the SMS code",
       "open the bank app yourself",
@@ -31,6 +35,10 @@
       "authority_impersonation",
       "urgency_secrecy",
       "upfront_payment"
+    ],
+    "expected_knowledge_card_ids": [
+      "family.urgency_secrecy",
+      "family.upfront_payment"
     ],
     "must_include": [
       "do not transfer money yet",
@@ -57,6 +65,10 @@
       "urgency_secrecy",
       "implausible_promise"
     ],
+    "expected_knowledge_card_ids": [
+      "family.release_before_payment",
+      "family.implausible_promise"
+    ],
     "must_include": [
       "do not prepay before seeing the item",
       "ask for a short video with today's date",
@@ -79,6 +91,9 @@
       "suspicious_link_qr",
       "urgency_secrecy",
       "upfront_payment"
+    ],
+    "expected_knowledge_card_ids": [
+      "family.suspicious_link_qr"
     ],
     "must_include": [
       "do not open the link or scan the QR",
@@ -105,6 +120,10 @@
       "credential_theft",
       "urgency_secrecy"
     ],
+    "expected_knowledge_card_ids": [
+      "family.upfront_payment",
+      "family.credential_theft"
+    ],
     "must_include": [
       "do not pay a registration fee before a contract",
       "verify the legal entity name and address independently",
@@ -127,6 +146,10 @@
       "edited_screenshot_hint",
       "receipt_inconsistency",
       "fake_courier_refund"
+    ],
+    "expected_knowledge_card_ids": [
+      "family.payment_receipt_claim",
+      "family.release_before_payment"
     ],
     "must_include": [
       "a screenshot is not proof of payment",
@@ -152,6 +175,10 @@
       "amount_mismatch",
       "edited_screenshot_hint"
     ],
+    "expected_knowledge_card_ids": [
+      "family.payment_receipt_claim",
+      "family.overpayment_refund"
+    ],
     "must_include": [
       "do not refund anything before confirming the incoming transfer and amount",
       "a screenshot does not prove the overpayment",
@@ -176,6 +203,10 @@
       "edited_screenshot_hint",
       "fake_courier_refund"
     ],
+    "expected_knowledge_card_ids": [
+      "family.payment_receipt_claim",
+      "family.release_before_payment"
+    ],
     "must_include": [
       "a different name is an inconsistency",
       "confirm the incoming transfer in the receiving account",
@@ -196,6 +227,9 @@
     "input_type": "image",
     "input": "qr/payment_page_url.png",
     "expected_rule_families": [],
+    "expected_knowledge_card_ids": [
+      "family.suspicious_link_qr"
+    ],
     "expected_signal_kinds": [
       "link"
     ],
@@ -217,6 +251,9 @@
     "input_type": "image",
     "input": "qr/shortened_url.png",
     "expected_rule_families": [],
+    "expected_knowledge_card_ids": [
+      "family.suspicious_link_qr"
+    ],
     "expected_signal_kinds": [
       "link_shortened"
     ],
@@ -238,6 +275,9 @@
     "input_type": "image",
     "input": "qr/lookalike_domain.png",
     "expected_rule_families": [],
+    "expected_knowledge_card_ids": [
+      "family.suspicious_link_qr"
+    ],
     "expected_signal_kinds": [
       "link_lookalike"
     ],
@@ -262,6 +302,10 @@
       "credential_theft",
       "authority_impersonation"
     ],
+    "expected_knowledge_card_ids": [
+      "family.credential_theft",
+      "family.authority_impersonation"
+    ],
     "expected_signal_kinds": [
       "otp_request"
     ],
@@ -283,6 +327,7 @@
     "input_type": "image",
     "input": "qr/unreadable.png",
     "expected_rule_families": [],
+    "expected_knowledge_card_ids": [],
     "expected_signal_kinds": [],
     "expected_status": "low_ocr",
     "must_include": [
