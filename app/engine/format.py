@@ -1,7 +1,5 @@
 """Final user-facing message formatting."""
 
-from functools import cache
-
 from app.engine.rules import load_rule_pack
 from app.engine.types import CheckStatus, DraftOutput, Language
 
@@ -178,11 +176,11 @@ _STATUS_MESSAGES = {
     },
     CheckStatus.low_ocr: {
         Language.uz_latn: (
-            "Rasmdagi matn yoki QR-kodni aniq o'qiy olmadim. Muhim joyni matn qilib "
+            "Rasmdagi matn yoki QR-kodni to'liq qayta ishlay olmadim. Muhim joyni matn qilib "
             "yoki bitta QR-kodni alohida yuboring."
         ),
         Language.ru: (
-            "Не получилось чётко прочитать текст или QR-код на изображении. "
+            "Не получилось полностью обработать текст или QR-код на изображении. "
             "Пришлите важный фрагмент текстом или один QR-код отдельно."
         ),
     },
@@ -280,8 +278,16 @@ def _top_family_labels(rule_ids: list[str], language: Language) -> list[str]:
     return [_family_label(family, language) for family in families[:3]]
 
 
-@cache
 def _rules_by_id():
+    """Index the rule pack *currently* in force.
+
+    Deliberately uncached: ``load_rule_pack()`` serves a snapshot that
+    ``app.rules_store.apply`` republishes on a schedule and after every operator
+    edit. Caching this map pinned the first pack the process ever read, so a
+    share summary kept reporting the pre-override family and severity — and
+    silently dropped any rule the override layer had added.
+    """
+
     try:
         pack = load_rule_pack()
     except (FileNotFoundError, ValueError):

@@ -14,7 +14,7 @@ from app.config import Settings
 from app.content import EditorialBase
 from app.data.models import Base
 from app.engine.knowledge import retrieve_knowledge
-from app.engine.knowledge.loader import clear_active_knowledge_base
+from app.engine.knowledge.loader import clear_active_knowledge_base, load_yaml_knowledge_base
 from app.engine.types import RuleHit
 from app.knowledge_store import KnowledgeStoreBase
 from app.rules_store import RuleStoreBase
@@ -267,3 +267,85 @@ def test_deleting_an_override_restores_the_baseline_card(client) -> None:
 
     assert response.status_code == 303
     assert "family.urgency_secrecy" in asyncio.run(_retrieved_ids())
+
+
+# --- baseline visibility ----------------------------------------------------
+
+
+def test_the_listing_shows_shipped_cards_when_no_override_exists(client) -> None:
+    """A fresh database must not render an empty page while cards are answering."""
+
+    _login(client)
+
+    listing = client.get("/admin/cards?language=ru").text
+
+    for card in load_yaml_knowledge_base().cards:
+        assert card.id in listing, f"{card.id} is in force but absent from the editor"
+    assert KNOWLEDGE_COPY["ru"]["baseline_pill"] in listing
+
+
+def test_a_baseline_row_offers_no_delete_action(client) -> None:
+    """Only a stored override can be deleted; the shipped card is not ours to remove."""
+
+    _login(client)
+
+    listing = client.get("/admin/cards?language=ru").text
+
+    assert "/admin/cards/baseline/family.urgency_secrecy/edit" in listing
+    assert "/admin/cards/baseline/family.urgency_secrecy/delete" not in listing
+
+
+def test_editing_a_baseline_card_prefills_its_shipped_values(client) -> None:
+    _login(client)
+    baseline = next(
+        card for card in load_yaml_knowledge_base().cards if card.id == "family.urgency_secrecy"
+    )
+
+    response = client.get("/admin/cards/baseline/family.urgency_secrecy/edit")
+
+    assert response.status_code == 200
+    assert "family.urgency_secrecy" in response.text
+    # Compared on an apostrophe-free fragment: Jinja escapes the stored text.
+    assert "Time pressure or secrecy reduces the" in response.text
+    assert baseline.red_flags[0] in response.text
+    # No override_id: saving must create an override, not update a missing row.
+    assert 'name="override_id" value=""' in response.text or "override_id" not in response.text
+
+
+def test_saving_an_edited_baseline_card_overrides_it_by_id(client) -> None:
+    _login(client)
+    assert "family.urgency_secrecy" in asyncio.run(_retrieved_ids())
+
+    saved = client.post(
+        "/admin/cards",
+        data=_form(
+            card_id="family.urgency_secrecy",
+            mechanism="Edited baseline mechanism for the deadline pattern.",
+            status="retired",
+        ),
+        follow_redirects=False,
+    )
+
+    assert saved.status_code == 303
+    # The retired override suppresses the shipped card of the same ID.
+    assert "family.urgency_secrecy" not in asyncio.run(_retrieved_ids())
+
+
+def test_an_overridden_card_is_listed_once(client) -> None:
+    """The override replaces its baseline row rather than appearing beside it."""
+
+    _login(client)
+    client.post(
+        "/admin/cards", data=_form(card_id="family.urgency_secrecy"), follow_redirects=False
+    )
+
+    listing = client.get("/admin/cards?language=ru").text
+
+    assert listing.count("family.urgency_secrecy") == 1
+    assert "/admin/cards/baseline/family.urgency_secrecy/edit" not in listing
+
+
+def test_an_unknown_baseline_card_is_a_404(client) -> None:
+    _login(client)
+
+    assert client.get("/admin/cards/baseline/family.not_a_real_card/edit").status_code == 404

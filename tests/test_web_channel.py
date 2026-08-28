@@ -1,16 +1,23 @@
 """Web-channel parity, privacy boundaries, and abuse-gate tests."""
 
+import asyncio
 import logging
 import re
 
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 from starlette.formparsers import MultiPartParser
+from starlette.requests import Request
 
 from app.config import Settings
+from app.data import repo
+from app.data.models import Base
 from app.engine import CheckResult, CheckStatus, InputType, Language
-from app.web import routes
+from app.web import abuse, routes
 from app.web.abuse import MAX_REQUEST_BODY_BYTES, configure_ephemeral_multipart
 from app.web.app import create_app
+from app.web.session import get_or_create_web_session
 
 
 class FakeSession:
@@ -436,3 +443,94 @@ def test_web_ip_limit_survives_cookie_reset_and_spoofed_xff(monkeypatch) -> None
     assert scope == "web_ip"
     assert "203.0.113" not in user_key
     assert count == 2
+
+
+def test_turnstile_verification_rejects_a_non_json_response(monkeypatch) -> None:
+    """An edge/proxy error page must fail verification, not the whole request.
+
+    Decoding HTML as JSON raises ValueError, which is not an OSError -- it used
+    to escape the worker thread and surface as a 500 instead of the intended
+    "verification failed" rejection.
+    """
+
+    class _HtmlErrorPage:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc) -> bool:
+            return False
+
+        def read(self) -> bytes:
+            return b"<html><body>502 Bad Gateway</body></html>"
+
+    monkeypatch.setattr(abuse, "urlopen", lambda *_args, **_kwargs: _HtmlErrorPage())
+
+    assert abuse._verify_turnstile_sync("token", "secret", None) is False
+
+
+def test_turnstile_verification_rejects_a_json_response_that_is_not_an_object(
+    monkeypatch,
+) -> None:
+    class _JsonArray:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc) -> bool:
+            return False
+
+        def read(self) -> bytes:
+            return b"[]"
+
+    monkeypatch.setattr(abuse, "urlopen", lambda *_args, **_kwargs: _JsonArray())
+
+    assert abuse._verify_turnstile_sync("token", "secret", None) is False
+
+
+def test_accepted_consent_survives_a_rejected_submission() -> None:
+    """Accepting the notice is a completed decision, not part of the check.
+
+    Every early exit from POST /check returns without committing, so a consent
+    row written in the same transaction used to be rolled back and the user was
+    asked to tick the box again.
+    """
+
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    settings = _settings()
+
+    async def _create_schema() -> None:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+
+    asyncio.run(_create_schema())
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    client = TestClient(create_app(settings=settings, session_factory=factory))
+
+    # Consent ticked, but the text field is blank: a 400, not a check.
+    rejected = client.post(
+        "/check", data={"language": "ru", "text": "   ", "consent": "yes"}
+    )
+    assert rejected.status_code == 400
+
+    scope = {
+        "type": "http",
+        "headers": [
+            (b"cookie", f"avvalo_web_session={client.cookies['avvalo_web_session']}".encode())
+        ],
+    }
+    web_session = get_or_create_web_session(
+        Request(scope), secret=settings.web_session_secret.get_secret_value()
+    )
+
+    async def _stored_consent():
+        async with factory() as session:
+            return await repo.get_consent(session, user_key=web_session.user_key)
+
+    consent = asyncio.run(_stored_consent())
+    asyncio.run(engine.dispose())
+
+    assert consent is not None
+    assert consent.notice_version == settings.notice_version

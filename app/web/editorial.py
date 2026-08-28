@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -15,16 +16,21 @@ from app.config import Settings
 from app.content import (
     ARTICLE_MAX_CHARS,
     CATEGORIES,
+    EDITORIAL_COVER_ALT_MAX_CHARS,
+    EDITORIAL_COVER_UPLOAD_MAX_BYTES,
     SLUG_MAX_CHARS,
     SUMMARY_MAX_CHARS,
     TITLE_MAX_CHARS,
     EditorialPost,
     EditorialPostDraft,
     create_post,
+    get_admin_cover,
     get_admin_post,
+    get_published_cover,
     get_published_post,
     list_admin_posts,
     list_published_posts,
+    prepare_editorial_cover,
     update_post,
 )
 from app.web.abuse import require_same_origin
@@ -113,6 +119,30 @@ async def case_detail(
         ),
     )
     return _no_store(response)
+
+
+@router.get("/cases/{slug}/cover", name="case_cover", include_in_schema=False)
+async def case_cover(request: Request, slug: str) -> Response:
+    """Serve a normalized cover only while its editorial post is published."""
+
+    session_factory = _session_factory_or_none(request)
+    if session_factory is None:
+        raise HTTPException(status_code=404)
+    async with session_factory() as session:
+        cover = await get_published_cover(session, slug=slug)
+    if cover is None:
+        raise HTTPException(status_code=404)
+
+    revision = int(cover.updated_ts.timestamp() * 1_000_000)
+    etag = f'"{cover.post_id.hex}-{revision}"'
+    headers = {
+        "Cache-Control": "public, max-age=86400",
+        "ETag": etag,
+        "X-Content-Type-Options": "nosniff",
+    }
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers=headers)
+    return Response(content=cover.image_bytes, media_type=cover.media_type, headers=headers)
 
 
 @router.get("/admin", include_in_schema=False)
@@ -206,6 +236,10 @@ async def admin_post_new(request: Request, language: str = DEFAULT_LANGUAGE) -> 
 async def admin_post_create(
     request: Request,
     draft: Annotated[EditorialPostDraft, Depends(_editorial_draft_from_form)],
+    cover_image: Annotated[UploadFile | None, File()] = None,
+    cover_alt_uz_latn: Annotated[str, Form()] = "",
+    cover_alt_ru: Annotated[str, Form()] = "",
+    remove_cover: Annotated[bool, Form()] = False,
     language: Annotated[str, Form()] = DEFAULT_LANGUAGE,
 ) -> Response:
     """Validate and create one founder-authored post."""
@@ -216,7 +250,16 @@ async def admin_post_create(
     redirect = _require_admin(request, settings, language)
     if redirect is not None:
         return redirect
-    return await _save_admin_post(request, language=language, draft=draft, post_id=None)
+    return await _save_admin_post(
+        request,
+        language=language,
+        draft=draft,
+        post_id=None,
+        cover_image=cover_image,
+        cover_alt_uz_latn=cover_alt_uz_latn,
+        cover_alt_ru=cover_alt_ru,
+        remove_cover=remove_cover,
+    )
 
 
 @router.get(
@@ -244,6 +287,30 @@ async def admin_post_edit(
     return _admin_form_response(request, language, post=post)
 
 
+@router.get(
+    "/admin/posts/{post_id}/cover",
+    include_in_schema=False,
+)
+async def admin_post_cover(request: Request, post_id: uuid.UUID) -> Response:
+    """Preview a cover inside the authenticated editor, including for drafts."""
+
+    settings = _admin_settings(request)
+    if not is_admin_authenticated(request, settings):
+        raise HTTPException(status_code=404)
+    session_factory = _session_factory_or_error(request)
+    async with session_factory() as session:
+        cover = await get_admin_cover(session, post_id)
+    if cover is None:
+        raise HTTPException(status_code=404)
+    return _no_store(
+        Response(
+            content=cover.image_bytes,
+            media_type=cover.media_type,
+            headers={"X-Content-Type-Options": "nosniff"},
+        )
+    )
+
+
 @router.post(
     "/admin/posts/{post_id}",
     response_class=HTMLResponse,
@@ -253,6 +320,10 @@ async def admin_post_update(
     request: Request,
     post_id: uuid.UUID,
     draft: Annotated[EditorialPostDraft, Depends(_editorial_draft_from_form)],
+    cover_image: Annotated[UploadFile | None, File()] = None,
+    cover_alt_uz_latn: Annotated[str, Form()] = "",
+    cover_alt_ru: Annotated[str, Form()] = "",
+    remove_cover: Annotated[bool, Form()] = False,
     language: Annotated[str, Form()] = DEFAULT_LANGUAGE,
 ) -> Response:
     """Validate and update an existing founder-authored post."""
@@ -263,7 +334,16 @@ async def admin_post_update(
     redirect = _require_admin(request, settings, language)
     if redirect is not None:
         return redirect
-    return await _save_admin_post(request, language=language, draft=draft, post_id=post_id)
+    return await _save_admin_post(
+        request,
+        language=language,
+        draft=draft,
+        post_id=post_id,
+        cover_image=cover_image,
+        cover_alt_uz_latn=cover_alt_uz_latn,
+        cover_alt_ru=cover_alt_ru,
+        remove_cover=remove_cover,
+    )
 
 
 async def _save_admin_post(
@@ -272,6 +352,10 @@ async def _save_admin_post(
     language: str,
     draft: EditorialPostDraft,
     post_id: uuid.UUID | None,
+    cover_image: UploadFile | None,
+    cover_alt_uz_latn: str,
+    cover_alt_ru: str,
+    remove_cover: bool,
 ) -> Response:
     session_factory = _session_factory_or_error(request)
     error_key: str | None = None
@@ -279,24 +363,39 @@ async def _save_admin_post(
     try:
         async with session_factory() as session:
             if post_id is None:
-                await create_post(session, draft)
+                current_has_cover = False
             else:
                 existing = await get_admin_post(session, post_id)
                 if existing is None:
                     raise HTTPException(status_code=404)
                 post = existing
-                await update_post(session, existing, draft)
+                current_has_cover = existing.cover_media_type is not None
+
+            uploaded_bytes = await _read_cover_upload(cover_image)
+            cover = await asyncio.to_thread(
+                prepare_editorial_cover,
+                image_bytes=uploaded_bytes,
+                alt_uz_latn=cover_alt_uz_latn,
+                alt_ru=cover_alt_ru,
+                remove=remove_cover,
+                current_has_cover=current_has_cover,
+            )
+            if post_id is None:
+                await create_post(session, draft, cover)
+            else:
+                await update_post(session, existing, draft, cover)
             await session.commit()
     except IntegrityError:
         error_key = "duplicate_slug"
-    except ValueError:
-        error_key = "form_error"
+    except ValueError as exc:
+        error_key = _editorial_error_key(exc)
     if error_key is not None:
         return _admin_form_response(
             request,
             language,
             post=post,
             error=EDITORIAL_COPY[language][error_key],
+            cover_alts={"uz_latn": cover_alt_uz_latn, "ru": cover_alt_ru},
             status_code=409 if error_key == "duplicate_slug" else 400,
         )
     return _no_store(RedirectResponse(f"/admin/posts?language={language}", status_code=303))
@@ -325,8 +424,13 @@ def _admin_form_response(
     *,
     post: EditorialPost | EditorialPostDraft | None,
     error: str | None = None,
+    cover_alts: dict[str, str] | None = None,
     status_code: int = 200,
 ) -> HTMLResponse:
+    cover_alt_values = cover_alts or {
+        language_code: getattr(post, f"cover_alt_{language_code}", "") or ""
+        for language_code in LANGUAGES
+    }
     return _no_store(
         templates.TemplateResponse(
             request,
@@ -340,10 +444,32 @@ def _admin_form_response(
                 max_title=TITLE_MAX_CHARS,
                 max_summary=SUMMARY_MAX_CHARS,
                 max_article=ARTICLE_MAX_CHARS,
+                max_cover_alt=EDITORIAL_COVER_ALT_MAX_CHARS,
+                cover_alt_values=cover_alt_values,
             ),
             status_code=status_code,
         )
     )
+
+
+async def _read_cover_upload(upload: UploadFile | None) -> bytes | None:
+    if upload is None or not upload.filename:
+        return None
+    content = await upload.read(EDITORIAL_COVER_UPLOAD_MAX_BYTES + 1)
+    if len(content) > EDITORIAL_COVER_UPLOAD_MAX_BYTES:
+        raise ValueError("cover_too_large")
+    return content
+
+
+def _editorial_error_key(exc: ValueError) -> str:
+    code = exc.args[0] if exc.args and isinstance(exc.args[0], str) else ""
+    return {
+        "invalid_cover": "cover_invalid",
+        "cover_too_large": "cover_too_large",
+        "cover_alt_required": "cover_alt_required",
+        "cover_alt_too_long": "cover_alt_too_long",
+        "cover_alt_without_image": "cover_alt_without_image",
+    }.get(code, "form_error")
 
 
 def _public_context(request: Request, language: str, *, language_path: str, **extra) -> dict:

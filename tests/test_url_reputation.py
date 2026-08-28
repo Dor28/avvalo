@@ -170,6 +170,33 @@ async def test_no_hit_and_disabled_flag_are_noops() -> None:
     assert disabled_store.calls == []
 
 
+async def test_email_domain_is_not_sent_to_the_link_reputation_store() -> None:
+    store = _ReputationStore(hit=False)
+    llm = _LLM(
+        DraftOutput(
+            red_flags=[],
+            verify=["Use an independent official channel."],
+            ask=["What can be verified independently?"],
+            addressed_rule_ids=[],
+        )
+    )
+
+    result = await run_check(
+        CheckInput(
+            user_key="r6-email-only",
+            language=Language.ru,
+            input_type=InputType.text,
+            raw_text="Напишите в поддержку: support@listed.example",
+        ),
+        llm_provider=llm,
+        url_reputation_store=store,
+        settings=_settings(enabled=True),
+    )
+
+    assert result.rule_ids == []
+    assert store.calls == []
+
+
 def test_validator_requires_the_synthetic_fact_for_blocklist_synonyms() -> None:
     line = "The link appears in a public phishing list."
     draft = DraftOutput(

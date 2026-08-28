@@ -19,7 +19,7 @@ import unicodedata
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 import yaml
 
@@ -185,7 +185,14 @@ def load_official_domains() -> OfficialDomainCatalog:
 def find_urls(text: str) -> list[str]:
     """Return every raw URL-shaped span in ephemeral text, in order."""
 
-    return [match.group(0) for match in URL_RE.finditer(text)]
+    return [
+        match.group(0)
+        for match in URL_RE.finditer(text)
+        # The bare-host branch also matches the domain half of an email.
+        # An email address is not a submitted destination and must not enter
+        # URL reputation lookup as if the user had supplied a link.
+        if match.start() == 0 or text[match.start() - 1] != "@"
+    ]
 
 
 def extract_normalized_domains(text: str) -> tuple[str, ...]:
@@ -204,7 +211,7 @@ def normalize_domain(value: str) -> str | None:
 def describe_link(raw_url: str) -> LinkShape:
     """Resolve one raw link into its normalized shape without fetching it."""
 
-    cleaned = raw_url.strip().strip(_TRAILING_PUNCTUATION)
+    cleaned, _suffix = split_url_trailing_punctuation(raw_url)
     cleaned = cleaned.replace("[.]", ".").replace("(.)", ".")
     cleaned = re.sub(r"(?i)^hxxp", "http", cleaned)
     if "://" not in cleaned:
@@ -220,6 +227,18 @@ def describe_link(raw_url: str) -> LinkShape:
         # A malformed authority (bad port, unbalanced brackets) is not a crash:
         # the link simply has no host we can reason about.
         return LinkShape(domain=None, has_userinfo=False, is_ip=False, mixed_script=False)
+
+    try:
+        # WHATWG-style browser parsers decode escaped host characters before
+        # navigation. Match that behavior so `%70ayme.example` cannot bypass
+        # the same classifier that catches `payme.example`.
+        host = unquote(host, encoding="utf-8", errors="strict")
+    except UnicodeDecodeError:
+        return LinkShape(domain=None, has_userinfo=has_userinfo, is_ip=False, mixed_script=False)
+    if "%" in host or any(
+        char.isspace() or ord(char) < 0x20 or char in "/?#@\\[]" for char in host
+    ):
+        return LinkShape(domain=None, has_userinfo=has_userinfo, is_ip=False, mixed_script=False)
 
     domain = host.strip(".").casefold()
     if domain.startswith("www."):
@@ -241,6 +260,19 @@ def describe_link(raw_url: str) -> LinkShape:
         is_ip=_is_ip_literal(domain),
         mixed_script=len(_scripts(domain)) > 1,
     )
+
+
+def split_url_trailing_punctuation(value: str) -> tuple[str, str]:
+    """Separate prose punctuation without stripping a bare IPv6 host bracket."""
+
+    core = value.strip()
+    suffix = ""
+    while core and core[-1] in _TRAILING_PUNCTUATION:
+        if core[-1] == "]" and _ends_with_bracketed_host(core):
+            break
+        suffix = core[-1] + suffix
+        core = core[:-1]
+    return core, suffix
 
 
 def classify_link(raw_url: str) -> str | None:
@@ -305,6 +337,15 @@ def _is_ip_literal(domain: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _ends_with_bracketed_host(value: str) -> bool:
+    candidate = re.sub(r"(?i)^hxxp", "http", value)
+    if "://" not in candidate:
+        candidate = f"https://{candidate}"
+    authority = re.split(r"[/?#]", candidate.split("://", 1)[1], maxsplit=1)[0]
+    host_port = authority.rsplit("@", 1)[-1]
+    return host_port.startswith("[") and host_port.find("]") == len(host_port) - 1
 
 
 def _scripts(value: str) -> set[str]:

@@ -1,11 +1,11 @@
-"""Text minimization before any model call."""
+"""Build strict or answer-prompt-safe views of ephemeral submitted text."""
 
 from __future__ import annotations
 
 import re
 
 from app.engine.types import Signal
-from app.engine.url import URL_RE, classify_link
+from app.engine.url import URL_RE, classify_link, split_url_trailing_punctuation
 
 _EMAIL_RE = re.compile(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b")
 _TME_RE = re.compile(r"(?i)\b(?:https?|hxxps?)://t\.me/[a-z0-9_]{4,32}\b")
@@ -45,10 +45,47 @@ _NAME_RE = re.compile(
 )
 
 
-def minimize(raw_text: str, signals: list[Signal] | None = None) -> str:
-    """Replace raw identifiers with typed tokens while keeping scam wording."""
+def minimize(
+    raw_text: str,
+    signals: list[Signal] | None = None,
+    *,
+    preserve_names: bool = False,
+    preserve_urls: bool = False,
+) -> str:
+    """Replace protected identifiers while keeping useful situation wording.
+
+    The strict default remains suitable for retrieval and routing. The answer
+    prompt may deliberately preserve submitted names and URLs, but every other
+    protected value is still tokenized and no mapping or submitted value is
+    persisted or logged.
+    """
 
     _ = signals
+    if preserve_urls:
+        return _minimize_around_urls(raw_text, preserve_names=preserve_names)
+    return _minimize_protected_values(raw_text, preserve_names=preserve_names)
+
+
+def _minimize_around_urls(raw_text: str, *, preserve_names: bool) -> str:
+    """Minimize non-URL spans without altering any character inside a URL."""
+
+    chunks: list[str] = []
+    cursor = 0
+    for match in URL_RE.finditer(raw_text):
+        # The bare-host branch also matches the domain half of an email. Keep
+        # that match inside the non-URL span so the whole email is tokenized.
+        if match.start() > 0 and raw_text[match.start() - 1] == "@":
+            continue
+        chunks.append(
+            _minimize_protected_values(raw_text[cursor : match.start()], preserve_names)
+        )
+        chunks.append(match.group(0))
+        cursor = match.end()
+    chunks.append(_minimize_protected_values(raw_text[cursor:], preserve_names))
+    return "".join(chunks)
+
+
+def _minimize_protected_values(raw_text: str, preserve_names: bool) -> str:
     minimized = _EMAIL_RE.sub("[EMAIL]", raw_text)
     minimized = _TME_RE.sub("[HANDLE]", minimized)
     minimized = URL_RE.sub(_replace_link, minimized)
@@ -59,14 +96,14 @@ def minimize(raw_text: str, signals: list[Signal] | None = None) -> str:
     minimized = _PASSPORT_RE.sub("[PASSPORT]", minimized)
     minimized = _CARD_RE.sub(_replace_card, minimized)
     minimized = _ADDRESS_RE.sub("[ADDRESS]", minimized)
-    minimized = _NAME_RE.sub("[NAME]", minimized)
+    if not preserve_names:
+        minimized = _NAME_RE.sub("[NAME]", minimized)
     return minimized
 
 
 def _replace_link(match: re.Match[str]) -> str:
     value = match.group(0)
-    core = value.rstrip(".,;:!?)]}\"'")
-    suffix = value[len(core) :]
+    core, suffix = split_url_trailing_punctuation(value)
     label = classify_link(core)
     token = f"[LINK: {label}]" if label else "[LINK]"
     return f"{token}{suffix}"

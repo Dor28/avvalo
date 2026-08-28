@@ -22,8 +22,11 @@ class GoogleCloudVisionOCRProvider:
         try:
             vision = _vision_module()
             image = vision.Image(content=stripped)
-            client = self._client or self._build_client()
-            response = await asyncio.to_thread(client.document_text_detection, image=image)
+            # Built once and kept: each client opens its own gRPC channel and
+            # reloads the service-account key.
+            if self._client is None:
+                self._client = self._build_client()
+            response = await asyncio.to_thread(self._client.document_text_detection, image=image)
         except Exception as exc:
             raise OCRProviderError(
                 "google cloud vision OCR failed", error_code=type(exc).__name__

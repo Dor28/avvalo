@@ -60,8 +60,13 @@ Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` an
 2. Content: text as-is, or image → OCR provider with a confidence gate (`low_ocr` below threshold).
 3. Language resolution — the reply language follows the content, not the UI.
 4. Deterministic rules (`app/engine/rules/`): keyword packs in `rules/*.yaml` (per-script keyword groups, matched on raw text) plus regex extractors → `RuleHit`s and `Signal`s. `rules/shared/` holds reference data and is deliberately *not* loaded as a rule pack: the URL-reputation feed, and `official_domains.yaml` — the founder-reviewed catalog of impersonated organizations, shorteners, and public suffixes that [app/engine/url.py](app/engine/url.py) classifies against.
-5. `minimize()` strips PII before anything is sent to the LLM.
-6. LLM call in JSON-schema mode via an OpenAI-compatible provider; prompt = `prompts/system_safety.txt` + `prompts/check.txt` with rule hits injected as grounded facts.
+5. `minimize()` builds two ephemeral views: strict identifier minimization for knowledge
+   retrieval/routing, and an answer-prompt view that retains submitted names and full URLs while
+   still tokenizing phones, cards, credentials, codes, passports, addresses, and other protected
+   values. Decoded QR payloads remain strictly minimized.
+6. LLM call in JSON-schema mode via an OpenAI-compatible provider; only the answer model receives
+   the name/URL-preserving view. The prompt is `prompts/system_safety.txt` + `prompts/check.txt`
+   with rule hits injected as grounded facts.
 7. Deterministic safety validator ([app/engine/validate.py](app/engine/validate.py)): bans verdict words in ru/uz_latn/Cyrillic-Uzbek/English, strips contacts/links/card numbers/OTPs, caps list lengths; one corrective retry, then `safety_fallback`.
 8. `format_result` renders the reply in the resolved language.
 
@@ -76,7 +81,7 @@ unreachable database falls back to the shipped YAML, never to an empty pack. Ope
 `/admin/rules` and `/admin/cards` (needs `ADMIN_ACCESS_KEY`), each with a dry-run that calls the real
 matcher / real retrieval so a preview cannot drift from production.
 
-**Providers are injectable and env-selected.** LLM = any OpenAI-compatible host (`LLM_BASE_URL`/`LLM_MODEL`; OpenRouter Qwen in prod, Ollama locally). OCR = `OCR_PROVIDER` ∈ gcv | tesseract | paddleocr | local_stub behind `app/engine/ocr/base.py`. Tests pass fake providers directly into `run_check(..., llm_provider=, ocr_provider=)` — keep new external dependencies injectable the same way.
+**Providers are injectable and env-selected.** LLM = any OpenAI-compatible host (`LLM_BASE_URL`/`LLM_MODEL`; OpenRouter Qwen in prod, Ollama locally). OCR = `OCR_PROVIDER` ∈ rapidocr | gcv | tesseract | paddleocr | local_stub behind `app/engine/ocr/base.py`; `rapidocr` is the default and runs PP-OCRv5 locally on ONNX Runtime, with weights baked into the image at build time because the production container is read-only. `paddleocr` runs the same models through paddlepaddle and needs the `paddle` extra plus a writable model cache — it is kept only for accuracy comparisons. Providers are built once per process by `get_provider()` and warmed at boot from `app/main.py`; tests pass fake providers directly into `run_check(..., llm_provider=, ocr_provider=)` — keep new external dependencies injectable the same way.
 
 **Data layer:** async SQLAlchemy + asyncpg on PostgreSQL 16; Alembic owns the schema. Functions in `app/data/repo.py` take a caller-provided `AsyncSession` and flush; the caller owns commit/rollback. Unit tests run on in-memory aiosqlite (see `RULE_IDS_TYPE` variant pattern in models.py for Postgres-only column types).
 

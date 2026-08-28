@@ -23,7 +23,8 @@
 
       <form class="admin-editor-form"
             action="{% if post and post.id %}/admin/posts/{{ post.id }}{% else %}/admin/posts{% endif %}"
-            method="post">
+            method="post"
+            enctype="multipart/form-data">
         <input type="hidden" name="language" value="{{ language }}">
 
         <section class="admin-settings-card">
@@ -54,6 +55,28 @@
           </label>
         </section>
 
+        <section class="admin-media-card">
+          <div class="admin-media-copy">
+            <h2>{{ editorial.form_cover }}</h2>
+            <p>{{ editorial.form_cover_hint }}</p>
+          </div>
+          {% if post and post.id and post.cover_media_type %}
+            <img class="admin-cover-preview"
+                 src="/admin/posts/{{ post.id }}/cover"
+                 alt="{{ cover_alt_values[language] }}">
+          {% endif %}
+          <label class="admin-cover-upload">
+            <span>{% if post and post.id and post.cover_media_type %}{{ editorial.form_cover_replace }}{% else %}{{ editorial.form_cover_choose }}{% endif %}</span>
+            <input name="cover_image" type="file" accept="image/jpeg,image/png,image/webp">
+          </label>
+          {% if post and post.id and post.cover_media_type %}
+            <label class="admin-cover-remove">
+              <input name="remove_cover" type="checkbox" value="true">
+              <span>{{ editorial.form_cover_remove }}</span>
+            </label>
+          {% endif %}
+        </section>
+
         <section class="translation-editor" data-translation-editor>
           <div class="translation-bar">
             <strong>{{ editorial.form_translation }}</strong>
@@ -79,6 +102,11 @@
               <label class="admin-field">
                 <span>{{ editorial.form_summary }} · {{ language_labels[option] }}</span>
                 <textarea name="summary_{{ option }}" rows="3" required maxlength="{{ max_summary }}">{{ post['summary_' ~ option] if post else '' }}</textarea>
+              </label>
+              <label class="admin-field">
+                <span>{{ editorial.form_cover_alt }} · {{ language_labels[option] }}</span>
+                <input name="cover_alt_{{ option }}" type="text" maxlength="{{ max_cover_alt }}"
+                       value="{{ cover_alt_values[option] }}">
               </label>
               <label class="admin-field">
                 <span>{{ editorial.form_article }} · {{ language_labels[option] }}</span>

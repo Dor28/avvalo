@@ -125,8 +125,9 @@ docs/           product, technical, deployment, and roadmap documents
 - Docker with Compose
 - PostgreSQL 16 when running outside Compose
 - Optional for local LLM development: Ollama with `qwen2.5:7b-instruct`
-- Optional for image/OCR checks: Google Cloud Vision credentials, Tesseract, or
-  PaddleOCR depending on `OCR_PROVIDER`
+- Nothing extra for image/OCR checks: the default `rapidocr` provider runs
+  PP-OCRv5 locally on ONNX Runtime. Cloud Vision credentials, Tesseract, or the
+  `paddle` extra are only needed for the other `OCR_PROVIDER` values
 
 ## Quick Start with Docker
 
@@ -265,7 +266,7 @@ Runtime config is loaded from environment variables through
 | `LLM_BASE_URL` | OpenAI-compatible endpoint, for example OpenRouter or Ollama. |
 | `LLM_API_KEY` | LLM provider API key. Keep backend-only. |
 | `LLM_MODEL` | Model ID selected by eval. |
-| `OCR_PROVIDER` | `gcv`, `tesseract`, `paddleocr`, or local stub paths. |
+| `OCR_PROVIDER` | `rapidocr` (default, local PP-OCRv5 on ONNX Runtime), `gcv`, `tesseract`, `paddleocr` (needs the `paddle` extra), or local stub paths. |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Cloud Vision service-account path when using GCV. |
 | `NOTICE_VERSION` | Consent notice version; bump to force re-consent. |
 | `DAILY_CHECK_LIMIT` | Daily Telegram checks for the Avvalo checker. |

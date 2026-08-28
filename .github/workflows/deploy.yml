@@ -34,7 +34,11 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: requirements-dev.lock
-      - run: pip install --require-hashes -r requirements-dev.lock
+      # --no-deps: the lock is the complete resolved closure, so pip installs
+      # exactly it. Without this, pip re-reads each wheel's metadata and demands
+      # a pin for requirements the lock deliberately excludes — rapidocr asks
+      # for opencv-python, which we replace with the headless build.
+      - run: pip install --require-hashes --no-deps -r requirements-dev.lock
       - run: pip install --no-deps --no-build-isolation -e .
       - name: Lint
         run: ruff check .
@@ -89,7 +93,10 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: requirements-dev.lock
-      - run: pip install --require-hashes -r requirements-dev.lock
+      # --no-deps for the same reason as the `test` job above: the lock is the
+      # complete resolved closure, and pip's own resolution fights the uv
+      # opencv-python override.
+      - run: pip install --require-hashes --no-deps -r requirements-dev.lock
       - run: pip install --no-deps --no-build-isolation -e .
       - name: Migrations apply to a clean Postgres 16
         run: alembic upgrade head

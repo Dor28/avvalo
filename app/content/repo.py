@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.content.images import PreparedEditorialCover
 from app.content.models import EditorialPost
 
 CATEGORIES = ("payments", "phishing", "marketplace", "jobs", "accounts", "documents")
@@ -74,6 +75,9 @@ class LocalizedEditorialPost:
     summary: str
     article: str
     published_ts: datetime
+    has_cover: bool
+    cover_alt: str | None
+    cover_version: int
 
     @property
     def reading_minutes(self) -> int:
@@ -81,8 +85,30 @@ class LocalizedEditorialPost:
 
         return max(1, round(len(self.article.split()) / 180))
 
+    @property
+    def cover_url(self) -> str | None:
+        """Return a cache-busted public cover URL when this post has one."""
 
-async def create_post(session: AsyncSession, draft: EditorialPostDraft) -> EditorialPost:
+        if not self.has_cover:
+            return None
+        return f"/cases/{self.slug}/cover?v={self.cover_version}"
+
+
+@dataclass(frozen=True)
+class EditorialCover:
+    """Public cover bytes for one published editorial post."""
+
+    post_id: uuid.UUID
+    image_bytes: bytes
+    media_type: str
+    updated_ts: datetime
+
+
+async def create_post(
+    session: AsyncSession,
+    draft: EditorialPostDraft,
+    cover: PreparedEditorialCover | None = None,
+) -> EditorialPost:
     """Create a new draft or published article and flush it."""
 
     values = draft.normalized()
@@ -94,6 +120,7 @@ async def create_post(session: AsyncSession, draft: EditorialPostDraft) -> Edito
         updated_ts=now,
         published_ts=now if values.state == "published" else None,
     )
+    _apply_cover(post, cover)
     session.add(post)
     await session.flush()
     return post
@@ -103,6 +130,7 @@ async def update_post(
     session: AsyncSession,
     post: EditorialPost,
     draft: EditorialPostDraft,
+    cover: PreparedEditorialCover | None = None,
 ) -> EditorialPost:
     """Replace editable values while preserving creation and first-publish times."""
 
@@ -113,6 +141,7 @@ async def update_post(
     post.updated_ts = now
     if values.state == "published" and post.published_ts is None:
         post.published_ts = now
+    _apply_cover(post, cover)
     await session.flush()
     return post
 
@@ -121,6 +150,29 @@ async def get_admin_post(session: AsyncSession, post_id: uuid.UUID) -> Editorial
     """Return one article regardless of publication state."""
 
     return await session.get(EditorialPost, post_id)
+
+
+async def get_admin_cover(
+    session: AsyncSession,
+    post_id: uuid.UUID,
+) -> EditorialCover | None:
+    """Return cover bytes for an authenticated editor, including draft posts."""
+
+    row = (
+        await session.execute(
+            select(
+                EditorialPost.id,
+                EditorialPost.cover_bytes,
+                EditorialPost.cover_media_type,
+                EditorialPost.updated_ts,
+            ).where(
+                EditorialPost.id == post_id,
+                EditorialPost.cover_bytes.is_not(None),
+                EditorialPost.cover_media_type.is_not(None),
+            )
+        )
+    ).one_or_none()
+    return _cover_from_row(row)
 
 
 async def list_admin_posts(session: AsyncSession) -> list[EditorialPost]:
@@ -175,6 +227,32 @@ async def get_published_post(
     return _localized(post, language if language in LANGUAGES else "ru") if post else None
 
 
+async def get_published_cover(
+    session: AsyncSession,
+    *,
+    slug: str,
+) -> EditorialCover | None:
+    """Return cover bytes only when their editorial post is published."""
+
+    row = (
+        await session.execute(
+            select(
+                EditorialPost.id,
+                EditorialPost.cover_bytes,
+                EditorialPost.cover_media_type,
+                EditorialPost.updated_ts,
+            ).where(
+                EditorialPost.slug == slug,
+                EditorialPost.state == "published",
+                EditorialPost.published_ts.is_not(None),
+                EditorialPost.cover_bytes.is_not(None),
+                EditorialPost.cover_media_type.is_not(None),
+            )
+        )
+    ).one_or_none()
+    return _cover_from_row(row)
+
+
 def _localized(post: EditorialPost, language: str) -> LocalizedEditorialPost:
     published_ts = post.published_ts
     if published_ts is None:
@@ -187,7 +265,37 @@ def _localized(post: EditorialPost, language: str) -> LocalizedEditorialPost:
         summary=getattr(post, f"summary_{language}"),
         article=getattr(post, f"article_{language}"),
         published_ts=published_ts,
+        has_cover=post.cover_media_type is not None,
+        cover_alt=getattr(post, f"cover_alt_{language}"),
+        cover_version=int(post.updated_ts.timestamp() * 1_000_000),
     )
+
+
+def _cover_from_row(row) -> EditorialCover | None:
+    if row is None or row.cover_bytes is None or row.cover_media_type is None:
+        return None
+    return EditorialCover(
+        post_id=row.id,
+        image_bytes=row.cover_bytes,
+        media_type=row.cover_media_type,
+        updated_ts=row.updated_ts,
+    )
+
+
+def _apply_cover(post: EditorialPost, cover: PreparedEditorialCover | None) -> None:
+    if cover is None:
+        return
+    if cover.clear:
+        post.cover_bytes = None
+        post.cover_media_type = None
+        post.cover_alt_uz_latn = None
+        post.cover_alt_ru = None
+        return
+    if cover.image_bytes is not None:
+        post.cover_bytes = cover.image_bytes
+        post.cover_media_type = cover.media_type
+    post.cover_alt_uz_latn = cover.alt_uz_latn
+    post.cover_alt_ru = cover.alt_ru
 
 
 def _validate_required(value: str, maximum: int, error: str) -> None:

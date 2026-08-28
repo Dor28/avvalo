@@ -16,32 +16,24 @@ LANGUAGE_LABELS = {
 
 _CHOOSE_LANGUAGE = "🌐 Tilni tanlang · Тилни танланг · Выберите язык"
 
+# Shown before the user picks a language, so it carries both languages at once.
+# Three beats each: the moment they are in, what to send, what they get back. What
+# Avvalo will *not* say belongs in the consent notice, not here.
+_START_INTRO = (
+    "\U0001f1fa\U0001f1ff O'zbekcha\n"
+    "Shubhali xabar keldimi? Javob berish yoki pul o'tkazishga shoshilmang.\n"
+    "Shu yerga tashlang: matn, skrinshot, havola yoki QR-kod — farqi yo'q.\n"
+    "Nimasi shubhali va buni qanday tekshirish mumkinligini aytamiz.\n\n"
+    "\U0001f1f7\U0001f1fa Русский\n"
+    "Пришло что-то подозрительное? Не спешите отвечать и платить.\n"
+    "Скиньте сюда: текст, скрин, ссылку или QR-код — что угодно.\n"
+    "Расскажем, что здесь настораживает и как это проверить."
+)
+
 TEXTS: dict[str, dict[str, str]] = {
     "start_intro": {
-        "uz_latn": (
-            "\U0001f1fa\U0001f1ff O'zbekcha\n"
-            "Avvalo — harakatdan oldin shubhali vaziyatni tekshirishga yordam beradi.\n"
-            "Xabar, rasm yoki vaziyatni yuboring: havola, QR-kod, to'lov so'rovi, "
-            "taklif yoki hujjat ham bo'lishi mumkin. Avvalo nimaga e'tibor berish va "
-            "nimani mustaqil tekshirishni ko'rsatadi.\n\n"
-            "\U0001f1f7\U0001f1fa Русский\n"
-            "Avvalo помогает разобраться в сомнительной ситуации до того, как вы начнёте действовать.\n"
-            "Пришлите сообщение, изображение или опишите ситуацию: это может быть ссылка, "
-            "QR-код, запрос на оплату, предложение или документ. Avvalo покажет, на что "
-            "обратить внимание и что проверить самостоятельно."
-        ),
-        "ru": (
-            "\U0001f1fa\U0001f1ff O'zbekcha\n"
-            "Avvalo — harakatdan oldin shubhali vaziyatni tekshirishga yordam beradi.\n"
-            "Xabar, rasm yoki vaziyatni yuboring: havola, QR-kod, to'lov so'rovi, "
-            "taklif yoki hujjat ham bo'lishi mumkin. Avvalo nimaga e'tibor berish va "
-            "nimani mustaqil tekshirishni ko'rsatadi.\n\n"
-            "\U0001f1f7\U0001f1fa Русский\n"
-            "Avvalo помогает разобраться в сомнительной ситуации до того, как вы начнёте действовать.\n"
-            "Пришлите сообщение, изображение или опишите ситуацию: это может быть ссылка, "
-            "QR-код, запрос на оплату, предложение или документ. Avvalo покажет, на что "
-            "обратить внимание и что проверить самостоятельно."
-        ),
+        "uz_latn": _START_INTRO,
+        "ru": _START_INTRO,
     },
     "choose_language": {
         "uz_latn": _CHOOSE_LANGUAGE,
@@ -54,12 +46,14 @@ TEXTS: dict[str, dict[str, str]] = {
             "oldin tekshirishga yordam beradi.\n\n"
             "Qisqasi:\n"
             "• Avvalo siz yuborgan vaziyat, material yoki jarayonni tahlil qiladi — odamning "
-            "obro'sini emas. «Xavfsiz», «firibgar» yoki yakuniy hukm bermaydi.\n"
+            "obro'sini emas. «Firibgar» yoki «hammasi joyida» degan hukmni kutmang: "
+            "avvalo tekshiring — keyin ishoning.\n"
             "• Javob e'tibor talab qiladigan belgilar, mustaqil tekshiruv qadamlari va "
             "beriladigan savollardan iborat. Bu yuridik, moliyaviy yoki rasmiy xulosa emas.\n"
             "• Yuborgan matn, rasm, havola va tayyorlangan javob saqlanmaydi hamda logga yozilmaydi.\n"
             "• Rasm faqat matnni aniqlash uchun qayta ishlanadi. Tashqi tahlil xizmatiga "
-            "telefon, karta va havolalar token bilan almashtirilgan matn yuboriladi.\n"
+            "yuboriladigan matnda telefon, karta, kod va boshqa maxfiy ma'lumotlar token "
+            "bilan almashtiriladi; ism-familiya va havola esa o'z holicha qolishi mumkin.\n"
             "• Xohlagan payt /delete_my_data yozib ma'lumotlaringizni o'chira olasiz. "
             "Batafsil: /privacy.\n\n"
             "Boshlash uchun «Roziman» ni bosing."
@@ -69,30 +63,32 @@ TEXTS: dict[str, dict[str, str]] = {
             "установки приложения, подписания документа или передачи личных данных.\n\n"
             "Коротко:\n"
             "• Avvalo разбирает присланную ситуацию, материал или процесс, а не репутацию "
-            "человека. Мы не ставим ярлыки «безопасно» или «мошенник» и не выносим вердикт.\n"
+            "человека. Вердикта «мошенник» или «всё чисто» не ждите: сначала проверьте — "
+            "потом доверяйте.\n"
             "• В ответе будут признаки, требующие внимания, шаги независимой проверки и "
             "вопросы. Это не юридическое, финансовое или официальное заключение.\n"
             "• Присланные текст, изображение, ссылка и подготовленный ответ не сохраняются "
             "и не записываются в журналы.\n"
             "• Изображение используется только для распознавания текста. Сервис анализа "
-            "получает текст, в котором телефоны, карты и ссылки заменены токенами.\n"
+            "получает текст, в котором телефоны, карты, коды и другие секретные данные "
+            "заменены токенами; имена, фамилии и ссылки могут передаваться без замены.\n"
             "• Удалить свои данные можно в любой момент командой /delete_my_data. Подробнее: /privacy.\n\n"
             "Нажмите «Согласен», чтобы начать."
         ),
     },
     "web_privacy_notice": {
         "uz_latn": (
-            "👋 Assalomu alaykum. Avvalo shubhali vaziyatni javob berish, pul to'lash, "
-            "ilova o'rnatish yoki hujjat imzolash yoxud shaxsiy ma'lumot yuborishdan "
-            "oldin tushunishga yordam beradi.\n\n"
+            "👋 Assalomu alaykum. Avvalo shubhali vaziyatni javob berish yoki pul "
+            "o'tkazishdan oldin tushunishga yordam beradi.\n\n"
             "Davom etishdan oldin:\n"
             "• Avvalo vaziyat, material yoki jarayonni tahlil qiladi — odamning "
-            "obro'sini emas. «Xavfsiz», «firibgar» yoki yakuniy hukm bermaydi.\n"
+            "obro'sini emas.\n"
             "• Yuborgan matn, rasm, havola va tayyorlangan javob saqlanmaydi hamda "
             "logga yozilmaydi.\n"
             "• Rasm faqat matnni aniqlash uchun qayta ishlanadi. Tashqi tahlil "
-            "xizmatiga telefon, karta va havolalar token bilan almashtirilgan matn "
-            "yuboriladi.\n"
+            "xizmatiga yuboriladigan matnda telefon, karta, kod va boshqa maxfiy "
+            "ma'lumotlar token bilan almashtiriladi; ism-familiya va havola esa o'z "
+            "holicha qolishi mumkin.\n"
             "• Veb tekshiruvdagi taxallusli texnik yozuvlar saqlash muddati tugagach "
             "avtomatik o'chiriladi. Saytda ularni alohida o'chirish imkoniyati "
             "hozircha yo'q.\n\n"
@@ -100,17 +96,16 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
         "ru": (
             "👋 Здравствуйте. Avvalo помогает разобраться в сомнительной ситуации "
-            "до того, как вы ответите, заплатите, установите приложение, подпишете "
-            "документ или передадите личные данные.\n\n"
+            "до того, как вы ответите или заплатите.\n\n"
             "Перед продолжением:\n"
             "• Avvalo анализирует ситуацию, материал или процесс, а не репутацию "
-            "человека. Мы не ставим ярлыки «безопасно» или «мошенник» и не выносим "
-            "вердикт.\n"
+            "человека.\n"
             "• Присланные текст, изображение, ссылка и подготовленный ответ не "
             "сохраняются и не записываются в журналы.\n"
             "• Изображение используется только для распознавания текста. Сервис "
-            "анализа получает текст, в котором телефоны, карты и ссылки заменены "
-            "токенами.\n"
+            "анализа получает текст, в котором телефоны, карты, коды и другие секретные "
+            "данные заменены токенами; имена, фамилии и ссылки могут передаваться без "
+            "замены.\n"
             "• Псевдонимные технические записи веб-проверки удаляются автоматически "
             "по сроку хранения. Отдельного удаления на сайте пока нет.\n\n"
             "Чтобы начать, отметьте «Согласен»."
@@ -129,7 +124,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "🔒 Maxfiylik\n\n"
             "• Avvalo vaziyat, material yoki jarayonni tahlil qiladi; odamning obro'siga baho bermaydi.\n"
             "• Yuborgan matn, rasm, havola va tayyorlangan javob saqlanmaydi hamda logga yozilmaydi.\n"
-            "• Tashqi tahlil xizmatiga telefon, karta va havolalar token bilan almashtirilgan matn yuboriladi.\n"
+            "• Tashqi tahlil xizmatiga yuboriladigan matnda telefon, karta, kod va boshqa maxfiy ma'lumotlar token bilan almashtiriladi; ism-familiya va havola esa o'z holicha qolishi mumkin.\n"
             "• Avvalo mustaqil tekshiruv qadamlarini beradi, lekin yuridik, moliyaviy yoki rasmiy xulosa bermaydi.\n"
             "• Ma'lumotlaringizni o'chirish uchun /delete_my_data yuboring."
         ),
@@ -137,7 +132,7 @@ TEXTS: dict[str, dict[str, str]] = {
             "🔒 Конфиденциальность\n\n"
             "• Avvalo разбирает ситуацию, материал или процесс, а не репутацию человека.\n"
             "• Присланные текст, изображение, ссылка и подготовленный ответ не сохраняются и не записываются в журналы.\n"
-            "• Сервис анализа получает текст, в котором телефоны, карты и ссылки заменены токенами.\n"
+            "• Сервис анализа получает текст, в котором телефоны, карты, коды и другие секретные данные заменены токенами; имена, фамилии и ссылки могут передаваться без замены.\n"
             "• Avvalo даёт шаги независимой проверки, но не юридическое, финансовое или официальное заключение.\n"
             "• Чтобы удалить свои данные, отправьте /delete_my_data."
         ),
@@ -149,8 +144,9 @@ TEXTS: dict[str, dict[str, str]] = {
             "obro'siga baho bermaydi.\n"
             "• Yuborgan matn, rasm, havola va tayyorlangan javob saqlanmaydi hamda "
             "logga yozilmaydi.\n"
-            "• Tashqi tahlil xizmatiga telefon, karta va havolalar token bilan "
-            "almashtirilgan matn yuboriladi.\n"
+            "• Tashqi tahlil xizmatiga yuboriladigan matnda telefon, karta, kod va "
+            "boshqa maxfiy ma'lumotlar token bilan almashtiriladi; ism-familiya va "
+            "havola esa o'z holicha qolishi mumkin.\n"
             "• Avvalo mustaqil tekshiruv qadamlarini beradi, lekin yuridik, moliyaviy "
             "yoki rasmiy xulosa bermaydi.\n"
             "• Veb tekshiruvdagi taxallusli texnik yozuvlar saqlash muddati tugagach "
@@ -163,8 +159,9 @@ TEXTS: dict[str, dict[str, str]] = {
             "человека.\n"
             "• Присланные текст, изображение, ссылка и подготовленный ответ не "
             "сохраняются и не записываются в журналы.\n"
-            "• Сервис анализа получает текст, в котором телефоны, карты и ссылки "
-            "заменены токенами.\n"
+            "• Сервис анализа получает текст, в котором телефоны, карты, коды и другие "
+            "секретные данные заменены токенами; имена, фамилии и ссылки могут "
+            "передаваться без замены.\n"
             "• Avvalo даёт шаги независимой проверки, но не юридическое, финансовое "
             "или официальное заключение.\n"
             "• Псевдонимные технические записи веб-проверки удаляются автоматически "

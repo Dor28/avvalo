@@ -3,10 +3,10 @@
 EDITORIAL_COPY = {
     "uz_latn": {
         "cases_kicker": "Avvalo holatlari",
-        "cases_title": "Shubhali vaziyatlarni sodda misollar orqali tushunib oling",
+        "cases_title": "Boshqalarda ishlagan sxemalar",
         "cases_lead": (
-            "Avvalo tahririyati to‘lov, havola, ish takliflari va boshqa vaziyatlarda nimaga "
-            "e’tibor berish va nimani mustaqil tekshirishni tushuntiradi."
+            "Qadamma-qadam ko‘rsatamiz: sxema qanday qurilgan va uni qaysi tafsilotdan "
+            "oldinroq payqash mumkin."
         ),
         "cases_empty": "Hozircha e’lon qilingan holatlar yo‘q.",
         "read_time": "{minutes} daqiqa",
@@ -19,12 +19,11 @@ EDITORIAL_COPY = {
         ),
         "case_cta_title": "Shunga o‘xshash vaziyat bormi?",
         "case_cta_body": (
-            "Vaziyatga oid matn, havola yoki rasmni Avvalo'ga yuboring. To‘lov so‘rovi, "
-            "taklif, hujjat yoki yozishma bo‘lishi mumkin."
+            "Matn, havola yoki skrinshotni tashlang — sizinikini ko‘rib chiqamiz."
         ),
         "case_cta_button": "Vaziyatni tekshirish",
         "latest_title": "Yangi holatlar",
-        "latest_body": "Tahririy misollar orqali nimaga e’tibor berish va nimalarni tekshirish kerakligini bilib oling.",
+        "latest_body": "Qisqa tahlillar: nima bo‘lgan va birinchi shubhali belgi qayerda edi.",
         "all_cases": "Barcha holatlar",
         "categories": {
             "payments": "To‘lovlar",
@@ -56,6 +55,12 @@ EDITORIAL_COPY = {
         "form_slug_hint": "Lotin harflari, raqamlar va tire: fake-payment-screenshot",
         "form_category": "Turkum",
         "form_state": "Holat",
+        "form_cover": "Muqova rasmi",
+        "form_cover_hint": "JPG, PNG yoki WebP formatidagi rasmni yuklang. Fayl hajmi 10 MB dan oshmasligi kerak.",
+        "form_cover_choose": "Rasm tanlash",
+        "form_cover_replace": "Boshqa rasm tanlash",
+        "form_cover_remove": "Muqova rasmini olib tashlash",
+        "form_cover_alt": "Rasm tavsifi",
         "form_translation": "Til versiyalari",
         "form_title": "Sarlavha",
         "form_summary": "Qisqa tavsif",
@@ -64,13 +69,18 @@ EDITORIAL_COPY = {
         "form_cancel": "Bekor qilish",
         "form_error": "Barcha maydonlarni tekshiring va qayta saqlang.",
         "duplicate_slug": "Bu sahifa manzili allaqachon ishlatilgan.",
+        "cover_invalid": "Rasmni o‘qib bo‘lmadi. JPG, PNG yoki WebP faylini tanlang.",
+        "cover_too_large": "Rasm juda katta. 10 MB dan kichik faylni tanlang.",
+        "cover_alt_required": "Muqova rasmi uchun ikki tilda qisqa tavsif yozing.",
+        "cover_alt_too_long": "Rasm tavsifi 240 belgidan oshmasligi kerak.",
+        "cover_alt_without_image": "Avval muqova rasmini tanlang yoki tavsiflarni tozalang.",
     },
     "ru": {
         "cases_kicker": "Кейсы Avvalo",
-        "cases_title": "Разберитесь в сомнительных ситуациях на понятных примерах",
+        "cases_title": "Схемы, которые уже сработали на других",
         "cases_lead": (
-            "Редакция Avvalo объясняет, на что обращать внимание и что проверять "
-            "самостоятельно в ситуациях с оплатой, ссылками, вакансиями и документами."
+            "Разбираем по шагам: как устроена схема и по какой детали её видно "
+            "заранее."
         ),
         "cases_empty": "Опубликованных кейсов пока нет.",
         "read_time": "{minutes} мин",
@@ -83,12 +93,11 @@ EDITORIAL_COPY = {
         ),
         "case_cta_title": "Столкнулись с похожей ситуацией?",
         "case_cta_body": (
-            "Отправьте в Avvalo текст, ссылку или изображение, связанные с вашей ситуацией. "
-            "Это может быть запрос на оплату, предложение, документ или переписка."
+            "Скиньте текст, ссылку или скрин — разберём вашу."
         ),
         "case_cta_button": "Проверить ситуацию",
         "latest_title": "Новые кейсы",
-        "latest_body": "Узнайте на редакционных примерах, на что обращать внимание и что проверять.",
+        "latest_body": "Короткие разборы: что произошло и где был первый тревожный сигнал.",
         "all_cases": "Все кейсы",
         "categories": {
             "payments": "Оплата",
@@ -120,6 +129,12 @@ EDITORIAL_COPY = {
         "form_slug_hint": "Латинские буквы, цифры и дефисы: fake-payment-screenshot",
         "form_category": "Категория",
         "form_state": "Статус",
+        "form_cover": "Обложка",
+        "form_cover_hint": "Загрузите фото в формате JPG, PNG или WebP размером до 10 МБ.",
+        "form_cover_choose": "Выбрать фото",
+        "form_cover_replace": "Выбрать другое фото",
+        "form_cover_remove": "Удалить обложку",
+        "form_cover_alt": "Описание изображения",
         "form_translation": "Языковые версии",
         "form_title": "Заголовок",
         "form_summary": "Краткое описание",
@@ -128,5 +143,10 @@ EDITORIAL_COPY = {
         "form_cancel": "Отмена",
         "form_error": "Проверьте все поля и попробуйте сохранить снова.",
         "duplicate_slug": "Такой адрес страницы уже используется.",
+        "cover_invalid": "Не удалось прочитать изображение. Выберите файл JPG, PNG или WebP.",
+        "cover_too_large": "Изображение слишком большое. Выберите файл меньше 10 МБ.",
+        "cover_alt_required": "Добавьте краткое описание обложки на двух языках.",
+        "cover_alt_too_long": "Описание изображения не должно превышать 240 символов.",
+        "cover_alt_without_image": "Сначала выберите обложку или очистите описания.",
     },
 }

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from urllib.parse import urlsplit
 
 from openai import APIError, AsyncOpenAI
 from pydantic import BaseModel, Field, SecretStr, ValidationError
@@ -28,10 +29,16 @@ class OpenAICompatibleProvider:
         model: str,
         timeout_s: float = 30.0,
         temperature: float = 0.2,
+        reasoning_effort: str | None = None,
         client: Any | None = None,
     ) -> None:
         self.model = model
         self.temperature = temperature
+        self.reasoning_effort = (reasoning_effort or "").strip() or None
+        hostname = (urlsplit(base_url).hostname or "").casefold()
+        self._openrouter_privacy = hostname == "openrouter.ai" or hostname.endswith(
+            ".openrouter.ai"
+        )
         key = api_key.get_secret_value() if isinstance(api_key, SecretStr) else api_key
         self._client = client or AsyncOpenAI(
             base_url=base_url,
@@ -49,6 +56,7 @@ class OpenAICompatibleProvider:
             api_key=settings.llm_api_key,
             model=settings.llm_model,
             timeout_s=settings.llm_timeout_s,
+            reasoning_effort=settings.llm_reasoning_effort,
         )
 
     async def analyze(
@@ -96,15 +104,31 @@ class OpenAICompatibleProvider:
 
         _ = schema  # JSON mode is the common denominator across configured hosts.
         try:
-            response = await self._client.chat.completions.create(
-                model=self.model,
-                messages=[
+            request: dict[str, Any] = {
+                "model": self.model,
+                "messages": [
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
-                temperature=self.temperature,
-                max_tokens=max_output_tokens,
-                response_format={"type": "json_object"},
+                "temperature": self.temperature,
+                "max_tokens": max_output_tokens,
+                "response_format": {"type": "json_object"},
+            }
+            if self._openrouter_privacy:
+                # Names and submitted URLs may now reach the answer prompt. Make
+                # the production router enforce endpoints that neither retain nor
+                # collect prompt data instead of relying on account defaults.
+                extra_body: dict[str, Any] = {
+                    "provider": {"zdr": True, "data_collection": "deny"}
+                }
+                if self.reasoning_effort is not None:
+                    # Reasoning tokens come out of max_tokens, so on a reasoning
+                    # model they crowd out the JSON draft and it truncates
+                    # mid-object. "none" turns them off; see llm_reasoning_effort.
+                    extra_body["reasoning"] = {"effort": self.reasoning_effort}
+                request["extra_body"] = extra_body
+            response = await self._client.chat.completions.create(
+                **request,
             )
         except APIError as exc:
             status_code = getattr(exc, "status_code", None)

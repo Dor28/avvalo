@@ -5,11 +5,18 @@ degrades detection silently for every user, and this box deploys from ``main``.
 Every route therefore forces a dry-run affordance and republishes the merged
 pack immediately on save, so an operator sees the real effect rather than
 waiting out the refresh interval.
+
+The list shows the shipped baseline rules alongside the stored overrides. An
+override-only list renders an empty page on a fresh database while the baseline
+rules are matching real content, which makes the rules in force impossible to
+review and their IDs impossible to discover.
 """
 
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -19,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES
 from app.config import Settings
-from app.engine.rules.loader import load_rule_pack, load_yaml_rule_pack
+from app.engine.rules.loader import RuleDefinition, load_rule_pack, load_yaml_rule_pack
 from app.rules_store import (
     RuleOverride,
     RuleOverrideDraft,
@@ -78,9 +85,87 @@ def _split_patterns(raw: str) -> list[str]:
     return [line.strip() for line in raw.splitlines() if line.strip()]
 
 
+@dataclass(frozen=True)
+class _RuleRow:
+    """One list row: a stored override, or a shipped rule with no override yet."""
+
+    rule_id: str
+    family: str
+    description: str
+    severity: int
+    disabled: bool
+    edit_url: str
+    override_id: str | None
+    updated_ts: datetime | None
+
+    @property
+    def is_baseline(self) -> bool:
+        return self.override_id is None
+
+
+def _draft_from_rule(rule: RuleDefinition) -> RuleOverrideDraft:
+    """Project a shipped baseline rule onto the editor's draft contract.
+
+    Editing a baseline rule opens this draft with no ``override_id``, so saving
+    creates an override carrying the same ID — which is exactly how the merge in
+    ``app.rules_store.apply`` replaces a baseline rule.
+    """
+
+    return RuleOverrideDraft(
+        rule_id=rule.id,
+        family=rule.family,
+        description=rule.desc,
+        message_key=rule.message_key,
+        severity=rule.severity,
+        emits_signal=rule.emits_signal,
+        patterns={
+            language: list(rule.match.get(language, ())) for language in PATTERN_LANGUAGES
+        },
+        disabled=False,
+    )
+
+
+def _rule_rows(
+    overrides: list[RuleOverride],
+    baseline: tuple[RuleDefinition, ...],
+    language: str,
+) -> list[_RuleRow]:
+    """Overrides newest-first, then the baseline rules no override replaces."""
+
+    overridden = {override.rule_id for override in overrides}
+    rows = [
+        _RuleRow(
+            rule_id=override.rule_id,
+            family=override.family,
+            description=override.description,
+            severity=override.severity,
+            disabled=override.disabled,
+            edit_url=f"/admin/rules/{override.id}/edit?language={language}",
+            override_id=str(override.id),
+            updated_ts=override.updated_ts,
+        )
+        for override in overrides
+    ]
+    rows.extend(
+        _RuleRow(
+            rule_id=rule.id,
+            family=rule.family,
+            description=rule.desc,
+            severity=rule.severity,
+            disabled=False,
+            edit_url=f"/admin/rules/baseline/{rule.id}/edit?language={language}",
+            override_id=None,
+            updated_ts=None,
+        )
+        for rule in sorted(baseline, key=lambda rule: rule.id)
+        if rule.id not in overridden
+    )
+    return rows
+
+
 @router.get("/admin/rules", response_class=HTMLResponse, include_in_schema=False)
 async def admin_rules(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
-    """List every override alongside the baseline pack size."""
+    """List the stored overrides and the shipped rules none of them replaces."""
 
     settings = _admin_settings(request)
     language = _normalize_language(language)
@@ -91,6 +176,7 @@ async def admin_rules(request: Request, language: str = DEFAULT_LANGUAGE) -> Res
     session_factory = _session_factory_or_error(request)
     async with session_factory() as session:
         overrides = await list_overrides(session)
+    baseline = load_yaml_rule_pack().rules
     return _no_store(
         templates.TemplateResponse(
             request,
@@ -98,8 +184,8 @@ async def admin_rules(request: Request, language: str = DEFAULT_LANGUAGE) -> Res
             _context(
                 request,
                 language,
-                overrides=overrides,
-                baseline_count=len(load_yaml_rule_pack().rules),
+                rows=_rule_rows(overrides, baseline, language),
+                baseline_count=len(baseline),
                 active_count=len(load_rule_pack().rules),
             ),
         )
@@ -116,6 +202,32 @@ async def admin_rule_new(request: Request, language: str = DEFAULT_LANGUAGE) -> 
     if redirect is not None:
         return redirect
     return _form_response(request, language, override=None)
+
+
+@router.get(
+    "/admin/rules/baseline/{rule_id}/edit",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def admin_rule_baseline_edit(
+    request: Request,
+    rule_id: str,
+    language: str = DEFAULT_LANGUAGE,
+) -> Response:
+    """Open a shipped rule pre-filled; saving stores an override with its ID."""
+
+    settings = _admin_settings(request)
+    language = _normalize_language(language)
+    redirect = _require_admin(request, settings, language)
+    if redirect is not None:
+        return redirect
+    rule = next(
+        (rule for rule in load_yaml_rule_pack().rules if rule.id == rule_id),
+        None,
+    )
+    if rule is None:
+        raise HTTPException(status_code=404)
+    return _form_response(request, language, override=_draft_from_rule(rule))
 
 
 @router.get(

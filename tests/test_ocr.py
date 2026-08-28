@@ -2,8 +2,10 @@
 
 import logging
 from io import BytesIO
+from pathlib import Path
 
 import pytest
+import yaml
 from PIL import Image
 
 from app.config import Settings
@@ -14,9 +16,19 @@ from app.engine.ocr import (
     OCRProviderError,
     OCRResult,
     PaddleOCRProvider,
+    RapidOCRProvider,
     get_provider,
+    reset_provider_cache,
+    warmup_provider,
 )
-from app.engine.ocr.base import MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS, strip_image_metadata
+from app.engine.ocr.base import (
+    MAX_IMAGE_DIMENSION,
+    MAX_IMAGE_PIXELS,
+    script_match_score,
+    strip_image_metadata,
+)
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _settings(**overrides) -> Settings:
@@ -143,3 +155,182 @@ def test_provider_selection_is_configurable() -> None:
 def test_paddleocr_provider_selection() -> None:
     provider = get_provider(_settings(ocr_provider="paddleocr"))
     assert isinstance(provider, PaddleOCRProvider)
+
+
+def test_rapidocr_is_the_default_provider() -> None:
+    """The default must work on a fresh checkout: no key, no network."""
+
+    reset_provider_cache()
+
+    assert isinstance(get_provider(_settings()), RapidOCRProvider)
+
+
+def test_provider_is_reused_across_checks() -> None:
+    """Rebuilding per check reloads the OCR models on every single image."""
+
+    reset_provider_cache()
+    settings = _settings(ocr_provider="rapidocr")
+    first = get_provider(settings)
+
+    assert get_provider(settings) is first
+
+    reset_provider_cache()
+    assert get_provider(settings) is not first
+
+
+def test_provider_cache_keys_on_configuration() -> None:
+    reset_provider_cache()
+    rapid = get_provider(_settings(ocr_provider="rapidocr"))
+    stub = get_provider(_settings(ocr_provider="local_stub"))
+
+    assert rapid is not stub
+    assert isinstance(stub, LocalStubOCRProvider)
+
+
+def _png_bytes() -> bytes:
+    payload = BytesIO()
+    Image.new("RGB", (40, 20), "white").save(payload, format="PNG")
+    return payload.getvalue()
+
+
+async def test_rapidocr_prefers_the_script_that_recovered_more_text(monkeypatch) -> None:
+    """A Latin model reading Cyrillic returns short, *confident* nonsense.
+
+    Measured: on a rendered Russian screenshot the Latin model reported 0.90 on
+    14 characters of garbage, so picking on confidence alone silently returned
+    it and the Cyrillic model never ran.
+    """
+
+    provider = RapidOCRProvider()
+    attempts = {
+        "latin": OCRResult(text="Baa\n15\nMHyT", confidence=0.90),
+        "cyrillic": OCRResult(
+            text="Ваша карта заблокирована.\nСрочно подтвердите код 4821",
+            confidence=0.88,
+        ),
+    }
+    monkeypatch.setattr(provider, "_run_engine", lambda script, image: attempts[script])
+
+    result = await provider.extract(_png_bytes())
+
+    assert result.text.startswith("Ваша")
+    assert result.confidence == 0.88
+
+
+async def test_rapidocr_still_prefers_higher_confidence_at_equal_length(monkeypatch) -> None:
+    provider = RapidOCRProvider()
+    attempts = {
+        "latin": OCRResult(text="Kartani tasdiqlang", confidence=0.95),
+        "cyrillic": OCRResult(text="Kaptahn tacdnqlang", confidence=0.61),
+    }
+    monkeypatch.setattr(provider, "_run_engine", lambda script, image: attempts[script])
+
+    result = await provider.extract(_png_bytes())
+
+    assert result.text == "Kartani tasdiqlang"
+
+
+def test_script_match_score_weighs_recovered_characters() -> None:
+    confident_garbage = OCRResult(text="Baa 15", confidence=0.99)
+    full_read = OCRResult(text="Ваша карта заблокирована сегодня", confidence=0.70)
+
+    assert script_match_score(full_read) > script_match_score(confident_garbage)
+
+
+def test_rapidocr_covers_both_scripts_avvalo_accepts() -> None:
+    """Uzbek Latin and Cyrillic input need different PP-OCRv5 models."""
+
+    assert RapidOCRProvider().scripts == ("latin", "cyrillic")
+
+
+async def test_warmup_is_optional_for_providers_without_startup_cost() -> None:
+    reset_provider_cache()
+
+    await warmup_provider(_settings(ocr_provider="local_stub"))
+
+
+async def test_paddleocr_warmup_loads_every_configured_language(monkeypatch) -> None:
+    provider = PaddleOCRProvider(langs=("uz", "ru"))
+    built: list[str] = []
+    monkeypatch.setattr(provider, "_engine", built.append)
+
+    await provider.warmup()
+
+    assert built == ["uz", "ru"]
+
+
+async def test_rapidocr_warmup_loads_every_configured_script(monkeypatch) -> None:
+    provider = RapidOCRProvider()
+    built: list[str] = []
+    probed: list[str] = []
+
+    def engine(script: str):
+        built.append(script)
+        return lambda image: probed.append(script)
+
+    monkeypatch.setattr(provider, "_engine", engine)
+    await provider.warmup()
+
+    assert built == ["latin", "cyrillic"]
+    # The probe pass is what forces lazily fetched artifacts into the image.
+    assert probed == ["latin", "cyrillic"]
+
+
+async def test_rapidocr_warmup_surfaces_a_missing_model(monkeypatch) -> None:
+    """A build that cannot fetch models must fail loudly, not silently."""
+
+    provider = RapidOCRProvider()
+    monkeypatch.setattr(
+        provider, "_engine", lambda script: (_ for _ in ()).throw(FileNotFoundError(script))
+    )
+
+    with pytest.raises(FileNotFoundError):
+        await provider.warmup()
+
+
+def test_ocr_models_are_baked_into_the_image() -> None:
+    """A read-only container cannot download models, so the build must.
+
+    The previous provider fetched weights on first use and wrote them under
+    ``$HOME``, which ``read_only: true`` forbids — every image check failed
+    with ``ocr_error``. Baking the models in removes the writable directory and
+    the runtime network call together.
+    """
+
+    dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
+    compose = yaml.safe_load(
+        (REPO_ROOT / "docker-compose.prod.yml").read_text(encoding="utf-8")
+    )
+
+    assert compose["services"]["app"]["read_only"] is True
+    assert "RapidOCRProvider().warmup()" in dockerfile
+    # Warmup must run after the app package is installed, or it cannot import.
+    assert dockerfile.index("pip install --require-hashes") < dockerfile.index("warmup()")
+
+
+def test_runtime_image_uses_headless_opencv() -> None:
+    """rapidocr imports cv2, and opencv-python links X11 that slim lacks."""
+
+    runtime_lock = (REPO_ROOT / "requirements.lock").read_text(encoding="utf-8")
+    dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert "\nopencv-python-headless==" in runtime_lock
+    # Both wheels install the same `cv2`, so the X11-linked one is kept out by a
+    # marker that is never true rather than by being absent from the closure.
+    assert "sys_platform == 'never'" in runtime_lock
+    # ...which only holds if pip installs the lock instead of re-resolving it.
+    assert "--require-hashes --no-deps" in dockerfile
+
+
+def test_runtime_image_excludes_the_paddle_dependency_tree() -> None:
+    """paddlepaddle and paddlex dominate image size and memory; keep them out."""
+
+    runtime_lock = (REPO_ROOT / "requirements.lock").read_text(encoding="utf-8")
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert "\npaddlepaddle==" not in runtime_lock
+    assert "\npaddlex==" not in runtime_lock
+    assert "\nrapidocr==" in runtime_lock
+    assert "\nonnxruntime==" in runtime_lock
+    # Still installable for accuracy comparisons, just not in the image.
+    assert "paddle = [" in pyproject

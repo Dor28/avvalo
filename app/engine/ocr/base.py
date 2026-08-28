@@ -27,6 +27,23 @@ class OCRProvider(Protocol):
         """Return OCR text for image bytes after provider-specific processing."""
 
 
+def script_match_score(result: OCRResult) -> float:
+    """Rank one script's OCR attempt by how much text it plausibly recovered.
+
+    Providers that try several per-script models cannot choose between them on
+    confidence, because each model measures confidence against its own
+    alphabet: a Latin model reading Cyrillic returns *confident* nonsense,
+    since В/а/М/Н/у/Т look like B/a/M/H/y/T. Measured on a rendered Russian
+    screenshot, the Latin model reported 0.90 on 14 characters of garbage while
+    the Cyrillic model read all ~90 correctly.
+
+    Characters recovered times mean confidence approximates the number of
+    correct characters, which separates the two cleanly in both directions.
+    """
+
+    return len(result.text.strip()) * result.confidence
+
+
 class OCRProviderError(RuntimeError):
     """Raised when OCR cannot produce a usable provider response.
 

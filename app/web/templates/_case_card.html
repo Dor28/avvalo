@@ -1,4 +1,7 @@
 <article class="case-card">
+  {% if post.cover_url %}
+    <img class="case-card-cover" src="{{ post.cover_url }}" alt="{{ post.cover_alt }}" loading="lazy">
+  {% endif %}
   <div class="case-card-meta">
     <span class="category-pill">{{ editorial.categories[post.category] }}</span>
     <span>{{ editorial.read_time.format(minutes=post.reading_minutes) }}</span>

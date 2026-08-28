@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     llm_out_rate_per_m: float = Field(default=0.0, ge=0)
     llm_timeout_s: float = Field(default=30.0, gt=0)
     max_output_tokens: int = Field(default=600, ge=1, le=600)
+    # OpenRouter reasoning budget. Reasoning tokens are spent from the SAME
+    # completion budget as the answer, so on a reasoning model they starve the
+    # JSON draft: measured on deepseek-v4-flash, 519 of 600 tokens went to
+    # reasoning and the reply truncated mid-object. Filling a fixed JSON shape
+    # needs no chain of thought, so this defaults to off. "none" disables it;
+    # "low"/"medium"/"high" re-enable it; empty leaves the provider default.
+    llm_reasoning_effort: str | None = "none"
     llm_fallback_base_url: str | None = None
     llm_fallback_api_key: SecretStr | None = None
     llm_fallback_model: str | None = None
@@ -47,11 +54,13 @@ class Settings(BaseSettings):
     knowledge_unavailable_alert_window_minutes: int = Field(default=30, ge=1, le=1440)
 
     google_application_credentials: str | None = None
-    ocr_provider: str = "gcv"
+    # rapidocr needs no credentials and runs offline, so it is the only default
+    # that works on a fresh checkout as well as in production.
+    ocr_provider: str = "rapidocr"
     ocr_min_confidence: float = Field(default=0.5, ge=0, le=1)
     ocr_timeout_s: float = Field(default=30.0, gt=0)
 
-    notice_version: str = "2026-07-22-v3"
+    notice_version: str = "2026-08-11-v4"
     daily_check_limit: int = Field(default=5, ge=1)
     operator_alert_chat_id: int | None = None
     operator_alert_debounce_s: float = Field(default=900.0, gt=0)

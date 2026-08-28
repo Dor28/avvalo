@@ -61,6 +61,9 @@ PUNYCODE_CLICK = "xn--lick-k6d.uz"
         # Bare IP hosts.
         ("http://185.23.44.9/pay", "ip-address"),
         ("http://[2001:db8::1]/pay", "ip-address"),
+        ("http://[2001:db8::1]", "ip-address"),
+        # Browsers decode percent-escaped host characters before navigation.
+        ("https://%70ayme-secure.example", "lookalike-domain"),
         # A public suffix used as an interior label.
         ("https://sberbank.uz.secure-login.example", "domain-in-subdomain"),
         ("https://account.com.verify-now.example", "domain-in-subdomain"),
@@ -78,6 +81,8 @@ def test_classify_link_labels_each_deceptive_shape(raw_url: str, expected: str |
         ("click.uz", "click.uz"),
         ("https://click.uz@evil.example/login", "evil.example"),
         (f"https://{PUNYCODE_CLICK}/pay", CYRILLIC_CLICK),
+        ("https://%63lick.uz", "click.uz"),
+        ("https://payme.uz%2eevil.example", "payme.uz.evil.example"),
     ],
 )
 def test_normalize_domain_resolves_to_one_exact_form(raw_url: str, expected: str) -> None:
@@ -108,6 +113,12 @@ def test_extract_normalized_domains_deduplicates_encodings() -> None:
     assert extract_normalized_domains(text) == ("click.uz", CYRILLIC_CLICK)
 
 
+def test_extract_normalized_domains_does_not_treat_email_domains_as_links() -> None:
+    text = "Bog'lanish uchun support@listed.example manziliga yozing."
+
+    assert extract_normalized_domains(text) == ()
+
+
 # --- the three callers resolve one link the same way -------------------------
 
 
@@ -123,6 +134,20 @@ def test_rules_minimize_and_reputation_share_one_analyzer() -> None:
     assert "[LINK: lookalike-domain]" in minimized
     assert reputation_normalize_domain(f"https://{CYRILLIC_CLICK}") == CYRILLIC_CLICK
     assert CYRILLIC_CLICK not in minimized
+
+
+def test_percent_escaped_host_is_consistent_across_all_three_callers() -> None:
+    raw_text = "To'lov: https://%70ayme-secure.example/login"
+
+    _hits, signals = run_rules(raw_text)
+    minimized = minimize(raw_text, signals)
+
+    assert ("link_lookalike", "lookalike-domain") in {(s.kind, s.note) for s in signals}
+    assert "[LINK: lookalike-domain]" in minimized
+    assert reputation_normalize_domain("https://%70ayme-secure.example") == (
+        "payme-secure.example"
+    )
+    assert "%70ayme-secure.example" not in minimized
 
 
 def test_rules_package_reexports_the_shared_classifier() -> None:

@@ -14,8 +14,8 @@ from app.data import repo
 from app.privacy.consent import grant_consent, is_consent_current
 
 NOTICE = "2026-06-24-v1"
-PREVIOUS_NOTICE = "2026-07-07-v2"
-CURRENT_NOTICE = "2026-07-22-v3"
+PREVIOUS_NOTICE = "2026-07-22-v3"
+CURRENT_NOTICE = "2026-08-11-v4"
 
 
 def _settings(**overrides) -> Settings:
@@ -72,11 +72,28 @@ def test_start_intro_is_short_and_explains_the_flow() -> None:
     intro = t("start_intro", DEFAULT_LANGUAGE)
     assert "O'zbekcha" in intro
     assert "Русский" in intro
-    assert "Xabar, rasm yoki vaziyatni yuboring" in intro
-    assert "Пришлите сообщение, изображение или опишите ситуацию" in intro
     assert "QR-kod" in intro
     assert "QR-код" in intro
-    assert len(intro) < 700
+    assert len(intro) < 600
+
+
+def test_no_verdict_promise_lives_in_the_consent_notice_not_the_intro() -> None:
+    # The intro sells what to send; the "we never label it" contract is part of
+    # what the user consents to, so it belongs on the consent screen.
+    intro = t("start_intro", DEFAULT_LANGUAGE)
+    assert "hukm" not in intro
+    assert "вердикт" not in intro
+
+    assert "avvalo tekshiring" in t("privacy_notice", "uz_latn")
+    assert "сначала проверьте" in t("privacy_notice", "ru")
+
+    # The web page states the same limit once, in the boundary block at the foot
+    # of the page (tests/test_web_ui.py), so its consent screen must not repeat
+    # it — on one scrollable page the repetition reads as self-protection.
+    for language in LANGUAGES:
+        web_notice = t("web_privacy_notice", language).casefold()
+        assert "hukm" not in web_notice
+        assert "вердикт" not in web_notice
 
 
 def test_privacy_copy_matches_ephemeral_content_contract() -> None:
@@ -88,6 +105,8 @@ def test_privacy_copy_matches_ephemeral_content_contract() -> None:
     assert "1 час" not in privacy_copy
     assert "saqlanmaydi" in privacy_copy
     assert "не сохраняются" in privacy_copy
+    assert "ism-familiya va havola" in privacy_copy
+    assert "имена, фамилии и ссылки" in privacy_copy
 
 
 def test_story_capture_copy_is_retired() -> None:

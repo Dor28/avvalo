@@ -95,6 +95,9 @@ RULES_COPY = {
         "preview_match": "Qoida ishga tushdi. Mos kelgan shablonlar:",
         "preview_no_match": "Qoida ishga tushmadi — bu matnda hech bir shablon mos kelmadi.",
         "baseline_note": "Paketdagi asosiy qoidalar: {count} ta. Faol qoidalar: {active} ta.",
+        "baseline_pill": "paketdan",
+        "baseline_edit": "Ustiga yozish",
+        "baseline_row_hint": "Paketdagi asosiy qoida. Tahrirlansa, shu ID bilan qo'shimcha qoida yaratiladi.",
         "errors": _ERRORS["uz_latn"],
     },
     "ru": {
@@ -138,6 +141,9 @@ RULES_COPY = {
         "preview_match": "Правило сработало. Совпавшие шаблоны:",
         "preview_no_match": "Правило не сработало — ни один шаблон не совпал с этим текстом.",
         "baseline_note": "Базовых правил в пакете: {count}. Активных правил: {active}.",
+        "baseline_pill": "из пакета",
+        "baseline_edit": "Переопределить",
+        "baseline_row_hint": "Базовое правило из пакета. При редактировании создаётся правило с тем же ID.",
         "errors": _ERRORS["ru"],
     },
 }

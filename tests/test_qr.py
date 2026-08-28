@@ -10,8 +10,13 @@ from app.data.models import CheckEvent
 from app.engine import CheckInput, CheckStatus, InputType, Language, run_check
 from app.engine.llm import LLMResponse
 from app.engine.ocr import OCRResult
-from app.engine.qr import QRDecoderError, QRDecodeResult, ZXingQRCodeDecoder
-from app.engine.types import DraftOutput
+from app.engine.qr import (
+    QRDecoderError,
+    QRDecodeResult,
+    ZXingQRCodeDecoder,
+    is_emvco_payment_payload,
+)
+from app.engine.types import MAX_SUBMITTED_TEXT_CHARS, DraftOutput
 from tests.support import addressed_rule_ids
 
 _GOLDEN_DIR = Path(__file__).resolve().parent / "fixtures" / "golden"
@@ -24,6 +29,14 @@ class _LowConfidenceOCR:
     async def extract(self, _image_bytes: bytes) -> OCRResult:
         self.calls += 1
         return OCRResult(text="", confidence=0.0)
+
+
+class _TextOCR:
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+    async def extract(self, _image_bytes: bytes) -> OCRResult:
+        return OCRResult(text=self.text, confidence=1.0)
 
 
 class _FakeQRDecoder:
@@ -131,7 +144,7 @@ async def test_multiple_qr_codes_are_not_arbitrarily_selected() -> None:
 
 
 async def test_emvco_payload_becomes_typed_signal_without_parsed_claims() -> None:
-    payload = "0002010102115204000053038605802UZ5911PRIVATE SHOP6304ABCD"
+    payload = "0002010102115204000053038605802UZ5912PRIVATE SHOP63045FD8"
     llm = _CapturingLLM()
 
     result = await run_check(
@@ -146,6 +159,55 @@ async def test_emvco_payload_becomes_typed_signal_without_parsed_claims() -> Non
     assert "[PAYMENT_QR]" in llm.user_prompt
     assert payload not in llm.user_prompt
     assert "PRIVATE SHOP" not in llm.user_prompt
+
+
+def test_emvco_shape_requires_valid_tlv_lengths_and_crc() -> None:
+    valid = "0002010102115204000053038605802UZ5912PRIVATE SHOP63045FD8"
+    arbitrary = "000201https://payme-secure.example6304ABCD"
+    non_hex_crc = valid[:-4] + "+FD8"
+
+    assert is_emvco_payment_payload(valid) is True
+    assert is_emvco_payment_payload(arbitrary) is False
+    assert is_emvco_payment_payload(non_hex_crc) is False
+
+
+async def test_emvco_like_prefix_does_not_hide_a_lookalike_link() -> None:
+    payload = "000201https://payme-secure.example6304ABCD"
+    llm = _CapturingLLM()
+
+    result = await run_check(
+        _image_input(user_key="not-payment-qr"),
+        llm_provider=llm,
+        ocr_provider=_LowConfidenceOCR(),
+        qr_decoder=_FakeQRDecoder(payload),
+    )
+
+    assert result.status == CheckStatus.ok
+    assert '"kind": "link_lookalike"' in llm.user_prompt
+    assert "[PAYMENT_QR]" not in llm.user_prompt
+
+
+async def test_combined_caption_ocr_and_qr_content_stays_inside_text_budget() -> None:
+    llm = _CapturingLLM()
+    caption = "c" * 100
+    ocr_text = "o" * (MAX_SUBMITTED_TEXT_CHARS - 50)
+
+    result = await run_check(
+        CheckInput(
+            user_key="combined-image-content",
+            language=Language.uz_latn,
+            input_type=InputType.image,
+            image_bytes=b"ephemeral-image",
+            caption=caption,
+        ),
+        llm_provider=llm,
+        ocr_provider=_TextOCR(ocr_text),
+        qr_decoder=_FakeQRDecoder("https://ordinary.example/path"),
+    )
+
+    assert result.status == CheckStatus.low_ocr
+    assert result.error_class == "ExtractedContentTooLong"
+    assert llm.calls == 0
 
 
 async def test_decoded_payload_is_minimized_and_never_persisted_or_logged(

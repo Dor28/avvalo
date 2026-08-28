@@ -18,21 +18,36 @@ dependencies = [
     "jinja2>=3.1,<4",
     "langdetect>=1.0.9,<2",
     "numpy>=1.26,<3",
+    "onnxruntime>=1.20,<2",
     "openai>=2,<3",
-    "paddleocr>=3.0,<4",
-    "paddlepaddle>=3.0,<4",
+    # rapidocr imports cv2. The default opencv-python wheel links X11 (libxcb,
+    # libGL, …), which python:*-slim does not carry and which has no business in
+    # a headless container; the headless wheel is the same cv2 without them.
+    "opencv-python-headless>=4.10,<6",
     "pillow>=11,<13",
     "pydantic>=2.10,<3",
     "pydantic-settings>=2.8,<3",
     "pytesseract>=0.3.13,<0.4",
     "python-multipart>=0.0.20,<1",
     "pyyaml>=6,<7",
+    "rapidocr>=3,<4",
     "sqlalchemy[asyncio]>=2.0.38,<3",
     "uvicorn[standard]>=0.34,<1",
-    "zxing-cpp>=2.3,<4",
+    # Held at 2.x: 3.0 reworked BarcodeFormat/BarcodeFormats and broke the
+    # C-API. app/engine/qr/zxing.py passes `formats=BarcodeFormat.QRCode`, so
+    # that major deserves its own change with QR fixtures, not a drive-by bump.
+    "zxing-cpp>=2.3,<3",
 ]
 
 [project.optional-dependencies]
+# OCR_PROVIDER=paddleocr runs the same PP-OCRv5 models as the default
+# rapidocr provider, but through paddlepaddle. Kept installable for accuracy
+# comparisons and left out of the runtime image, where paddle and paddlex
+# dominate both the dependency tree and the memory footprint.
+paddle = [
+    "paddleocr>=3.0,<4",
+    "paddlepaddle>=3.0,<4",
+]
 dev = [
     "aiosqlite>=0.20,<1",
     "pytest>=8.3,<10",
@@ -40,6 +55,12 @@ dev = [
     "pytest-cov>=6,<8",
     "ruff>=0.11,<1",
 ]
+
+[tool.uv]
+# rapidocr requires opencv-python by name. Both wheels install the same `cv2`
+# module, so they cannot coexist — this drops the X11-linked one (the marker is
+# never true) and leaves opencv-python-headless above as the sole provider.
+override-dependencies = ["opencv-python; sys_platform == 'never'"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]
@@ -81,5 +102,9 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 "app/web/routes.py" = ["E501", "RUF001"]
 "app/web/editorial_copy.py" = ["E501", "RUF001"]
 "app/engine/format.py" = ["RUF001"]
+# Both document why cross-script OCR confidence is unusable: the Cyrillic
+# lookalikes ARE the subject, so flagging them defeats the explanation.
+"app/engine/ocr/base.py" = ["RUF002"]
+"tests/test_ocr.py" = ["RUF001"]
 "app/engine/validate.py" = ["RUF001"]
 "tests/test_editorial_posts.py" = ["E501", "RUF001"]

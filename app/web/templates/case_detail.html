@@ -8,6 +8,7 @@
     <meta property="og:type" content="article">
     <meta property="og:title" content="{{ post.title }}">
     <meta property="og:description" content="{{ post.summary }}">
+    {% if post.cover_url %}<meta property="og:image" content="{{ request.url_for('case_cover', slug=post.slug) }}">{% endif %}
     <title>{{ post.title }} — Avvalo</title>
     <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v={{ static_version }}">
@@ -31,6 +32,9 @@
           <h1>{{ post.title }}</h1>
           <p>{{ post.summary }}</p>
         </header>
+        {% if post.cover_url %}
+          <img class="article-cover" src="{{ post.cover_url }}" alt="{{ post.cover_alt }}">
+        {% endif %}
         <div class="article-body">{{ post.article }}</div>
         <aside class="article-note">{{ editorial.article_note }}</aside>
       </article>
