@@ -89,3 +89,6 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 "tests/test_ocr.py" = ["RUF001"]
 "app/engine/validate.py" = ["RUF001"]
 "tests/test_editorial_posts.py" = ["E501", "RUF001"]
+# The filler-blocklist cases are real ru/uz_latn/uz_cyrl bullets: the lookalike
+# glyphs are the fixtures under test.
+"tests/test_answer_grounding.py" = ["RUF001"]

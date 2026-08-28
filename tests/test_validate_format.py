@@ -392,7 +392,7 @@ def test_validator_accepts_clean_draft_and_truncates_blocks() -> None:
     )
 
     assert result.ok
-    assert result.draft.red_flags == ["one", "two", "three"]
+    assert [flag.text for flag in result.draft.red_flags] == ["one", "two", "three"]
     assert result.draft.verify == ["one", "two", "three"]
     assert result.draft.ask == ["one", "two", "three"]
 

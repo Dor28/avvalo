@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     llm_fallback_base_url: str | None = None
     llm_fallback_api_key: SecretStr | None = None
     llm_fallback_model: str | None = None
+    # PIPELINE_V2 §3: a red flag may only reach the user when it names the
+    # detected rule, signal, or card it rests on. Disabling this restores the
+    # older behavior where any model-authored red flag was rendered as written.
+    answer_grounding_enabled: bool = True
     knowledge_router_enabled: bool = False
     knowledge_router_base_url: str | None = None
     knowledge_router_api_key: SecretStr | None = None

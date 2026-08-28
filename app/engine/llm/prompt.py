@@ -43,12 +43,59 @@ def draft_output_schema() -> dict:
 
     schema = DraftOutput.model_json_schema()
     _inline_situation_type(schema)
+    _inline_evidence(schema)
     required = list(schema.get("required", []))
     for field in ("situation_type", "addressed_rule_ids"):
         if field not in required:
             required.append(field)
     schema["required"] = required
     return schema
+
+
+def _inline_evidence(schema: dict) -> None:
+    """Replace the ``$ref`` for red-flag evidence with an inline object.
+
+    Same reasoning as :func:`_inline_situation_type`: a host that does not
+    resolve ``$defs`` would silently receive an unconstrained array. Replacing
+    the generated description also keeps the ``Evidence`` docstring — which
+    names internal functions — out of every prompt.
+
+    ``source_id`` is required on the wire even though the Python model defaults
+    it to ``""``. The schema pushes the model to attribute every red flag; the
+    default keeps a non-compliant response parseable so the validator's
+    compatibility floor, not a hard parse error, decides what happens next.
+    """
+
+    properties = schema.get("properties", {})
+    if "red_flags" in properties:
+        properties["red_flags"] = {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "description": (
+                            "The warning sign as the user reads it, in the target language."
+                        ),
+                    },
+                    "source_id": {
+                        "type": "string",
+                        "description": (
+                            "Which supplied fact this red flag rests on. Copy exactly one "
+                            "supplied FACT rule ID, STRUCTURED SIGNALS 'kind' value, or CARD "
+                            "id. Never invent an ID. A red flag citing an unsupplied ID is "
+                            "discarded and the user never sees it."
+                        ),
+                    },
+                },
+                "required": ["text", "source_id"],
+            },
+        }
+    defs = schema.get("$defs", {})
+    defs.pop("Evidence", None)
+    if not defs:
+        schema.pop("$defs", None)
 
 
 def _inline_situation_type(schema: dict) -> None:

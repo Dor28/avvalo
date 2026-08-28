@@ -1,0 +1,199 @@
+[
+  {
+    "id": "scam_fake_bank_support",
+    "language": "uz_latn",
+    "text": "Bank xavfsizlik xizmatidanmiz. Kartangiz bloklanadi. Hozir SMS orqali kelgan 6 xonali kodni yuboring, aks holda hisobingiz 10 daqiqada yopiladi.",
+    "expected_rule_ids": ["fs.credential.otp", "fs.urgency.deadline", "fs.authority.impersonation"],
+    "benign": false
+  },
+  {
+    "id": "scam_family_emergency",
+    "language": "ru",
+    "text": "Мама, это мой новый номер. Телефон разбился. Я попал в неприятность, срочно переведи 3 000 000 сум на карту **** 4412. Только папе пока не звони.",
+    "expected_rule_ids": ["fs.authority.impersonation", "fs.urgency.deadline", "fs.secrecy.tell_nobody"],
+    "benign": false
+  },
+  {
+    "id": "scam_seller_prepayment",
+    "language": "uz_latn",
+    "text": "Телевизорни фақат бугун 40% арзон бераман. Бошқа харидор кутяпти, ҳозир 50% олдиндан картага ташланг. Учрашув ҳам, видеоқўнғироқ ҳам қилмайман, курьер олиб боради.",
+    "expected_rule_ids": ["fs.payment.prepay", "fs.verify.avoids", "fs.urgency.deadline", "fs.promise.toogood"],
+    "benign": false
+  },
+  {
+    "id": "scam_fake_delivery_link",
+    "language": "ru",
+    "text": "Ваша посылка задержана. Оплатите 14 900 сум в течение часа, иначе заказ вернётся отправителю: hxxps://delivery-check[.]example/uz. Можно также отсканировать QR-код ниже.",
+    "expected_rule_ids": ["fs.link.payorlogin", "fs.urgency.deadline"],
+    "benign": false
+  },
+  {
+    "id": "scam_upfront_fee_job",
+    "language": "uz_latn",
+    "text": "Uydan turib kuniga 1,5 mln so‘m topasiz, tajriba kerak emas. Joylar faqat bugun. Ishni boshlash uchun 250 000 so‘m ro‘yxatdan o‘tish puli va pasport rasmini Telegramga yuboring.",
+    "expected_rule_ids": ["fs.promise.toogood", "fs.payment.prepay", "fs.credential.secret_docs", "fs.urgency.deadline"],
+    "benign": false
+  },
+  {
+    "id": "scam_incoming_payment_screenshot",
+    "language": "ru",
+    "text": "Здравствуйте! Оплату отправила, вот скриншот перевода на 850 000 сум. Деньги придут в течение дня, банк иногда задерживает. Отдайте товар курьеру сейчас, я очень спешу.",
+    "expected_rule_ids": ["fs.payment.screenshot_claim", "fs.payment.release_pressure"],
+    "benign": false
+  },
+  {
+    "id": "scam_overpayment_refund",
+    "language": "uz_latn",
+    "text": "Akangiz men. Xato qilib ikki marta to‘lab yuboribman, 1 200 000 o‘rniga 2 400 000 ketdi. Iltimos, ortig‘ini shu kartaga qaytarib bering, skrinshot mana. Tezroq bo‘lsa yaxshi edi.",
+    "expected_rule_ids": ["fs.payment.overpayment_refund", "fs.payment.screenshot_claim"],
+    "benign": false
+  },
+  {
+    "id": "scam_payment_name_mismatch",
+    "language": "uz_latn",
+    "text": "Тўловни қилдим, чек мана. Лекин банк иловамда бошқа исм чиқяпти, унчалик муҳим эмас, пул барибир тушади. Тезроқ жўнатинг, харидор кутиб турибди.",
+    "expected_rule_ids": ["fs.payment.receipt_inconsistent", "fs.payment.screenshot_claim", "fs.payment.release_pressure"],
+    "benign": false
+  },
+
+  {
+    "id": "benign_bank_purchase_notification",
+    "language": "ru",
+    "text": "Покупка 45 000 сум, карта *1234. Доступный баланс 1 250 000 сум. Спасибо, что вы с нами.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_real_bank_otp_delivery",
+    "language": "ru",
+    "text": "Код 4821 для входа в приложение. Никому не сообщайте его, сотрудники банка не спрашивают код.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_real_bank_otp_delivery_uz",
+    "language": "uz_latn",
+    "text": "Ilovaga kirish uchun kod: 7391. Uni hech kimga aytmang.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_delivery_completed",
+    "language": "uz_latn",
+    "text": "Buyurtmangiz yetkazib berildi. Xaridingiz uchun rahmat!",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_family_visit",
+    "language": "ru",
+    "text": "Привет! Как дела? Завтра приедем к вам на обед, что-нибудь привезти?",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_marketplace_haggle_uz",
+    "language": "uz_latn",
+    "text": "Salom, telefon hali sotuvdami? Narxini biroz tushira olasizmi?",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_marketplace_enquiry_ru",
+    "language": "ru",
+    "text": "Здравствуйте, товар ещё в наличии? Могу подъехать завтра посмотреть.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_meeting_arrangement",
+    "language": "uz_latn",
+    "text": "Ertaga soat 15:00 da metro yonida uchrashamizmi? Naqd pulda hisoblashamiz.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_taxi_arrived",
+    "language": "ru",
+    "text": "Водитель подъехал, белая машина, ожидает три минуты у подъезда.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_home_late_uz_cyrl",
+    "language": "uz_latn",
+    "text": "Ишдан кеч қайтаман, кечки овқатни ўзинг еб ол.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_work_report",
+    "language": "ru",
+    "text": "Отправил отчёт на почту, посмотри пожалуйста когда будет время.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_utility_reminder",
+    "language": "uz_latn",
+    "text": "Hurmatli mijoz, gaz uchun to‘lov muddati yaqinlashmoqda. Ilovadan to‘lashingiz mumkin.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_order_confirmed",
+    "language": "ru",
+    "text": "Ваш заказ № 4512 оплачен. Доставка третьего октября с десяти до восемнадцати часов.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_repay_loan_to_friend",
+    "language": "uz_latn",
+    "text": "Anvar aka, o‘tgan oygi qarzni shu hafta qaytarsam bo‘ladimi?",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_legitimate_refund_notice",
+    "language": "ru",
+    "text": "Возврат за отменённый заказ поступит на вашу карту в течение пяти рабочих дней.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_school_meeting",
+    "language": "uz_latn",
+    "text": "Ertaga ota-onalar yig‘ilishi soat 14:00 da bo‘ladi. Iltimos, kechikmang.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_doctor_reminder",
+    "language": "ru",
+    "text": "Напоминаем: приём у врача завтра в половине двенадцатого. Отменить можно в приложении.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_holiday_greeting",
+    "language": "uz_latn",
+    "text": "Ассалому алайкум! Байрамингиз билан табриклайман.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_shop_sale_ad",
+    "language": "ru",
+    "text": "Скидка двадцать процентов на всю коллекцию до конца недели в наших магазинах.",
+    "expected_rule_ids": [],
+    "benign": true
+  },
+  {
+    "id": "benign_courier_eta",
+    "language": "uz_latn",
+    "text": "Kuryer 20 daqiqada yetib boradi. Buyurtma summasi 85 000 so‘m, naqd yoki karta orqali to‘lashingiz mumkin.",
+    "expected_rule_ids": [],
+    "benign": true
+  }
+]

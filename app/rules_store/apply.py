@@ -18,6 +18,7 @@ from app.engine.rules import matching_patterns
 from app.engine.rules.loader import (
     RuleDefinition,
     RulePack,
+    RuleRequirement,
     load_yaml_rule_pack,
     set_active_rule_pack,
 )
@@ -31,6 +32,10 @@ def preview_rule(draft: RuleOverrideDraft, sample: str) -> tuple[str, ...]:
     The operator dry-run: a bad pattern here degrades detection silently for
     every user, and ``main`` deploys on merge, so an edit must be testable
     before it is saved. Raises ``ValueError`` if the draft itself is invalid.
+
+    The draft's ``exclude`` and ``requires`` are carried through, so a rule the
+    two would suppress previews as matching nothing — the preview reports what
+    would fire, not which keywords are present.
     """
 
     normalized = draft.normalized()
@@ -42,6 +47,9 @@ def preview_rule(draft: RuleOverrideDraft, sample: str) -> tuple[str, ...]:
         severity=normalized.severity,
         match={language: tuple(values) for language, values in normalized.patterns.items()},
         emits_signal=normalized.emits_signal,
+        exclude={language: tuple(values) for language, values in normalized.exclude.items()},
+        match_mode=normalized.match_mode,
+        requires=RuleRequirement.from_mapping(normalized.requires),
     )
     return matching_patterns(rule, sample)
 
@@ -51,7 +59,14 @@ def merge_rule_pack(
     overrides: tuple[RuleDefinition, ...],
     disabled: frozenset[str],
 ) -> RulePack:
-    """Overlay ``overrides`` onto ``base`` by rule ID, preserving pack order."""
+    """Overlay ``overrides`` onto ``base`` by rule ID, preserving pack order.
+
+    Raises ``ValueError`` if the merged result violates the ``requires``
+    constraint (PIPELINE_V2 §6) — an override cannot gate a rule on another
+    gated rule. The caller leaves the pack already in force untouched in that
+    case, which on a fresh process is the shipped YAML baseline; detection never
+    degrades to an empty pack.
+    """
 
     by_id = {rule.id: rule for rule in overrides}
     merged: list[RuleDefinition] = []

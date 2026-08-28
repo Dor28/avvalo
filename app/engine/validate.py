@@ -3,6 +3,13 @@
 ``addressed_rule_ids`` is a language-independent floor for rule preservation:
 it catches silently dropped authoritative facts, but a model declaring an ID is
 not proof that its wording explained that fact well.
+
+Two per-bullet filters run before the draft-level scan (PIPELINE_V2 §3, §5):
+grounding drops a red flag that cannot name the detected fact it rests on, and
+the filler blocklist drops a bullet that is nothing but a stock safety phrase.
+Both remove the offending bullet instead of rejecting the whole draft, because a
+rejection costs a corrective retry and often lands on ``safety_fallback`` —
+replacing a partly-good answer with fixed copy.
 """
 
 from __future__ import annotations
@@ -13,7 +20,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel
 
-from app.engine.types import DraftOutput, Language, RuleHit, Signal
+from app.engine.types import DraftOutput, Evidence, Language, RuleHit, Signal
 
 _MAX_BULLETS = 3
 
@@ -216,10 +223,51 @@ _BLOCKLIST_CLAIM_RE = re.compile(
 )
 
 
+# Whole-bullet stock phrases. ``prompts/check.txt`` already asks the model to
+# avoid them; these are the deterministic counterpart. Matched with `fullmatch`
+# against the bullet stripped of edge punctuation, so a bullet that carries a
+# concrete instruction *and* a stock phrase survives — the goal is removing
+# content-free bullets, not policing style.
+_FILLER_PATTERNS = (
+    # Russian
+    r"(?:пожалуйста,?\s*)?будьте\s+(?:осторожны|бдительны|внимательны)"
+    r"(?:\s+в\s+интернете)?",
+    r"(?:пожалуйста,?\s*)?соблюдайте\s+осторожность(?:\s+в\s+интернете)?",
+    r"проявляйте\s+(?:бдительность|осторожность|внимательность)",
+    r"всегда\s+проверяйте\s+(?:информацию|источники|официальные\s+источники)",
+    r"не\s+доверяйте\s+(?:незнакомцам|незнакомым\s+людям)",
+    r"это\s+может\s+быть\s+(?:опасно|небезопасно)",
+    # Uzbek, Latin script (apostrophes are normalized before matching)
+    r"(?:iltimos,?\s*)?(?:ehtiyot|hushyor|diqqatli)\s+bo'ling"
+    r"(?:\s+internetda)?",
+    r"doimo\s+(?:rasmiy\s+)?(?:manbalarni|ma'lumotlarni)\s+tekshiring",
+    r"notanish\s+(?:odamlarga|kishilarga)\s+ishonmang",
+    r"bu\s+xavfli\s+bo'lishi\s+mumkin",
+    # Uzbek, Cyrillic script — banned in replies, but a bullet can still arrive
+    # in it and must not survive the filter merely by changing script.
+    r"(?:илтимос,?\s*)?(?:эҳтиёт|ҳушёр|диққатли)\s+бўлинг",
+    r"доимо\s+(?:расмий\s+)?манбаларни\s+текширинг",
+    # English, for a model that slips out of the target language
+    r"(?:please\s+)?be\s+(?:careful|vigilant|cautious)(?:\s+online)?",
+    r"exercise\s+caution(?:\s+online)?",
+    r"stay\s+safe(?:\s+online)?",
+    r"always\s+verify\s+(?:information|sources|official\s+sources)",
+)
+
+_FILLER_RE = tuple(re.compile(pattern) for pattern in _FILLER_PATTERNS)
+# The same straight/curly/modifier quote variants the rule matcher folds, so the
+# Uzbek o' and g' spellings are one phrase here however the apostrophe is typed.
+_UZ_APOSTROPHES = str.maketrans(
+    {"’": "'", "‘": "'", "`": "'", "ʼ": "'", "՚": "'", "´": "'"}
+)
+_BULLET_EDGE_RE = re.compile(r"^[\s\W_]+|[\s\W_]+$")
+
+
 class ValidationReason(StrEnum):
     """Fixed safety-rejection codes safe to reuse in retries and metadata logs."""
 
     DRAFT_FAILED = "draft failed deterministic safety validation"
+    UNGROUNDED_RED_FLAG = "red flag does not name a detected fact"
     BANNED_VERDICT_WORD = "banned verdict word"
     BANNED_DIRECT_VERDICT = "banned direct verdict"
     RISK_SCORE = "risk score or probability leaked"
@@ -243,12 +291,20 @@ class ValidationReason(StrEnum):
 
 
 class ValidationResult(BaseModel):
-    """Result of deterministic draft validation."""
+    """Result of deterministic draft validation.
+
+    The two counters carry no bullet text — only how many bullets each filter
+    removed — so observability can watch the rates without recording model
+    output.
+    """
 
     ok: bool
     draft: DraftOutput
     reason: ValidationReason | None = None
     no_signal: bool = False
+    dropped_ungrounded: int = 0
+    dropped_filler: int = 0
+    grounding_unsupported: bool = False
 
 
 def validate(
@@ -259,11 +315,33 @@ def validate(
     *,
     knowledge_card_ids: list[str] | None = None,
     authoritative_lookup: bool = False,
+    require_grounding: bool = False,
 ) -> ValidationResult:
-    """Validate and normalize one LLM draft."""
+    """Validate and normalize one LLM draft.
 
-    _ = signals
-    normalized = _truncate_blocks(draft)
+    Per-bullet filters run before truncation so the best three bullets survive
+    rather than the first three of a list that still contains rejects.
+    """
+
+    # ``model_copy(update=...)`` bypasses field validation, so a caller can hand
+    # this boundary a list of bare strings. Normalizing here keeps the validator
+    # total: an unhandled AttributeError would escape ``run_check`` instead of
+    # degrading to ``safety_fallback``, which is the wrong failure mode for the
+    # component whose whole job is to fail safe.
+    filtered = draft.model_copy(update={"red_flags": _as_evidence(draft.red_flags)})
+    dropped_ungrounded = 0
+    grounding_unsupported = False
+    if require_grounding:
+        kept, dropped_ungrounded, grounding_unsupported = _partition_red_flags(
+            filtered.red_flags,
+            rule_hits=rule_hits,
+            signals=signals,
+            knowledge_card_ids=knowledge_card_ids or [],
+        )
+        filtered = filtered.model_copy(update={"red_flags": kept})
+
+    filtered, dropped_filler = _drop_filler(filtered)
+    normalized = _truncate_blocks(filtered)
     no_signal = len(rule_hits) == 0 and len(normalized.red_flags) == 0
     requires_red_flag = any(hit.severity >= _RED_FLAG_MIN_SEVERITY for hit in rule_hits)
     text = _joined_text(normalized)
@@ -277,12 +355,110 @@ def validate(
         authoritative_lookup=authoritative_lookup,
         rule_hits=rule_hits,
     )
+    if reason is ValidationReason.REQUIRED_RED_FLAGS_EMPTY and dropped_ungrounded:
+        # The block is empty *because* grounding removed every bullet. Reporting
+        # the precise cause is what routes the retry to the grounding contract
+        # instead of the generic don't-leak-contacts reminder.
+        reason = ValidationReason.UNGROUNDED_RED_FLAG
     return ValidationResult(
         ok=reason is None,
         draft=normalized,
         reason=reason,
         no_signal=no_signal,
+        dropped_ungrounded=dropped_ungrounded,
+        dropped_filler=dropped_filler,
+        grounding_unsupported=grounding_unsupported,
     )
+
+
+def _as_evidence(red_flags: list[Evidence]) -> list[Evidence]:
+    """Coerce any bare string that bypassed field validation into ``Evidence``."""
+
+    return [
+        item if isinstance(item, Evidence) else Evidence(text=str(item))
+        for item in red_flags
+    ]
+
+
+def _partition_red_flags(
+    red_flags: list[Evidence],
+    *,
+    rule_hits: list[RuleHit],
+    signals: list[Signal],
+    knowledge_card_ids: list[str],
+) -> tuple[list[Evidence], int, bool]:
+    """Keep only red flags naming a fact this check actually detected.
+
+    Returns the surviving bullets, how many were dropped, and whether the
+    compatibility floor applied.
+
+    A model that cites an id outside the evidence set has hallucinated its
+    grounding, and the bullet goes. A model that emits no ``source_id`` at all
+    has not implemented the field — a different failure, and one that would
+    otherwise empty every red-flag block against a provider whose JSON-schema
+    support does not extend to nested objects. In that single case the bullets
+    are kept and the caller records ``grounding_unsupported`` so the gap is
+    visible in observability rather than silently degrading answers. Enforcement
+    becomes strict as soon as the model demonstrates it understands the field.
+    """
+
+    if not red_flags:
+        return [], 0, False
+
+    evidence_ids = (
+        {hit.rule_id for hit in rule_hits}
+        | {signal.kind for signal in signals}
+        | set(knowledge_card_ids)
+    )
+    grounded = [flag for flag in red_flags if flag.source_id in evidence_ids]
+    cited = [flag for flag in red_flags if flag.source_id]
+    if not cited:
+        return list(red_flags), 0, True
+    return grounded, len(red_flags) - len(grounded), False
+
+
+def _drop_filler(draft: DraftOutput) -> tuple[DraftOutput, int]:
+    """Remove bullets that are nothing but a stock safety phrase.
+
+    A ``verify``/``ask`` bullet is kept when it is the last one standing: vague
+    advice beats an empty block, which would fail the draft outright and return
+    fixed fallback copy instead.
+    """
+
+    kept_flags = [flag for flag in draft.red_flags if not _is_filler(flag.text)]
+    kept_verify = _filtered_or_last(draft.verify)
+    kept_ask = _filtered_or_last(draft.ask)
+    dropped = (
+        len(draft.red_flags)
+        - len(kept_flags)
+        + len(draft.verify)
+        - len(kept_verify)
+        + len(draft.ask)
+        - len(kept_ask)
+    )
+    if not dropped:
+        return draft, 0
+    return (
+        draft.model_copy(
+            update={"red_flags": kept_flags, "verify": kept_verify, "ask": kept_ask}
+        ),
+        dropped,
+    )
+
+
+def _filtered_or_last(bullets: list[str]) -> list[str]:
+    kept = [bullet for bullet in bullets if not _is_filler(bullet)]
+    if kept or not bullets:
+        return kept
+    return [bullets[0]]
+
+
+def _is_filler(bullet: str) -> bool:
+    stripped = _BULLET_EDGE_RE.sub(
+        "", unicodedata.normalize("NFKC", bullet).translate(_UZ_APOSTROPHES).casefold()
+    )
+    collapsed = re.sub(r"\s+", " ", stripped)
+    return any(pattern.fullmatch(collapsed) for pattern in _FILLER_RE)
 
 
 def _truncate_blocks(draft: DraftOutput) -> DraftOutput:
@@ -296,7 +472,12 @@ def _truncate_blocks(draft: DraftOutput) -> DraftOutput:
 
 
 def _joined_text(draft: DraftOutput) -> str:
-    parts = [*draft.red_flags, draft.pattern or "", *draft.verify, *draft.ask]
+    parts = [
+        *(flag.text for flag in draft.red_flags),
+        draft.pattern or "",
+        *draft.verify,
+        *draft.ask,
+    ]
     return "\n".join(part for part in parts if part).strip()
 
 

@@ -5,7 +5,7 @@ only allowlisted IDs, enums, component versions, and metrics are recorded.
 """
 
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from time import perf_counter
 from typing import TypeVar
@@ -22,6 +22,7 @@ from app.engine.knowledge import (
     KnowledgeStore,
     RetrievalResult,
     RouterResponse,
+    compose_card_text,
     retrieve_knowledge,
 )
 from app.engine.knowledge.router import OpenAICompatibleKnowledgeRouter
@@ -371,6 +372,7 @@ async def _run_stages(
         ocr_confidence=content.ocr_confidence,
         initial_input_tokens=retrieval.router_input_tokens,
         initial_output_tokens=retrieval.router_output_tokens,
+        mandatory_card_ids=retrieval.mandatory_card_ids,
     )
     if llm_result.status is not None:
         return _attach_retrieval(llm_result.status, retrieval)
@@ -641,6 +643,7 @@ async def _call_llm(
     ocr_confidence: float | None,
     initial_input_tokens: int = 0,
     initial_output_tokens: int = 0,
+    mandatory_card_ids: Sequence[str] = (),
 ) -> _LLMStageResult:
     resolved_settings = settings
     provider = llm_provider
@@ -737,13 +740,32 @@ async def _call_llm(
                 ocr_ms=ocr_ms,
                 ocr_confidence=ocr_confidence,
             )
-        validation = validate(
+        # Reviewed card wording is merged in before validation: a card is
+        # reviewed, not trusted, so composed bullets face the same safety
+        # chassis as anything the model wrote.
+        composed_draft = compose_card_text(
             response.draft,
+            knowledge_cards,
+            mandatory_card_ids=mandatory_card_ids,
+            language=check_input.language,
+        )
+        validation = validate(
+            composed_draft,
             signals,
             rule_hits,
             check_input.language,
             knowledge_card_ids=[card.id for card in knowledge_cards],
+            require_grounding=(
+                resolved_settings.answer_grounding_enabled
+                if resolved_settings is not None
+                else False
+            ),
         )
+        if validation.grounding_unsupported:
+            # The model never populated ``source_id``. Answers still ship (see
+            # the compatibility floor in ``_partition_red_flags``), but the gap
+            # has to be visible: grounding is not actually being enforced.
+            log_error(stage="validate", error_type="GroundingUnsupported")
         if validation.ok:
             safe_response = LLMResponse(
                 draft=validation.draft,
@@ -915,14 +937,33 @@ def _configured_fallback_provider(settings: Settings | None) -> LLMProvider | No
     )
 
 
+# Rejections caused by an unattributed red flag need the grounding contract
+# restated, not the generic don't-leak-contacts reminder that would otherwise be
+# the model's only feedback.
+_GROUNDING_RETRY_REASONS = frozenset(
+    {
+        ValidationReason.UNGROUNDED_RED_FLAG,
+        ValidationReason.REQUIRED_RED_FLAGS_EMPTY,
+    }
+)
+
+
 def _retry_system_prompt(system: str, reason: ValidationReason) -> str:
-    return (
-        f"{system}\n\n"
+    guidance = (
         "SAFETY RETRY: The previous JSON draft failed deterministic validation: "
         f"{reason}. Return corrected JSON only. Do not include banned verdict words, "
         "raw contact details, raw links, secret values, or instructions to use the "
         "suspicious contact path."
     )
+    if reason in _GROUNDING_RETRY_REASONS:
+        guidance += (
+            " Every entry in \"red_flags\" must be an object "
+            '{"text": …, "source_id": …} whose "source_id" is copied EXACTLY from a '
+            "supplied FACT rule ID, a STRUCTURED SIGNALS \"kind\", or a supplied CARD "
+            "id. Entries citing anything else were discarded. Re-issue each warning "
+            "sign attributed to the supplied fact it rests on."
+        )
+    return guidance
 
 
 async def _with_timeout(awaitable: Awaitable[_T], timeout_s: float) -> _T:

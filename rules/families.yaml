@@ -7,6 +7,19 @@
 # `desc` is the neutral-English meaning passed to the LLM as a grounded fact.
 # `emits_signal` (optional) adds a structured Signal of that kind.
 #
+# Optional precision controls (PIPELINE_V2 §6) — omit them for the behavior above:
+#   `exclude:`     same per-language shape as `match:`; any hit here suppresses the rule,
+#                  whatever else matched. Kills one false positive without weakening the
+#                  keyword that catches the true hits.
+#   `match_mode:`  `substring` (default) or `word_prefix`. `word_prefix` anchors each literal
+#                  to a word start, so "kod" covers "kodni"/"kodingizni" but not "bikod"; it
+#                  still matches "kodeks", which is what `exclude` is for. A `regex:` pattern
+#                  is unaffected by either mode.
+#   `requires:`    co-occurrence gate with `any_of:` / `all_of:` (rule ids) and `signals:`
+#                  (signal kinds), evaluated in a second pass after base matching. A gated
+#                  rule may only reference rules that carry no `requires` of their own — a
+#                  violation fails the pack at load time.
+#
 # NOTE: these keyword sets are a strong starting point, NOT exhaustive. A native
 # Uzbek/Russian reviewer should expand them during the alpha. Structural signals
 # (lookalike/shortened links, phone "newness", personal-card transfers) are produced

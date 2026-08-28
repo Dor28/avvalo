@@ -121,6 +121,9 @@ async def retrieve_knowledge(
         status=status,
         router_status=router_status,
         kb_version=knowledge_base.version,
+        mandatory_card_ids=tuple(
+            card_id for card_id in selected_ids if card_id in mandatory_ids
+        ),
         invalid_router_ids=invalid_router_ids,
         router_input_tokens=router_input_tokens,
         router_output_tokens=router_output_tokens,

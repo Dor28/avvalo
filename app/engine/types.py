@@ -1,9 +1,10 @@
 """Pydantic contracts shared by the Avvalo engine pipeline."""
 
 from enum import StrEnum
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 MAX_SUBMITTED_TEXT_CHARS = 6_000
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -93,15 +94,45 @@ class RuleHit(BaseModel):
     severity: int = 1
 
 
+class Evidence(BaseModel):
+    """One red-flag bullet together with the detected fact it rests on.
+
+    ``source_id`` names a detected ``RuleHit.rule_id``, a ``Signal.kind``, or a
+    selected knowledge-card id. ``app.engine.validate`` checks membership in the
+    evidence set for the check, so a claim about the user's situation can only
+    reach them when it can name what it rests on (PIPELINE_V2 §3).
+
+    An empty ``source_id`` means the model did not use the field at all. That is
+    a distinct case from citing an unknown id, and the validator treats the two
+    differently — see ``_partition_red_flags``.
+    """
+
+    text: str
+    source_id: str = ""
+
+
 class DraftOutput(BaseModel):
     """The JSON-mode draft expected from the LLM layer."""
 
     situation_type: SituationType = SituationType.checkable
-    red_flags: list[str] = Field(default_factory=list)
+    red_flags: list[Evidence] = Field(default_factory=list)
     pattern: str | None = None
     verify: list[str] = Field(default_factory=list)
     ask: list[str] = Field(default_factory=list)
     addressed_rule_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("red_flags", mode="before")
+    @classmethod
+    def _coerce_red_flags(cls, value: Any) -> Any:
+        """Accept bare strings so a host that ignores the nested schema still parses.
+
+        Such a bullet carries no ``source_id`` and is handled by the validator's
+        compatibility floor rather than being silently trusted.
+        """
+
+        if not isinstance(value, list):
+            return value
+        return [{"text": item} if isinstance(item, str) else item for item in value]
 
 
 class CheckResult(BaseModel):

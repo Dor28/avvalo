@@ -82,6 +82,21 @@
           </label>
         </section>
 
+        <section class="admin-settings-card">
+          <label class="admin-field">
+            <span>{{ rules.match_mode_label }}</span>
+            <select name="match_mode" aria-describedby="match-mode-hint">
+              {% for mode in match_modes %}
+                <option value="{{ mode }}"
+                        {% if override and override.match_mode == mode %}selected{% elif not override and mode == 'substring' %}selected{% endif %}>
+                  {{ rules['match_mode_' + mode] }}
+                </option>
+              {% endfor %}
+            </select>
+            <small id="match-mode-hint">{{ rules.match_mode_hint }}</small>
+          </label>
+        </section>
+
         {% for pattern_language in pattern_languages %}
           <section class="admin-settings-card">
             <label class="admin-field wide">
@@ -90,8 +105,31 @@
                         aria-describedby="patterns-hint-{{ pattern_language }}">{{ patterns[pattern_language] }}</textarea>
               <small id="patterns-hint-{{ pattern_language }}">{{ rules.patterns_hint }}</small>
             </label>
+            <label class="admin-field wide">
+              <span>{{ rules.exclude_label.format(language=script_labels[pattern_language]) }}</span>
+              <textarea name="exclude_{{ pattern_language }}" rows="3"
+                        aria-describedby="exclude-hint-{{ pattern_language }}">{{ exclude[pattern_language] }}</textarea>
+              <small id="exclude-hint-{{ pattern_language }}">{{ rules.exclude_hint }}</small>
+            </label>
           </section>
         {% endfor %}
+
+        <section class="admin-settings-card">
+          <h2>{{ rules.requires_title }}</h2>
+          <p>{{ rules.requires_hint }}</p>
+          <label class="admin-field wide">
+            <span>{{ rules.requires_any_label }}</span>
+            <textarea name="requires_any_of" rows="2">{{ requires.any_of }}</textarea>
+          </label>
+          <label class="admin-field wide">
+            <span>{{ rules.requires_all_label }}</span>
+            <textarea name="requires_all_of" rows="2">{{ requires.all_of }}</textarea>
+          </label>
+          <label class="admin-field wide">
+            <span>{{ rules.requires_signals_label }}</span>
+            <textarea name="requires_signals" rows="2">{{ requires.signals }}</textarea>
+          </label>
+        </section>
 
         <section class="admin-settings-card admin-dry-run">
           <h2>{{ rules.sample_title }}</h2>

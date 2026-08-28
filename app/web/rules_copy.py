@@ -85,6 +85,26 @@ RULES_COPY = {
             "Har bir qatorda bitta shablon. Oddiy matn kichik harfga keltirilib qidiriladi. "
             "Regex uchun qatorni `regex:` bilan boshlang."
         ),
+        "match_mode_label": "Moslash usuli",
+        "match_mode_substring": "Matn ichidan (odatiy)",
+        "match_mode_word_prefix": "So'z boshidan",
+        "match_mode_hint": (
+            "\"So'z boshidan\" qo'shimchalarni qamrab oladi: \"kod\" \"kodni\" va "
+            "\"kodingizni\" ga mos keladi, \"bikod\" ga esa yo'q."
+        ),
+        "exclude_label": "Istisnolar — {language}",
+        "exclude_hint": (
+            "Har bir qatorda bitta shablon. Bulardan biri topilsa, qoida umuman ishlamaydi. "
+            "Kalit so'zni zaiflashtirmasdan bitta noto'g'ri ishlashni to'xtatish uchun."
+        ),
+        "requires_title": "Qo'shimcha shart (ixtiyoriy)",
+        "requires_hint": (
+            "Qoida faqat sanab o'tilgan boshqa qoidalar bilan birga ishlaydi. "
+            "Har bir qatorda bitta ID. Bo'sh qoldirilsa, shart qo'yilmaydi."
+        ),
+        "requires_any_label": "Kamida bittasi ishlagan bo'lsa",
+        "requires_all_label": "Hammasi ishlagan bo'lsa",
+        "requires_signals_label": "Signallar mavjud bo'lsa",
         "sample_title": "Sinov matni",
         "sample_hint": (
             "Saqlashdan oldin sinab ko'ring. Xato shablon barcha foydalanuvchilar uchun "
@@ -131,6 +151,26 @@ RULES_COPY = {
             "По одному шаблону в строке. Обычный текст ищется без учёта регистра. "
             "Для регулярного выражения начните строку с `regex:`."
         ),
+        "match_mode_label": "Способ совпадения",
+        "match_mode_substring": "Внутри текста (по умолчанию)",
+        "match_mode_word_prefix": "С начала слова",
+        "match_mode_hint": (
+            "«С начала слова» покрывает окончания: «kod» совпадёт с «kodni» и "
+            "«kodingizni», но не с «bikod»."
+        ),
+        "exclude_label": "Исключения — {language}",
+        "exclude_hint": (
+            "По одному шаблону в строке. Если найдено любое из них, правило не срабатывает "
+            "вовсе. Чтобы убрать одно ложное срабатывание, не ослабляя ключевое слово."
+        ),
+        "requires_title": "Дополнительное условие (необязательно)",
+        "requires_hint": (
+            "Правило сработает только вместе с перечисленными правилами. "
+            "По одному ID в строке. Пустое поле — условия нет."
+        ),
+        "requires_any_label": "Если сработало хотя бы одно",
+        "requires_all_label": "Если сработали все",
+        "requires_signals_label": "Если присутствуют сигналы",
         "sample_title": "Тестовый текст",
         "sample_hint": (
             "Проверьте перед сохранением. Ошибочный шаблон незаметно ломает "

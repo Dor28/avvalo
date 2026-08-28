@@ -80,7 +80,31 @@ This one file does three jobs: it is lookalike detection today, it is the seed f
 §4.1 (official identity match) later, and it is a large part of the Phase 3 validation packet.
 Build it once, early. It requires no code change and no deploy of new logic.
 
-### 1.4 Truthful copy
+### 1.4 Answer grounding and rule precision — **done**
+
+Specified in [PIPELINE_V2.md](PIPELINE_V2.md). Reviewed detection assets used to reach the user only
+as a suggestion to the model, and the validator only ever checked for forbidden content, never for
+grounded content — so a draft could satisfy every safety rule and still say nothing.
+
+- [x] Every red flag names the detected rule, signal, or card it rests on; one that cannot is
+      dropped rather than shown. Behind `ANSWER_GROUNDING_ENABLED`.
+- [x] Whole-bullet filler ("be careful", "always verify sources") is removed deterministically.
+- [x] Rules gained `exclude`, `match_mode: word_prefix`, and `requires` co-occurrence gates,
+      editable at `/admin/rules` (migration `0012`).
+- [x] `tools/eval_rules.py` measures per-rule precision and the benign false-positive rate.
+- [x] Cards can carry reviewed `uz_latn` / `ru` wording that is emitted verbatim; inert until 1.5.
+
+### 1.5 Reviewed card wording and a real eval corpus
+
+- [ ] **Founder:** the first `exclude` entry — a legitimate bank SMS ("kod … hech kimga aytmang")
+      currently trips `fs.secrecy.tell_nobody`. One line at `/admin/rules`, once the phrasing to
+      carve out is confirmed by a native reviewer.
+- [ ] **Founder:** `uz_latn` / `ru` wording on the highest-traffic cards, which turns each one from
+      a model paraphrase into reviewed text the user reads verbatim.
+- [ ] **Founder:** real circulating scam messages for the eval corpus's positive half. The benign
+      half ships; the positive half is Phase 2 material.
+
+### 1.6 Truthful copy
 
 - [ ] Align `image_hint` texts with what the checker actually does now.
 - [ ] Review link/QR knowledge cards in both reply languages (`uz_latn`, `ru`).

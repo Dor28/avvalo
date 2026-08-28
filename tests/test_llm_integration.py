@@ -138,7 +138,7 @@ async def test_openai_compatible_provider_maps_json_response() -> None:
     assert call["temperature"] == 0.2
     assert call["max_tokens"] == 321
     assert call["response_format"] == {"type": "json_object"}
-    assert response.draft.red_flags == ["One warning sign."]
+    assert [flag.text for flag in response.draft.red_flags] == ["One warning sign."]
     assert response.input_tokens == 123
     assert response.output_tokens == 45
 

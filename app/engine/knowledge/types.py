@@ -7,6 +7,20 @@ from typing import Literal, Protocol
 from pydantic import BaseModel, Field
 
 
+class LocalizedCardText(BaseModel):
+    """Reviewer-approved card wording in one reply language.
+
+    The untranslated card fields are English and exist to ground the model's
+    prompt. These are the sentences a user actually reads, so a card carrying
+    them can be composed into the answer verbatim rather than paraphrased
+    (PIPELINE_V2 §4).
+    """
+
+    red_flags: list[str] = Field(default_factory=list)
+    verify_steps: list[str] = Field(default_factory=list)
+    questions: list[str] = Field(default_factory=list)
+
+
 class KnowledgeCard(BaseModel):
     """One versioned, reviewed pattern or verification card."""
 
@@ -22,6 +36,10 @@ class KnowledgeCard(BaseModel):
     verify_steps: list[str] = Field(default_factory=list)
     questions: list[str] = Field(default_factory=list)
     reviewed_case_ids: list[str] = Field(default_factory=list)
+    # Keyed by ``Language`` value ("uz_latn" / "ru"). Absent until a native
+    # reviewer supplies the wording, in which case the model localizes the card
+    # as before — so this is additive per card, never a flag day.
+    localized: dict[str, LocalizedCardText] = Field(default_factory=dict)
 
 
 class KnowledgeBase(BaseModel):
@@ -39,6 +57,10 @@ class RetrievalResult(BaseModel):
     status: Literal["ok", "empty", "unavailable"] = "empty"
     router_status: Literal["not_used", "ok", "unavailable", "invalid_ids"] = "not_used"
     kb_version: str | None = None
+    # Cards selected by a rule/signal trigger rather than an alias cue or the
+    # router. Only these may compose their reviewed wording into the answer
+    # verbatim: a cue or router match is a relevance guess, not detected evidence.
+    mandatory_card_ids: tuple[str, ...] = ()
     invalid_router_ids: tuple[str, ...] = ()
     router_input_tokens: int = Field(default=0, ge=0)
     router_output_tokens: int = Field(default=0, ge=0)

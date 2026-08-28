@@ -221,11 +221,14 @@ def format_result(draft: DraftOutput, language: Language, *, no_signal: bool = F
     )
     labels = _HEADINGS[language]
     blocks: list[str] = []
+    # Only the bullet text is user-facing; ``source_id`` is an internal rule,
+    # signal, or card identifier and must never be rendered.
+    red_flag_texts = [flag.text for flag in copy.red_flags]
 
     if no_signal:
         blocks.append(labels["no_signal"])
-    elif copy.red_flags:
-        blocks.append(_section(labels["red_flags"], copy.red_flags))
+    elif red_flag_texts:
+        blocks.append(_section(labels["red_flags"], red_flag_texts))
 
     if copy.pattern:
         blocks.append(f"{labels['pattern']} {copy.pattern}")

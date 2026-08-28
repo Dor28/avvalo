@@ -104,6 +104,15 @@ The validator rejects person-level conclusions, `safe`/`scam`/`fraud confirmed`,
 scores, fabricated contacts, claimed external checks, leaked internal IDs, unsupported links, and
 missing authoritative rule coverage.
 
+Each red flag is an `Evidence` object carrying the bullet text and a `source_id` naming the
+detected rule, signal kind, or selected card it rests on. A bullet whose `source_id` is outside
+that evidence set is dropped rather than rejecting the draft; a draft in which no bullet cites
+anything keeps its flags and records `grounding_unsupported`, so a provider that ignores the
+nested schema degrades visibly instead of emptying every answer. `verify` and `ask` carry no
+provenance — generic verification advice is acceptable, a generic accusation is not. Bullets that
+are nothing but a stock safety phrase are dropped by the same per-bullet pass. Governed by
+[PIPELINE_V2.md](PIPELINE_V2.md) §3 and §5; enabled by `ANSWER_GROUNDING_ENABLED`.
+
 ### Statuses
 
 The engine uses categorical statuses such as `ok`, `no_signal`, `empty_input`, `meta`, `off_topic`,
@@ -123,6 +132,14 @@ Error classes are categorical identifiers, never exception messages.
 
 `rules/families.yaml` is the sole active rule pack. Stable `fs.*` rule IDs must not be
 renamed because events, knowledge cards, tests, and sanitized Share summaries reference them.
+
+A rule may carry three optional precision controls ([PIPELINE_V2.md](PIPELINE_V2.md) §6):
+`exclude` patterns that suppress it whatever else matched, `match_mode: word_prefix` for Uzbek
+agglutination, and a `requires` co-occurrence gate. All three are optional, default to the
+historical behavior, and are editable at `/admin/rules`. A gated rule may only reference rules
+that carry no gate of their own, which is validated at load time.
+`tools/eval_rules.py` scores the pack against `tests/fixtures/eval/corpus.json` and fails when the
+false-positive rate on the benign half exceeds its threshold.
 
 The pack covers credential theft, urgency/secrecy, authority impersonation, upfront payment,
 verification avoidance, implausible promises, suspicious links/QR codes, incoming-payment receipt
@@ -167,6 +184,13 @@ unpublished.
 Only approved, versioned cards from `knowledge/cards/` may be retrieved. Cards explain
 patterns and verification steps; they are not official-source evidence and cannot establish
 identity, intent, or fraud.
+
+A card may carry a `localized` block of reviewer-approved wording per reply language. When such a
+card is selected by a rule or signal trigger — never by an alias cue or the router — its bullets
+are composed into the answer verbatim and the model only supplies the `pattern` sentence and any
+warning sign the cards miss ([PIPELINE_V2.md](PIPELINE_V2.md) §4). Composition happens before
+validation: a card is reviewed, not trusted. A card with no wording for the reply language falls
+back to model localization.
 
 The semantic router is optional and receives the strict minimized text plus a server-generated
 allowlist; it never receives submitted names or raw URLs. It may select only allowed card IDs.

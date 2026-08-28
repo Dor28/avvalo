@@ -26,7 +26,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES
 from app.config import Settings
-from app.engine.rules.loader import RuleDefinition, load_rule_pack, load_yaml_rule_pack
+from app.engine.rules.loader import (
+    MATCH_MODE_SUBSTRING,
+    MATCH_MODES,
+    RuleDefinition,
+    load_rule_pack,
+    load_yaml_rule_pack,
+)
 from app.rules_store import (
     RuleOverride,
     RuleOverrideDraft,
@@ -60,9 +66,26 @@ def _draft_from_form(
     patterns_uz_latn: Annotated[str, Form()] = "",
     patterns_uz_cyrl: Annotated[str, Form()] = "",
     patterns_ru: Annotated[str, Form()] = "",
+    match_mode: Annotated[str, Form()] = MATCH_MODE_SUBSTRING,
+    exclude_uz_latn: Annotated[str, Form()] = "",
+    exclude_uz_cyrl: Annotated[str, Form()] = "",
+    exclude_ru: Annotated[str, Form()] = "",
+    requires_any_of: Annotated[str, Form()] = "",
+    requires_all_of: Annotated[str, Form()] = "",
+    requires_signals: Annotated[str, Form()] = "",
 ) -> RuleOverrideDraft:
     """Build the typed boundary from flat browser form fields."""
 
+    exclude = {
+        "uz_latn": _split_patterns(exclude_uz_latn),
+        "uz_cyrl": _split_patterns(exclude_uz_cyrl),
+        "ru": _split_patterns(exclude_ru),
+    }
+    requires = {
+        "any_of": _split_patterns(requires_any_of),
+        "all_of": _split_patterns(requires_all_of),
+        "signals": _split_patterns(requires_signals),
+    }
     return RuleOverrideDraft(
         rule_id=rule_id,
         family=family,
@@ -76,6 +99,16 @@ def _draft_from_form(
             "uz_cyrl": _split_patterns(patterns_uz_cyrl),
             "ru": _split_patterns(patterns_ru),
         },
+        match_mode=match_mode or MATCH_MODE_SUBSTRING,
+        # An all-empty block means "no exclusions" / "no gate", which the store
+        # records as absent. Sending empty structures instead would turn every
+        # ordinary save into an authoring error.
+        exclude={key: values for key, values in exclude.items() if values},
+        requires=(
+            {key: values for key, values in requires.items() if values}
+            if any(requires.values())
+            else None
+        ),
     )
 
 
@@ -121,8 +154,31 @@ def _draft_from_rule(rule: RuleDefinition) -> RuleOverrideDraft:
         patterns={
             language: list(rule.match.get(language, ())) for language in PATTERN_LANGUAGES
         },
+        # Carried through so opening a baseline rule in the editor and saving it
+        # cannot silently reset its precision controls back to the defaults.
+        match_mode=rule.match_mode,
+        exclude={
+            language: list(rule.exclude.get(language, ()))
+            for language in PATTERN_LANGUAGES
+            if rule.exclude.get(language)
+        },
+        requires=_requires_for_form(rule.requires),
         disabled=False,
     )
+
+
+def _requires_for_form(requirement) -> dict[str, list[str]] | None:
+    """Project a ``RuleRequirement`` back onto the editor's flat draft shape."""
+
+    if requirement is None:
+        return None
+    blocks = {
+        "any_of": list(getattr(requirement, "any_of", ()) or ()),
+        "all_of": list(getattr(requirement, "all_of", ()) or ()),
+        "signals": list(getattr(requirement, "signals", ()) or ()),
+    }
+    populated = {key: values for key, values in blocks.items() if values}
+    return populated or None
 
 
 def _rule_rows(
@@ -393,6 +449,9 @@ def _form_response(
                 override=override,
                 override_id=resolved_id,
                 patterns=_patterns_for_form(override),
+                exclude=_exclude_for_form(override),
+                requires=_requires_text_for_form(override),
+                match_modes=MATCH_MODES,
                 pattern_languages=PATTERN_LANGUAGES,
                 error=error,
                 sample=sample,
@@ -412,6 +471,29 @@ def _patterns_for_form(
     stored = getattr(override, "patterns", None) or {}
     return {
         language: "\n".join(stored.get(language, []) or []) for language in PATTERN_LANGUAGES
+    }
+
+
+def _exclude_for_form(
+    override: RuleOverride | RuleOverrideDraft | None,
+) -> dict[str, str]:
+    """Render stored exclusions back into one-per-line textarea values."""
+
+    stored = getattr(override, "exclude", None) or {}
+    return {
+        language: "\n".join(stored.get(language, []) or []) for language in PATTERN_LANGUAGES
+    }
+
+
+def _requires_text_for_form(
+    override: RuleOverride | RuleOverrideDraft | None,
+) -> dict[str, str]:
+    """Render a stored gate back into one-per-line textarea values."""
+
+    stored = getattr(override, "requires", None) or {}
+    return {
+        block: "\n".join(stored.get(block, []) or [])
+        for block in ("any_of", "all_of", "signals")
     }
 
 

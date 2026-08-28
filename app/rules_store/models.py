@@ -17,6 +17,8 @@ from datetime import datetime
 from sqlalchemy import JSON, Boolean, DateTime, Integer, Text, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from app.engine.rules.loader import MATCH_MODE_SUBSTRING
+
 
 class RuleStoreBase(DeclarativeBase):
     """Declarative base for operator-authored detection patterns only."""
@@ -38,6 +40,23 @@ class RuleOverride(RuleStoreBase):
     emits_signal: Mapped[str | None] = mapped_column(Text, nullable=True)
     # {"uz_latn": [...], "uz_cyrl": [...], "ru": [...]} — patterns, not user data.
     patterns: Mapped[dict[str, list[str]]] = mapped_column(JSON, nullable=False, default=dict)
+
+    # Precision controls (PIPELINE_V2 §6), all optional. NULL on every row
+    # written before they existed, which is read as "no exclusions", the
+    # historical substring matching, and "no co-occurrence gate".
+    # ``exclude`` maps to ``exclude_patterns`` so the column name cannot collide
+    # with the SQL keyword.
+    exclude: Mapped[dict[str, list[str]] | None] = mapped_column(
+        "exclude_patterns", JSON, nullable=True, default=dict
+    )
+    match_mode: Mapped[str | None] = mapped_column(
+        Text, nullable=True, default=MATCH_MODE_SUBSTRING
+    )
+    # {"any_of": [...], "all_of": [...], "signals": [...]} — rule IDs and signal
+    # kinds, never content.
+    requires: Mapped[dict[str, list[str]] | None] = mapped_column(
+        JSON, nullable=True, default=None
+    )
 
     # A disabled row suppresses the same rule ID in the shipped YAML pack.
     disabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

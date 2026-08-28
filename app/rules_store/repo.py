@@ -11,11 +11,16 @@ import re
 import uuid
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.engine.rules.loader import RuleDefinition
+from app.engine.rules.loader import (
+    MATCH_MODE_SUBSTRING,
+    MATCH_MODES,
+    RuleDefinition,
+    RuleRequirement,
+)
 from app.rules_store.models import RuleOverride
 
 LANGUAGES = ("uz_latn", "uz_cyrl", "ru")
@@ -29,6 +34,10 @@ MAX_PATTERNS_PER_LANGUAGE = 60
 REGEX_PREFIX = "regex:"
 # A literal shorter than this matches far too much text to be a useful signal.
 MIN_LITERAL_CHARS = 3
+# Co-occurrence gate (PIPELINE_V2 §6): rule IDs in any_of/all_of, signal kinds
+# in signals. A gate longer than this is a rule that should be split.
+REQUIRES_KEYS = ("any_of", "all_of", "signals")
+MAX_REQUIRES_ENTRIES = 20
 
 
 class RuleOverrideDraft(BaseModel):
@@ -43,6 +52,11 @@ class RuleOverrideDraft(BaseModel):
     severity: int
     emits_signal: str | None = None
     patterns: dict[str, list[str]]
+    # Optional precision controls; omitting them reproduces the historical
+    # behavior exactly (no exclusions, substring matching, no gate).
+    exclude: dict[str, list[str]] = Field(default_factory=dict)
+    match_mode: str = MATCH_MODE_SUBSTRING
+    requires: dict[str, list[str]] | None = None
     disabled: bool = False
 
     def normalized(self) -> RuleOverrideDraft:
@@ -81,6 +95,9 @@ class RuleOverrideDraft(BaseModel):
             severity=self.severity,
             emits_signal=emits_signal,
             patterns=patterns,
+            exclude=_validate_exclude(self.exclude),
+            match_mode=_validate_match_mode(self.match_mode),
+            requires=_validate_requires(self.requires),
             disabled=self.disabled,
         )
 
@@ -97,6 +114,52 @@ def _validate_patterns(raw: dict[str, list[str]]) -> dict[str, list[str]]:
             raise ValueError("invalid_patterns")
         entries = [str(value).strip() for value in values]
         cleaned[language] = [_validate_pattern(entry) for entry in entries if entry]
+    return cleaned
+
+
+def _validate_exclude(raw: dict[str, list[str]] | None) -> dict[str, list[str]]:
+    """Validate the optional exclusion groups; absent means "no exclusions"."""
+
+    if not raw:
+        return {}
+    return _validate_patterns(raw)
+
+
+def _validate_match_mode(raw: str | None) -> str:
+    mode = (raw or "").strip().casefold() or MATCH_MODE_SUBSTRING
+    if mode not in MATCH_MODES:
+        raise ValueError("invalid_match_mode")
+    return mode
+
+
+def _validate_requires(raw: dict[str, list[str]] | None) -> dict[str, list[str]] | None:
+    """Validate the optional co-occurrence gate; absent means "no gate".
+
+    A gate written with keys but no entries is rejected rather than dropped: it
+    reads as a restriction while restricting nothing, which is how an operator
+    ends up shipping a broad keyword they believed was gated.
+    """
+
+    if not raw:
+        return None
+    if not isinstance(raw, dict):
+        raise ValueError("invalid_requires")
+
+    cleaned: dict[str, list[str]] = {}
+    for key, values in raw.items():
+        if key not in REQUIRES_KEYS:
+            raise ValueError("invalid_requires")
+        if not isinstance(values, list) or len(values) > MAX_REQUIRES_ENTRIES:
+            raise ValueError("invalid_requires")
+        expected = MESSAGE_KEY_RE if key == "signals" else RULE_ID_RE
+        entries = [str(value).strip().casefold() for value in values]
+        entries = [entry for entry in entries if entry]
+        if any(not expected.fullmatch(entry) for entry in entries):
+            raise ValueError("invalid_requires")
+        cleaned[key] = entries
+
+    if not any(cleaned.values()):
+        raise ValueError("invalid_requires")
     return cleaned
 
 
@@ -186,6 +249,9 @@ async def load_overrides(
             continue
         try:
             patterns = _validate_patterns(row.patterns)
+            exclude = _validate_exclude(row.exclude)
+            match_mode = _validate_match_mode(row.match_mode)
+            requires = _validate_requires(row.requires)
         except ValueError:
             continue
         if not any(patterns.values()):
@@ -199,6 +265,9 @@ async def load_overrides(
                 severity=row.severity,
                 match={language: tuple(values) for language, values in patterns.items()},
                 emits_signal=row.emits_signal,
+                exclude={language: tuple(values) for language, values in exclude.items()},
+                match_mode=match_mode,
+                requires=RuleRequirement.from_mapping(requires),
             )
         )
     return tuple(definitions), frozenset(disabled)

@@ -4,8 +4,16 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from functools import lru_cache
 
-from app.engine.rules.loader import RuleDefinition, load_rule_pack
+from app.engine.rules.loader import (
+    MATCH_MODE_SUBSTRING,
+    MATCH_MODE_WORD_PREFIX,
+    RuleDefinition,
+    RulePack,
+    RuleRequirement,
+    load_rule_pack,
+)
 from app.engine.types import RuleHit, Signal
 from app.engine.url import (
     LABEL_CREDENTIALS,
@@ -65,29 +73,92 @@ _SIGNAL_KIND_BY_LABEL = {
 
 
 def run_rules(text: str) -> tuple[list[RuleHit], list[Signal]]:
-    """Run the keyword rules and structural extractors over raw local text."""
+    """Run the keyword rules and structural extractors over raw local text.
+
+    Two passes, never more (PIPELINE_V2 §6). The base pass matches every rule
+    that carries no ``requires`` gate and collects the structural signals; the
+    second pass admits the gated rules whose co-occurrence conditions the base
+    result already satisfies. Because a gate may only reference ungated rules
+    (enforced when the pack loads), one pass is enough and the outcome does not
+    depend on rule order. A signal emitted by a gated rule therefore lands in
+    the result but never feeds another gate.
+    """
 
     pack = load_rule_pack()
     normalized = normalize_text(text)
+    hits_by_id, signals, signal_keys = _base_pass(pack, text, normalized)
+
+    gated = [rule for rule in pack.rules if rule.requires is not None]
+    if gated:
+        fired_rule_ids = frozenset(hits_by_id)
+        signal_kinds = frozenset(signal.kind for signal in signals)
+        for rule in gated:
+            if not _requirements_met(rule.requires, fired_rule_ids, signal_kinds):
+                continue
+            if _rule_matches(rule, normalized):
+                _record_hit(rule, hits_by_id, signals, signal_keys)
+
+    return list(hits_by_id.values()), signals
+
+
+def _base_pass(
+    pack: RulePack,
+    text: str,
+    normalized_text: str,
+    *,
+    ignore_rule_id: str | None = None,
+) -> tuple[dict[str, RuleHit], list[Signal], set[tuple[str, str | None]]]:
+    """Match every ungated rule and extract the structural signals.
+
+    ``ignore_rule_id`` drops one rule from the pass so the operator dry-run can
+    evaluate a draft's gate without the stored version of that same rule
+    standing in for it.
+    """
+
     hits_by_id: dict[str, RuleHit] = {}
     signals: list[Signal] = []
     signal_keys: set[tuple[str, str | None]] = set()
 
     for rule in pack.rules:
-        if _rule_matches(rule, normalized):
-            hits_by_id[rule.id] = RuleHit(
-                rule_id=rule.id,
-                family=rule.family,
-                message_key=rule.message_key,
-                severity=rule.severity,
-            )
-            if rule.emits_signal:
-                _add_signal(signals, signal_keys, kind=rule.emits_signal, note=rule.family)
+        if rule.requires is not None or rule.id == ignore_rule_id:
+            continue
+        if _rule_matches(rule, normalized_text):
+            _record_hit(rule, hits_by_id, signals, signal_keys)
 
     for signal in extract_structural_signals(text):
         _add_signal(signals, signal_keys, kind=signal.kind, note=signal.note)
 
-    return list(hits_by_id.values()), signals
+    return hits_by_id, signals, signal_keys
+
+
+def _record_hit(
+    rule: RuleDefinition,
+    hits_by_id: dict[str, RuleHit],
+    signals: list[Signal],
+    signal_keys: set[tuple[str, str | None]],
+) -> None:
+    hits_by_id[rule.id] = RuleHit(
+        rule_id=rule.id,
+        family=rule.family,
+        message_key=rule.message_key,
+        severity=rule.severity,
+    )
+    if rule.emits_signal:
+        _add_signal(signals, signal_keys, kind=rule.emits_signal, note=rule.family)
+
+
+def _requirements_met(
+    requires: RuleRequirement,
+    fired_rule_ids: frozenset[str],
+    signal_kinds: frozenset[str],
+) -> bool:
+    """Whether the base pass satisfies a rule's co-occurrence gate."""
+
+    if requires.any_of and fired_rule_ids.isdisjoint(requires.any_of):
+        return False
+    if not fired_rule_ids.issuperset(requires.all_of):
+        return False
+    return signal_kinds.issuperset(requires.signals)
 
 
 def extract_structural_signals(text: str) -> list[Signal]:
@@ -133,19 +204,50 @@ def matching_patterns(rule: RuleDefinition, text: str) -> tuple[str, ...]:
     """Return every pattern in ``rule`` that matches ``text``.
 
     Shared with the operator dry-run so a preview can never disagree with what
-    production matching actually does.
+    production matching actually does. That includes the suppressions: an
+    ``exclude`` hit or an unmet ``requires`` gate means the rule would not fire,
+    so nothing is reported even when individual keywords are present.
     """
 
     normalized_text = normalize_text(text)
+    if not _rule_matches(rule, normalized_text):
+        return ()
+    if not _gate_open(rule, text, normalized_text):
+        return ()
     return tuple(
         pattern
         for patterns in rule.match.values()
         for pattern in patterns
-        if _pattern_matches(normalize_text(pattern), normalized_text)
+        if _pattern_matches(normalize_text(pattern), normalized_text, rule.match_mode)
     )
 
 
-def _pattern_matches(normalized_pattern: str, normalized_text: str) -> bool:
+def _gate_open(rule: RuleDefinition, text: str, normalized_text: str) -> bool:
+    """Whether ``rule``'s ``requires`` gate would be satisfied for ``text``.
+
+    Only the dry-run needs this: ``run_rules`` already holds the base result the
+    gate is evaluated against. The pack in force supplies that context here, with
+    the previewed rule itself left out so a stored earlier version of it cannot
+    satisfy its own gate.
+    """
+
+    if rule.requires is None:
+        return True
+    hits_by_id, signals, _keys = _base_pass(
+        load_rule_pack(), text, normalized_text, ignore_rule_id=rule.id
+    )
+    return _requirements_met(
+        rule.requires,
+        frozenset(hits_by_id),
+        frozenset(signal.kind for signal in signals),
+    )
+
+
+def _pattern_matches(
+    normalized_pattern: str,
+    normalized_text: str,
+    match_mode: str = MATCH_MODE_SUBSTRING,
+) -> bool:
     if normalized_pattern.startswith("regex:"):
         try:
             return bool(re.search(normalized_pattern.removeprefix("regex:"), normalized_text))
@@ -153,13 +255,45 @@ def _pattern_matches(normalized_pattern: str, normalized_text: str) -> bool:
             # Patterns are validated on write, but a row written out of band
             # must degrade to "no match" rather than break every check.
             return False
+    if match_mode == MATCH_MODE_WORD_PREFIX:
+        return bool(_word_prefix_matcher(normalized_pattern).search(normalized_text))
     return normalized_pattern in normalized_text
 
 
+@lru_cache(maxsize=2048)
+def _word_prefix_matcher(literal: str) -> re.Pattern[str]:
+    r"""Compile a word-start anchored matcher for one normalized literal.
+
+    ``(?<!\w)`` plus the escaped literal, so "kod" covers "kodni" and
+    "kodingizni" but not "bikod". Cached because rule literals are a bounded set
+    of reviewed reference data — submitted content is only ever the subject of a
+    match, never a cache key.
+    """
+
+    return re.compile(rf"(?<!\w){re.escape(literal)}")
+
+
 def _rule_matches(rule: RuleDefinition, normalized_text: str) -> bool:
+    """Whether ``rule`` fires, exclusions applied, gate not considered.
+
+    An ``exclude`` hit wins over everything the ``match`` groups found: it is
+    how a reviewer kills one false positive without weakening the keyword that
+    catches the true hits.
+    """
+
+    if _any_pattern_matches(rule.exclude, rule.match_mode, normalized_text):
+        return False
+    return _any_pattern_matches(rule.match, rule.match_mode, normalized_text)
+
+
+def _any_pattern_matches(
+    groups: dict[str, tuple[str, ...]],
+    match_mode: str,
+    normalized_text: str,
+) -> bool:
     return any(
-        _pattern_matches(normalize_text(pattern), normalized_text)
-        for patterns in rule.match.values()
+        _pattern_matches(normalize_text(pattern), normalized_text, match_mode)
+        for patterns in groups.values()
         for pattern in patterns
     )
 
