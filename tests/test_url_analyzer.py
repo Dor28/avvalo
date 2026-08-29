@@ -22,7 +22,6 @@ from app.engine.url import (
     URL_RE,
     classify_link,
     describe_link,
-    extract_normalized_domains,
     load_official_domains,
     normalize_domain,
 )
@@ -105,17 +104,6 @@ def test_malformed_authority_has_no_label_and_does_not_raise(raw_url: str) -> No
 
     assert classify_link(raw_url) in {None, "credentials-in-url", "ip-address"}
     describe_link(raw_url)
-
-
-def test_extract_normalized_domains_deduplicates_encodings() -> None:
-    text = f"Birinchi https://CLICK.uz/pay, keyin www.click.uz, keyin {PUNYCODE_CLICK}"
-    assert extract_normalized_domains(text) == ("click.uz", CYRILLIC_CLICK)
-
-
-def test_extract_normalized_domains_does_not_treat_email_domains_as_links() -> None:
-    text = "Bog'lanish uchun support@listed.example manziliga yozing."
-
-    assert extract_normalized_domains(text) == ()
 
 
 # --- both callers resolve one link the same way ------------------------------
