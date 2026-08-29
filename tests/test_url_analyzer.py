@@ -115,7 +115,7 @@ def test_rules_and_minimize_share_one_analyzer() -> None:
     raw_text = f"To'lov: https://{CYRILLIC_CLICK}/pay"
 
     _hits, signals = run_rules(raw_text)
-    minimized = minimize(raw_text, signals)
+    minimized = minimize(raw_text)
 
     assert ("link_lookalike", "lookalike-domain") in {(s.kind, s.note) for s in signals}
     assert "[LINK: lookalike-domain]" in minimized
@@ -127,7 +127,7 @@ def test_percent_escaped_host_is_consistent_across_both_callers() -> None:
     raw_text = "To'lov: https://%70ayme-secure.example/login"
 
     _hits, signals = run_rules(raw_text)
-    minimized = minimize(raw_text, signals)
+    minimized = minimize(raw_text)
 
     assert ("link_lookalike", "lookalike-domain") in {(s.kind, s.note) for s in signals}
     assert "[LINK: lookalike-domain]" in minimized

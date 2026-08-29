@@ -305,11 +305,10 @@ async def _run_stages(
     # where submitted names and URLs remain ephemeral but visible for context.
     # Decoded QR payloads retain their older strict prompt boundary because a QR
     # can conceal sensitive values the user never saw as text.
-    retrieval_text = minimize(text, signals)
+    retrieval_text = minimize(text)
     preserve_answer_identifiers = not content.contains_decoded_qr
     answer_prompt_text = minimize(
         text,
-        signals,
         preserve_names=preserve_answer_identifiers,
         preserve_urls=preserve_answer_identifiers,
     )

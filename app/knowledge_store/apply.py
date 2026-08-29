@@ -86,7 +86,7 @@ async def preview_card(
 
     rule_hits, signals = run_rules(sample)
     result = await retrieve_knowledge(
-        minimized_text=minimize(sample, signals),
+        minimized_text=minimize(sample),
         rule_hits=rule_hits,
         signals=signals,
         store=_StaticKnowledgeStore(KnowledgeBase(version=base.version, cards=candidate)),

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 
-from app.engine.types import Signal
 from app.engine.url import URL_RE, classify_link, split_url_trailing_punctuation
 
 _EMAIL_RE = re.compile(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b")
@@ -47,7 +46,6 @@ _NAME_RE = re.compile(
 
 def minimize(
     raw_text: str,
-    signals: list[Signal] | None = None,
     *,
     preserve_names: bool = False,
     preserve_urls: bool = False,
@@ -60,7 +58,6 @@ def minimize(
     persisted or logged.
     """
 
-    _ = signals
     if preserve_urls:
         return _minimize_around_urls(raw_text, preserve_names=preserve_names)
     return _minimize_protected_values(raw_text, preserve_names=preserve_names)

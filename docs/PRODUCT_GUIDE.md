@@ -147,7 +147,8 @@ Verified against the repository, not assumed:
   `ip-address`.
 - The full check pipeline ([app/engine/pipeline.py](../app/engine/pipeline.py)) with rate
   limiting, language resolution, deterministic rules, PII minimization, an LLM call in
-  JSON-schema mode, the safety validator, and localized formatting.
+  JSON mode with the output shape declared in the system prompt, the safety validator,
+  and localized formatting.
 - Database-backed rule and card overrides with founder editors at `/admin/rules` and
   `/admin/cards`, each with a dry run against the real matcher.
 - A founder-authored Knowledge section (`/cases`) with draft/publish administration.

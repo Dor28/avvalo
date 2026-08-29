@@ -125,7 +125,7 @@ def test_post_check_keyboard_uses_share_callback_when_check_id_exists() -> None:
 # --- #6: cookie Secure flag --------------------------------------------------
 
 def test_session_cookie_secure_flag_is_configurable() -> None:
-    ws = WebSession(user_key="k", signed_id="payload.sig", is_new=True)
+    ws = WebSession(user_key="k", signed_id="payload.sig")
 
     secure_resp = Response()
     set_web_session_cookie(secure_resp, ws, secure=True)

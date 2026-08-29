@@ -30,7 +30,6 @@ ALLOWED_EVENT_NAMES = {
     "usefulness_answered",
     "decision_answered",
     "share_clicked",
-    "share_tapped",
     "deletion_requested",
     "deletion_completed",
     "rule_pack_refreshed",
@@ -49,7 +48,6 @@ ALLOWED_FIELDS = {
     "kb_version",
     "knowledge_card_ids",
     "language",
-    "latency",
     "latency_ms",
     "limit",
     "llm_ms",
@@ -69,7 +67,6 @@ ALLOWED_FIELDS = {
     "safety_blocked",
     "status",
     "suppressed_cards",
-    "tokens",
     "usefulness",
 }
 

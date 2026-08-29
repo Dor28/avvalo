@@ -98,7 +98,7 @@ def test_build_prompt_renders_rule_descriptions_and_minimized_content() -> None:
         "Tel: +998 90 123 45 67, karta 8600 1234 1234 5678."
     )
     hits, signals = run_rules(raw_text)
-    minimized = minimize(raw_text, signals)
+    minimized = minimize(raw_text)
 
     system, user = build_prompt(
         language=Language.uz_latn,

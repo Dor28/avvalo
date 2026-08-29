@@ -74,7 +74,9 @@ Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` an
    retrieval/routing, and an answer-prompt view that retains submitted names and full URLs while
    still tokenizing phones, cards, credentials, codes, passports, addresses, and other protected
    values. Decoded QR payloads remain strictly minimized.
-6. LLM call in JSON-schema mode via an OpenAI-compatible provider; only the answer model receives
+6. LLM call via an OpenAI-compatible provider in JSON mode (`response_format:
+   {"type": "json_object"}`) — the output shape is declared in `prompts/system_safety.txt`,
+   not sent as a `json_schema` response format; only the answer model receives
    the name/URL-preserving view. The prompt is `prompts/system_safety.txt` + `prompts/check.txt`
    with rule hits injected as grounded facts.
 7. Deterministic safety validator ([app/engine/validate.py](app/engine/validate.py)): bans verdict words in ru/uz_latn/Cyrillic-Uzbek/English, strips contacts/links/card numbers/OTPs, caps list lengths; one corrective retry, then `safety_fallback`.
