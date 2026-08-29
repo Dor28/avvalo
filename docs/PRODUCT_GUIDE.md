@@ -28,7 +28,7 @@ longer a resolved case but the user's own acquired ability to notice what is wro
 
 Concretely, three things changed:
 
-1. **One reactive flow became three surfaces at three tempos** (§4).
+1. **One reactive flow became three capabilities** — Scanner, Check, Knowledge (§4).
 2. **The answer became decisive** — about the action, never about the object (§5).
 3. **The product became an application inside Telegram**, not only a bot and a web form (§6).
 
@@ -48,33 +48,33 @@ today but is always answered in `uz_latn`; adding Cyrillic-Uzbek **output** is s
 work (ROADMAP Phase 3) because the group most exposed to fraud reads Cyrillic fluently and
 Latin with difficulty. Until that ships, the audience is not broad — it is truncated by age.
 
-## 4. Three tempos
+## 4. What the product does
 
-One promise, served at three frequencies. The tempo determines what the surface is, what it
-costs to run, and why a person opens it.
+Three capabilities, one engine behind all of them.
 
-### Second — Scanner
+### Scanner
 
 A pasted link or a QR code, answered immediately from deterministic analysis with no model
-call. This is the daily utility: it is what a person reaches for while paying by QR or
-after receiving a link in a chat.
+call. Resolving where a shortened link leads is part of this, inside the boundaries in §8.1.
+This is what a person reaches for while paying by QR or after receiving a link in a chat.
 
-### Minute — Check
+### Check
 
 The full situation analysis in chat: a message, a screenshot, a forwarded conversation, an
 offer, a payment request. It also covers the "it already happened" situations — money
 already transferred, a code already received, an account already stolen, a call in progress,
 a deal about to close. Those are inputs to the same chat, never separate screens.
 
-### Event — Knowledge
+### Knowledge
 
 Founder-written explanations of real schemes, a rare notification about a circulating wave,
 and a forwardable one-screen reminder. This is what a person reads when they recognise their
 own story in someone else's.
 
-**Cost follows tempo.** The Scanner performs no model call, so it is generous and bounded
-only by abuse protection. The Check costs a model call and stays under `DAILY_CHECK_LIMIT`
-(default 5). The Scanner is the funnel into the Check: one button, "need a full analysis?".
+**Limits differ because costs differ.** The Scanner performs no model call, so it is
+generous and bounded only by abuse protection. The Check costs a model call and stays under
+`DAILY_CHECK_LIMIT` (default 5). The Scanner is the funnel into the Check: one button,
+"need a full analysis?".
 
 ## 5. The answer contract
 

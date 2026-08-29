@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Avvalo — a digital-safety assistant for Uzbekistan, built around one promise: **it never tells you something is safe; it makes you hard to deceive.** Users send a suspicious link, QR code, message, screenshot, payment request, offer, or document (Uzbek Latin/Cyrillic or Russian) through Telegram or an anonymous web page, and one shared engine explains what deserves attention and what to do next.
 
-The product runs at three tempos ([docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) §4): a **Scanner** that answers a link or QR deterministically with no model call, a **Check** that analyses a full situation in chat, and **Knowledge** — founder-written explanations plus rare wave notifications. Avvalo Verify (typed facts from official registries) is **parked**, not next; see PRODUCT_GUIDE §9.
+The product has three capabilities ([docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) §4): a **Scanner** that answers a link or QR deterministically with no model call, a **Check** that analyses a full situation in chat, and **Knowledge** — founder-written explanations plus rare wave notifications. Avvalo Verify (typed facts from official registries) is **parked**, not next; see PRODUCT_GUIDE §9.
 
 Three rules shape the whole codebase:
 
