@@ -153,9 +153,6 @@ async def export_metrics(
     return "\n".join(lines)
 
 
-metrics_summary = collect_metrics
-aggregate = collect_metrics
-
 
 def collect_knowledge_inventory(store: KnowledgeStore) -> dict[str, Any]:
     """Return the deploy-visible version and approved-card count, never content."""

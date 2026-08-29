@@ -172,14 +172,6 @@ def _response_content(response: Any) -> str:
     return content
 
 
-def _parse_draft(content: str) -> DraftOutput:
-    try:
-        data = json.loads(_strip_json_fence(content))
-        return DraftOutput.model_validate(data)
-    except (json.JSONDecodeError, ValidationError) as exc:
-        raise LLMResponseFormatError("Provider response did not match DraftOutput JSON") from exc
-
-
 def _strip_json_fence(content: str) -> str:
     text = content.strip()
     if text.startswith("```"):

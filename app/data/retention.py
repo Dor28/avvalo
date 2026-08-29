@@ -122,22 +122,6 @@ async def cleanup_expired(
     )
 
 
-async def run_retention(
-    session: AsyncSession,
-    *,
-    now: datetime | None = None,
-    policy: RetentionPolicy = DEFAULT_POLICY,
-) -> RetentionResult:
-    """Compatibility entry point for the scheduled cleanup job."""
-
-    return await cleanup_expired(session, now=now, policy=policy)
-
-
-run_cleanup = cleanup_expired
-purge_expired = cleanup_expired
-cleanup = cleanup_expired
-
-
 async def run_retention_job(
     session_factory: async_sessionmaker[AsyncSession],
     *,

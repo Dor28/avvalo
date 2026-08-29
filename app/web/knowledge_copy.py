@@ -17,7 +17,6 @@ SCRIPT_LABELS = {
 
 _ERRORS = {
     "uz_latn": {
-        "invalid_face": "Noma'lum tekshiruv yuzasi.",
         "invalid_card_id": "Karta ID'si `family.nom` ko'rinishida bo'lishi kerak.",
         "invalid_card_version": "Versiya noto'g'ri (masalan: 1.0.0).",
         "invalid_status": "Holat approved, draft yoki retired bo'lishi kerak.",
@@ -34,7 +33,6 @@ _ERRORS = {
         "duplicate_card": "Bu karta ID'si allaqachon mavjud.",
     },
     "ru": {
-        "invalid_face": "Неизвестная поверхность проверки.",
         "invalid_card_id": "ID карточки должен быть вида `family.имя`.",
         "invalid_card_version": "Некорректная версия (например: 1.0.0).",
         "invalid_status": "Статус должен быть approved, draft или retired.",

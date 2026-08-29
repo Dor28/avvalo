@@ -105,12 +105,6 @@ def _load_knowledge_base(root: Path) -> KnowledgeBase:
         raise KnowledgeLookupError("knowledge files could not be loaded") from exc
 
 
-def clear_knowledge_cache() -> None:
-    """Clear the file cache for tests and operator-controlled card updates."""
-
-    _load_knowledge_base.cache_clear()
-
-
 def _read_yaml(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise KnowledgeLookupError(f"knowledge file is missing: {path.name}")

@@ -137,7 +137,7 @@ rule_pack_version, kb_version, prompt_version, model_id, validator_version
 Do not log or persist the submission, OCR text, minimized text, generated retrieval query, prompt, or model output.
 
 Cards are authored in the `knowledge_card_override` table (`app/knowledge_store/`) and merged onto
-the shipped `knowledge/<face>/cards.yaml` base by card ID; a `draft` or `retired` override
+the shipped `knowledge/cards/cards.yaml` base by card ID; a `draft` or `retired` override
 suppresses the baseline card of that ID. The base is served from a process-level snapshot refreshed
 every `KNOWLEDGE_REFRESH_MINUTES`, falling back to the shipped YAML — never to an empty base, which
 would report `retrieval_status=empty` and hide the degradation. When an override contributes,
@@ -174,7 +174,7 @@ This is a dated baseline, not a completion claim. Re-run the audit after T14/R0 
 | Allowlisted semantic router | ⚠️ Wiring implemented and tested; recall unmeasured | `OpenAICompatibleKnowledgeRouter` sees minimized text plus a server allowlist only; backend validation rejects invented IDs. Tests cover timeout/failure degradation, default-off config, token-cost aggregation, and an end-to-end inflected-Russian path **against a fake provider**. No eval against a live model exists, so the inflected-recall gap that motivated the router is not yet proven closed |
 | Reviewed cases | ⚠️ Contract present; no intake pipeline | Cards and events carry validated `reviewed_case_ids`, but current approved cards reference no reviewed derivatives. The retired `story_submission` rows are never runtime knowledge and no new story-capture writes are allowed. Founder-authored public posts are an editorial surface, not reviewed-case grounding, and are never injected into answers |
 | Knowledge injected into answer prompt | ✅ Implemented and tested | `build_prompt(..., knowledge_cards=...)` renders at most three reviewed cards; T14 tests inspect the exact provider prompt for selected IDs and empty knowledge |
-| Safety validator | ✅ Structural preservation floor implemented and tested | Knowledge-ID/case-proof/external-lookup checks are active. `DraftOutput.addressed_rule_ids` plus `validate()` now rejects every omitted severity-2+ rule ID in all three languages and exercises retry/fallback. This proves declaration coverage, not semantic quality of the wording |
+| Safety validator | ✅ Structural preservation floor implemented and tested | Knowledge-ID/case-proof/external-lookup checks are active. `DraftOutput.addressed_rule_ids` plus `validate()` now rejects every omitted severity-2+ rule ID in both reply languages and exercises retry/fallback. This proves declaration coverage, not semantic quality of the wording |
 | Provider fallback / degraded answer | ✅ Implemented and tested | `_configured_fallback_provider()` and `_call_llm()` use the secondary provider after primary timeout/error; the T14 regression proves the result remains a normal successful answer |
 | Knowledge/version observability | ✅ Implemented and tested | `CheckResult`, `check_event`, logs, migrations, gap reports, and daily metrics carry card/case IDs, retrieval/router status, KB version, coverage, unavailable rate, and approved-card inventory without content |
 | Privacy-safe persistence | ✅ Implemented and tested | Active check, router, and URL-reputation paths persist only IDs, enums, hashes, versions, and metrics. `story_submission.minimized_text` is legacy stewardship only: no new writes or product reads; old rows remain covered by deletion and retention until an authorized purge |

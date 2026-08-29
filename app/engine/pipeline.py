@@ -5,7 +5,7 @@ only allowlisted IDs, enums, component versions, and metrics are recorded.
 """
 
 import asyncio
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Sequence
 from dataclasses import dataclass
 from time import perf_counter
 from typing import TypeVar
@@ -66,7 +66,6 @@ from app.obs.context import with_request_context
 from app.obs.cost import estimate_llm_cost_from_settings
 from app.obs.events import log_error, log_event
 
-_Stage = Callable[[CheckInput], Awaitable[CheckResult]]
 _DEFAULT_MAX_OUTPUT_TOKENS = 600
 _DEFAULT_OCR_MIN_CONFIDENCE = 0.5
 _T = TypeVar("_T")
