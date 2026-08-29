@@ -21,6 +21,7 @@ No other document may introduce a feature or change priority.
 | [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) | Current implemented architecture and engineering constraints |
 | [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) | Rules, minimization, reviewed knowledge, LLM, and safety validation |
 | [PIPELINE_V2.md](PIPELINE_V2.md) | Answer grounding, rule precision fields, and the evaluation corpus |
+| [DATA_FLOW.md](DATA_FLOW.md) | Where the data of one check physically goes: the boundaries it crosses, the two minimized views, and what is persisted |
 | [tasks/](tasks/README.md) | Executor-ready tasks created only when the roadmap permits implementation |
 
 ## Parked
