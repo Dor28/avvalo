@@ -11,7 +11,7 @@ from app.engine.ocr.base import (
     strip_image_metadata,
 )
 from app.engine.ocr.gcv import GoogleCloudVisionOCRProvider
-from app.engine.ocr.local_stub import LocalStubOCRProvider, OnPremOCRProvider
+from app.engine.ocr.local_stub import LocalStubOCRProvider
 from app.engine.ocr.paddleocr import PaddleOCRProvider
 from app.engine.ocr.rapidocr import RapidOCRProvider
 from app.engine.ocr.tesseract import TesseractOCRProvider
@@ -83,9 +83,6 @@ async def warmup_provider(settings: Settings | None = None) -> None:
     await warmup()
 
 
-get_ocr_provider = get_provider
-build_provider = get_provider
-
 __all__ = [
     "GoogleCloudVisionOCRProvider",
     "LocalStubOCRProvider",
@@ -93,12 +90,9 @@ __all__ = [
     "OCRProvider",
     "OCRProviderError",
     "OCRResult",
-    "OnPremOCRProvider",
     "PaddleOCRProvider",
     "RapidOCRProvider",
     "TesseractOCRProvider",
-    "build_provider",
-    "get_ocr_provider",
     "get_provider",
     "reset_provider_cache",
     "strip_image_metadata",

@@ -26,21 +26,6 @@ from app.obs.feedback_labels import collect_labels, render_labels
 from app.obs.metrics import collect_metrics, export_metrics
 
 
-async def _run(*, days: int | None, as_json: bool) -> str:
-    since = datetime.now(UTC) - timedelta(days=days) if days else None
-    settings = get_settings()
-    engine = create_database_engine(settings.database_url)
-    try:
-        session_factory = create_session_factory(engine)
-        async with session_factory() as session:
-            if as_json:
-                summary = await collect_metrics(session, since=since)
-                return json.dumps(summary, indent=2, default=str)
-            return await export_metrics(session, since=since)
-    finally:
-        await engine.dispose()
-
-
 async def run(
     argv: Sequence[str] | None = None,
     *,

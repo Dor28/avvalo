@@ -13,8 +13,4 @@ class LocalStubOCRProvider:
         raise NotImplementedError("on-prem OCR is post-grant roadmap")
 
 
-class OnPremOCRProvider(LocalStubOCRProvider):
-    """Compatibility alias for callers looking for the on-prem provider."""
-
-
-__all__ = ["LocalStubOCRProvider", "OCRProviderError", "OnPremOCRProvider"]
+__all__ = ["LocalStubOCRProvider", "OCRProviderError"]
