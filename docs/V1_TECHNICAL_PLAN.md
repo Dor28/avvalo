@@ -312,7 +312,7 @@ docker compose -f docker-compose.prod.yml \
 The current baseline is acceptable only while:
 
 - Telegram and web call the same engine;
-- all user-facing copy exists in all three languages;
+- all user-facing copy exists in both reply languages (`uz_latn`, `ru`);
 - no active path persists or logs submitted content;
 - outputs remain non-verdict, grounded, and independently verifiable;
 - the deployed rules/knowledge assets load successfully;
