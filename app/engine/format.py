@@ -50,10 +50,6 @@ _FAMILY_LABELS = {
         Language.uz_latn: "pul tasdiqlanmasdan jo'natishga bosim",
         Language.ru: "давление отправить товар до подтверждения",
     },
-    "verify_in_bank_app": {
-        Language.uz_latn: "bank ilovasida tasdiqlash zarurati",
-        Language.ru: "нужно проверить в банковском приложении",
-    },
 }
 
 _SHARE_COPY = {
