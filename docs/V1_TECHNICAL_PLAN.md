@@ -73,15 +73,14 @@ Every accepted request follows this order:
    signal, and multiple codes return retry guidance instead of an arbitrary choice.
 3. Resolve the response language: `uz_latn` or `ru` (Cyrillic-Uzbek resolves to `uz_latn`).
 4. Run local rules and structural signal extraction on local text.
-5. Optionally check URL hashes against the local reputation table.
-6. Build strict retrieval text, then a protected answer-prompt view that retains submitted names
+5. Build strict retrieval text, then a protected answer-prompt view that retains submitted names
    and full URLs while tokenizing phones, cards, credentials, codes, passports, addresses, and
    other protected identifiers. Decoded QR payloads remain strictly minimized.
-7. Retrieve at most three approved knowledge cards; optionally use the allowlisted semantic router.
-8. Call the configured answer model, with one configured provider fallback.
-9. Validate structure, grounding, prohibited claims, verdict words, contacts, and rule preservation.
-10. Retry once after validation failure; otherwise return the localized safety fallback.
-11. Format the localized result and persist only allowlisted metadata.
+6. Retrieve at most three approved knowledge cards; optionally use the allowlisted semantic router.
+7. Call the configured answer model, with one configured provider fallback.
+8. Validate structure, grounding, prohibited claims, verdict words, contacts, and rule preservation.
+9. Retry once after validation failure; otherwise return the localized safety fallback.
+10. Format the localized result and persist only allowlisted metadata.
 
 Non-billable failures refund the reserved limit. Channels do not duplicate engine logic.
 
@@ -209,9 +208,8 @@ The full knowledge contract lives in
 
 ## 7. Persistence and privacy
 
-Active tables contain consent, check-event metadata, categorical feedback, rate limits, deletion
-audit rows, and hash-only URL reputation entries. `user_key` is derived with HMAC; raw Telegram IDs
-are not stored or logged.
+Active tables contain consent, check-event metadata, categorical feedback, rate limits, and
+deletion audit rows. `user_key` is derived with HMAC; raw Telegram IDs are not stored or logged.
 
 Founder-authored public cases live in the separate `editorial_post` table and
 `app.content.models.EditorialBase`. Every record contains two deliberately authored language

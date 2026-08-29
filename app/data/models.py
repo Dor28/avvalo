@@ -19,7 +19,6 @@ from sqlalchemy import (
     Float,
     Integer,
     Numeric,
-    String,
     Text,
     Uuid,
     false,
@@ -123,14 +122,3 @@ class DeletionLog(Base):
     user_key: Mapped[str] = mapped_column(Text, nullable=False)
     requested_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     completed_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-
-
-class URLBlocklist(Base):
-    """Hash-only local reputation entry sourced from a public feed."""
-
-    __tablename__ = "url_blocklist"
-
-    domain_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
-    source: Mapped[str] = mapped_column(String(40), primary_key=True)
-    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

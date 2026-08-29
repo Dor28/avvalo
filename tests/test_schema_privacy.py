@@ -34,7 +34,6 @@ EXPECTED_TABLES = {
     "feedback",
     "rate_limit",
     "deletion_log",
-    "url_blocklist",
 }
 # No exception: the schema has no column that can hold submitted content.
 ALLOWED_CONTENT_COLUMNS: set[str] = set()

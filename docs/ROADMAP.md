@@ -171,9 +171,12 @@ explicit founder decision.
 - **Avvalo Verify** — official-registry facts, specified in
   [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md). Parked, not cancelled; the catalog it needs
   is being built anyway as lookalike detection.
-- **URL reputation enablement** — `rules/shared/uz_phishing_domains.yaml` holds zero domains
-  and `URL_REPUTATION_ENABLED` is off, so enabling it would change no answer. Reconsider once
-  the content track produces real material; those domains are the natural first entries.
+- **URL reputation** — *removed, not parked.* The local blocklist lookup shipped disabled
+  behind `URL_REPUTATION_ENABLED` with an empty domain list, so it changed no answer for its
+  whole life. The module, the `url_blocklist` table (migration `0014`), the public-feed
+  refresh job and the shipped domain file were deleted rather than carried further. Reviving
+  it means rebuilding it against real material from the content track, with the lookalike
+  catalog in `rules/shared/official_domains.yaml` as the starting point instead.
 - **Linking a fired knowledge card to a published Knowledge post** — `reviewed_case_ids` is
   already threaded end to end and every baseline card sets it to `[]`. Two constraints if it
   is ever taken up: the validator strips every URL from model output, so the link must be

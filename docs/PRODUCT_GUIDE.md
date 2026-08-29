@@ -142,7 +142,7 @@ Verified against the repository, not assumed:
 - OCR (`OCR_PROVIDER`, default `rapidocr`) with a confidence gate, and local in-process QR
   decoding via `zxing-cpp` ([app/engine/qr/](../app/engine/qr/)).
 - One URL analyzer ([app/engine/url.py](../app/engine/url.py)) shared by rule matching,
-  minimization and reputation lookup, producing six shape labels: `shortened`,
+  minimization and knowledge retrieval, producing six shape labels: `shortened`,
   `lookalike-domain`, `domain-in-subdomain`, `mixed-script-domain`, `credentials-in-url`,
   `ip-address`.
 - The full check pipeline ([app/engine/pipeline.py](../app/engine/pipeline.py)) with rate
@@ -156,8 +156,8 @@ Verified against the repository, not assumed:
 **Detection assets are thin.** The shipped baseline is 13 rules, 10 knowledge cards, 14
 organizations in the official-domain catalog, and 13 golden end-to-end cases. All of the
 rules and cards describe *universal* patterns — OTP requests, urgency, prepayment. None is
-specific to Uzbekistan. `rules/shared/uz_phishing_domains.yaml` contains zero domains and
-`URL_REPUTATION_ENABLED` is off, so the reputation store currently changes no answer.
+specific to Uzbekistan. The local URL-reputation lookup that once sat beside them was
+removed (ROADMAP §8): it shipped disabled with an empty domain list and changed no answer.
 
 This baseline can explain what is suspicious. It cannot yet explain a local scheme better
 than a general-purpose assistant can, and no product surface compensates for that.

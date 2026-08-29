@@ -23,7 +23,7 @@ from app.config import Settings
 from app.data.models import CheckEvent
 from app.obs.events import log_error
 
-_ALERT_STAGES = {"ocr", "llm", "web", "bot", "knowledge", "url_reputation"}
+_ALERT_STAGES = {"ocr", "llm", "web", "bot", "knowledge"}
 
 
 class OperatorAlertHandler(logging.Handler):

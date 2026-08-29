@@ -1,8 +1,8 @@
 """One URL analyzer: shape classification, normalization, and the no-fetch rule.
 
-Roadmap Phase 1.2. Rule matching, minimization, and reputation lookup all resolve
-a submitted link through ``app.engine.url``; these tests pin the shapes that
-analyzer must recognize and prove the three callers cannot drift apart.
+Roadmap Phase 1.2. Rule matching and minimization both resolve a submitted link
+through ``app.engine.url``; these tests pin the shapes that analyzer must
+recognize and prove the two callers cannot drift apart.
 """
 
 from __future__ import annotations
@@ -26,7 +26,6 @@ from app.engine.url import (
     load_official_domains,
     normalize_domain,
 )
-from app.engine.url_reputation import normalize_domain as reputation_normalize_domain
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -119,10 +118,10 @@ def test_extract_normalized_domains_does_not_treat_email_domains_as_links() -> N
     assert extract_normalized_domains(text) == ()
 
 
-# --- the three callers resolve one link the same way -------------------------
+# --- both callers resolve one link the same way ------------------------------
 
 
-def test_rules_minimize_and_reputation_share_one_analyzer() -> None:
+def test_rules_and_minimize_share_one_analyzer() -> None:
     """A homograph must not be a lookalike to one stage and invisible to another."""
 
     raw_text = f"To'lov: https://{CYRILLIC_CLICK}/pay"
@@ -132,11 +131,11 @@ def test_rules_minimize_and_reputation_share_one_analyzer() -> None:
 
     assert ("link_lookalike", "lookalike-domain") in {(s.kind, s.note) for s in signals}
     assert "[LINK: lookalike-domain]" in minimized
-    assert reputation_normalize_domain(f"https://{CYRILLIC_CLICK}") == CYRILLIC_CLICK
+    assert normalize_domain(f"https://{CYRILLIC_CLICK}") == CYRILLIC_CLICK
     assert CYRILLIC_CLICK not in minimized
 
 
-def test_percent_escaped_host_is_consistent_across_all_three_callers() -> None:
+def test_percent_escaped_host_is_consistent_across_both_callers() -> None:
     raw_text = "To'lov: https://%70ayme-secure.example/login"
 
     _hits, signals = run_rules(raw_text)
@@ -144,9 +143,7 @@ def test_percent_escaped_host_is_consistent_across_all_three_callers() -> None:
 
     assert ("link_lookalike", "lookalike-domain") in {(s.kind, s.note) for s in signals}
     assert "[LINK: lookalike-domain]" in minimized
-    assert reputation_normalize_domain("https://%70ayme-secure.example") == (
-        "payme-secure.example"
-    )
+    assert normalize_domain("https://%70ayme-secure.example") == "payme-secure.example"
     assert "%70ayme-secure.example" not in minimized
 
 
@@ -157,15 +154,13 @@ def test_rules_package_reexports_the_shared_classifier() -> None:
 def test_submitted_content_stages_define_no_second_url_pattern() -> None:
     """Guard the unification: a second host pattern is how these drifted before.
 
-    Scoped to the three stages that analyze *submitted* content. `validate.py`
-    (scans model output) and `url_reputation/refresh.py` (parses operator feed
-    files) legitimately keep their own patterns for a different corpus.
+    Scoped to the stages that analyze *submitted* content. `validate.py` scans
+    model output, a different corpus, and legitimately keeps its own patterns.
     """
 
     stages = [
         "app/engine/minimize.py",
         "app/engine/rules/engine.py",
-        "app/engine/url_reputation/normalize.py",
     ]
     offenders = [
         stage

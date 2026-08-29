@@ -35,7 +35,7 @@ flowchart LR
     S1["01 intake<br/>user_key = HMAC"]
     S2["02 daily limit"]
     S3["03 QR + OCR"]
-    S4["04 rules + reputation"]
+    S4["04 rules + signals"]
     S5["05 minimize()"]
     S6["06 knowledge"]
     S7["07 answer model"]
@@ -67,10 +67,9 @@ Three edges leave the machine, and only the thick one is unconditional:
 | `03 → Cloud Vision` | Image bytes with metadata stripped | off — `OCR_PROVIDER=rapidocr` runs PP-OCRv5 locally on ONNX |
 | `06 → knowledge router` | Strict view only; the router answers with card IDs from a supplied allowlist | off — `KNOWLEDGE_ROUTER_ENABLED=false` |
 
-No edge points at a submitted destination. A URL is never fetched, rendered, or resolved: the
-domain is normalized, hashed with SHA-256, and looked up in a local table
-(`app/engine/url_reputation/check.py`). Redirect resolution for shorteners
-(PRODUCT_GUIDE §8.1) has no implementation.
+No edge points at a submitted destination. A URL is never fetched, rendered, or resolved — it
+is parsed and classified by shape alone (`app/engine/url.py`), and there is no longer any store
+to look it up in. Redirect resolution for shorteners (PRODUCT_GUIDE §8.1) has no implementation.
 
 ## 2. Stage by stage
 
@@ -79,7 +78,7 @@ domain is normalized, hashed with SHA-256, and looked up in a local table
 | 01 | Intake (`app/bot/handlers.py`, `app/web/routes.py`) | `CheckInput` with ephemeral `raw_text` / `image_bytes` / `caption`; `user_key = HMAC_SHA256(secret, id)[:32]` | — |
 | 02 | Daily limit (`repo.increment_usage`) | Counter row per (user, scope, day) | — |
 | 03 | QR + OCR (`_content_from_input`) | Decoded payload and OCR text, in memory | image bytes, only under `gcv` |
-| 04 | Rules + reputation (`app/engine/rules`, `url_reputation`) | `RuleHit` / `Signal` objects; domain SHA-256 for local lookup | — |
+| 04 | Rules + signals (`app/engine/rules`) | `RuleHit` / `Signal` objects | — |
 | 05 | `minimize()` | Two derived views of the same text — see §3 | — |
 | 06 | Knowledge (`retrieve_knowledge`) | At most three reviewed cards, selected locally | strict view, only when the router is enabled |
 | 07 | Answer model (`_call_llm`) | Prompt = system + check template + rule hits + cards + answer view | **answer view** |
@@ -139,7 +138,6 @@ so the build fails if one appears.
 | `feedback` | check ID, usefulness, chosen next action | 90 days |
 | `consent` | `user_key`, notice version, language | 365 days |
 | `deletion_log` | `user_key`, requested and completed timestamps for `/delete_my_data` | 365 days |
-| `url_blocklist` | SHA-256 of a domain from a public feed — not user data | refreshed out of band |
 
 Logging is allowlisted at both ends: `app/obs/events.py` rejects an unknown event name and an
 unknown field name, and neither `log_event` nor `log_error` accepts free-form exception text — a
@@ -155,7 +153,7 @@ posture rather than a defect.
 | 1 | Names and full URLs reach the answer model | on, except for decoded QR content | `pipeline.py::_run_stages`, `minimize.py::minimize` |
 | 2 | OCR runs locally | on — `rapidocr` on ONNX in-container | `.env.example`, `app/engine/ocr/` |
 | 3 | Knowledge router is a second external call | off | `KNOWLEDGE_ROUTER_ENABLED`, `app/engine/knowledge/router.py` |
-| 4 | Submitted destinations are never opened | no code path exists | `app/engine/url_reputation/check.py` |
+| 4 | Submitted destinations are never opened | no code path exists | `app/engine/url.py` |
 | 5 | The limit slot commits before external work, and refunds on any non-billable status | on | `pipeline.py::run_check`, `BILLABLE_STATUSES` |
 | 6 | Logs accept allowlisted fields only | on | `app/obs/events.py` |
 | 7 | Web identity is a signed random cookie ID through the same HMAC; the client IP is hashed separately for the per-IP guard | on | `app/web/session.py`, `app/web/abuse.py` |

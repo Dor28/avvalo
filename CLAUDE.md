@@ -69,7 +69,7 @@ Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` an
    channel's per-IP guard shares `rate_limit` under `scope="web_ip"`.
 2. Content: text as-is, or image → OCR provider with a confidence gate (`low_ocr` below threshold).
 3. Language resolution — the reply language follows the content, not the UI.
-4. Deterministic rules (`app/engine/rules/`): keyword packs in `rules/*.yaml` (per-script keyword groups, matched on raw text) plus regex extractors → `RuleHit`s and `Signal`s. `rules/shared/` holds reference data and is deliberately *not* loaded as a rule pack: the URL-reputation feed, and `official_domains.yaml` — the founder-reviewed catalog of impersonated organizations, shorteners, and public suffixes that [app/engine/url.py](app/engine/url.py) classifies against.
+4. Deterministic rules (`app/engine/rules/`): keyword packs in `rules/*.yaml` (per-script keyword groups, matched on raw text) plus regex extractors → `RuleHit`s and `Signal`s. `rules/shared/` holds reference data and is deliberately *not* loaded as a rule pack: `official_domains.yaml`, the founder-reviewed catalog of impersonated organizations, shorteners, and public suffixes that [app/engine/url.py](app/engine/url.py) classifies against.
 5. `minimize()` builds two ephemeral views: strict identifier minimization for knowledge
    retrieval/routing, and an answer-prompt view that retains submitted names and full URLs while
    still tokenizing phones, cards, credentials, codes, passports, addresses, and other protected

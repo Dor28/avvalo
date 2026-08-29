@@ -139,7 +139,6 @@ ALLOWED_ERROR_STAGES = {
     "bot",
     "knowledge",
     "rule_pack",
-    "url_reputation",
 }
 
 ALLOWED_ERROR_FIELDS = {

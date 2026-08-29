@@ -56,11 +56,6 @@ from app.engine.types import (
     Signal,
     SituationType,
 )
-from app.engine.url_reputation import (
-    DatabaseURLReputationStore,
-    URLReputationStore,
-    lookup_url_reputation,
-)
 from app.engine.validate import ValidationReason, validate
 from app.obs.context import with_request_context
 from app.obs.cost import estimate_llm_cost_from_settings
@@ -111,7 +106,6 @@ async def run_check(
     qr_decoder: QRCodeDecoder | None = None,
     knowledge_store: KnowledgeStore | None = None,
     knowledge_router: KnowledgeRouter | None = None,
-    url_reputation_store: URLReputationStore | None = None,
     settings: Settings | None = None,
     rate_limit_override: int | None = None,
     commit_rate_limit_reservation: bool = False,
@@ -147,7 +141,6 @@ async def run_check(
                 qr_decoder=qr_decoder,
                 knowledge_store=knowledge_store,
                 knowledge_router=knowledge_router,
-                url_reputation_store=url_reputation_store,
                 session=session,
                 settings=settings,
             )
@@ -256,7 +249,6 @@ async def _run_stages(
     qr_decoder: QRCodeDecoder | None,
     knowledge_store: KnowledgeStore | None,
     knowledge_router: KnowledgeRouter | None,
-    url_reputation_store: URLReputationStore | None,
     session: AsyncSession | None,
     settings: Settings | None,
 ) -> CheckResult:
@@ -308,24 +300,6 @@ async def _run_stages(
         if key not in signal_keys:
             signal_keys.add(key)
             signals.append(signal)
-    reputation_enabled = (
-        url_reputation_store is not None
-        if settings is None
-        else settings.url_reputation_enabled
-    )
-    reputation_store = url_reputation_store
-    if reputation_enabled and reputation_store is None and session is not None:
-        reputation_store = DatabaseURLReputationStore(session)
-    if reputation_enabled and reputation_store is not None:
-        try:
-            reputation_hits = await lookup_url_reputation(text, store=reputation_store)
-        except Exception:
-            log_error(stage="url_reputation", error_type="URLReputationLookupError")
-        else:
-            existing_rule_ids = {hit.rule_id for hit in rule_hits}
-            rule_hits.extend(
-                hit for hit in reputation_hits if hit.rule_id not in existing_rule_ids
-            )
     # Retrieval and its optional semantic router keep the strict identifier-free
     # view. Only the answer model receives the explicitly authorized prompt view,
     # where submitted names and URLs remain ephemeral but visible for context.

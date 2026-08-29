@@ -47,9 +47,6 @@ class Settings(BaseSettings):
     knowledge_router_api_key: SecretStr | None = None
     knowledge_router_model: str | None = None
     knowledge_router_timeout_s: float = Field(default=10.0, gt=0)
-    url_reputation_enabled: bool = False
-    urlhaus_feed_url: str | None = None
-    openphish_feed_url: str | None = None
     url_feeds_refresh_hours: int = Field(default=12, ge=1, le=168)
     rule_pack_refresh_minutes: int = Field(default=15, ge=1, le=1440)
     knowledge_refresh_minutes: int = Field(default=15, ge=1, le=1440)

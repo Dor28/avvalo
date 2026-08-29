@@ -126,7 +126,7 @@ gains the nested `Evidence` object with a description naming the three legal ID 
 ### Rollback
 
 Behind `ANSWER_GROUNDING_ENABLED` (default `true`), matching the existing
-`URL_REPUTATION_ENABLED` / `KNOWLEDGE_ROUTER_ENABLED` convention. Disabling it restores string
+`KNOWLEDGE_ROUTER_ENABLED` convention. Disabling it restores string
 red flags and skips the grounding check. This exists because the change alters the JSON contract
 with a live third-party provider, and `main` deploys straight to production.
 

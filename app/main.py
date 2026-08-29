@@ -16,7 +16,6 @@ from app.data.db import (
 )
 from app.data.retention import RetentionPolicy, start_retention_scheduler
 from app.engine.ocr import warmup_provider
-from app.engine.url_reputation import install_url_reputation_job
 from app.knowledge_store import install_knowledge_refresh_job
 from app.obs.alerts import (
     install_knowledge_availability_alert_job,
@@ -46,7 +45,6 @@ async def run(*, check_only: bool = False) -> None:
 
         session_factory = create_session_factory(engine)
         scheduler = start_retention_scheduler(session_factory, policy=RetentionPolicy())
-        install_url_reputation_job(scheduler, session_factory, settings)
         install_knowledge_availability_alert_job(scheduler, session_factory, settings)
         install_rule_pack_refresh_job(scheduler, session_factory, settings)
         install_knowledge_refresh_job(scheduler, session_factory, settings)
