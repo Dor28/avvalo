@@ -61,7 +61,6 @@ _PHONE_RE = re.compile(
     r"(?<!\d)(?:\+?\d[\d\s().-]{6,}\d)(?!\d)",
     re.IGNORECASE,
 )
-_ISO_DATE_RE = re.compile(r"(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)")
 _EMAIL_RE = re.compile(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b")
 _URL_OR_DOMAIN_RE = re.compile(
     r"(?ix)"
@@ -314,7 +313,6 @@ def validate(
     language: Language,
     *,
     knowledge_card_ids: list[str] | None = None,
-    authoritative_lookup: bool = False,
     require_grounding: bool = False,
 ) -> ValidationResult:
     """Validate and normalize one LLM draft.
@@ -352,7 +350,6 @@ def validate(
         requires_red_flag,
         language,
         knowledge_card_ids=knowledge_card_ids or [],
-        authoritative_lookup=authoritative_lookup,
         rule_hits=rule_hits,
     )
     if reason is ValidationReason.REQUIRED_RED_FLAGS_EMPTY and dropped_ungrounded:
@@ -488,7 +485,6 @@ def _first_rejection_reason(
     language: Language,
     *,
     knowledge_card_ids: list[str],
-    authoritative_lookup: bool,
     rule_hits: list[RuleHit],
 ) -> ValidationReason | None:
     scan_text = _normalize_for_matching(text)
@@ -505,17 +501,7 @@ def _first_rejection_reason(
 
     if _EMAIL_RE.search(scan_text) or _URL_OR_DOMAIN_RE.search(scan_text):
         return ValidationReason.RAW_CONTACT_OR_URL
-    has_blocklist_fact = any(
-        hit.rule_id == "shared.link.blocklisted" for hit in rule_hits
-    )
-    # R6's sourced fact includes an ISO listed-since date. The broad phone
-    # detector also matches YYYY-MM-DD, so remove only that exact shape and only
-    # when the authoritative blocklist fact is present. All other digit runs
-    # remain subject to the normal phone/account guards.
-    phone_scan_text = (
-        _ISO_DATE_RE.sub("[DATE]", scan_text) if has_blocklist_fact else scan_text
-    )
-    if _PHONE_RE.search(phone_scan_text):
+    if _PHONE_RE.search(scan_text):
         return ValidationReason.RAW_PHONE
     if _CARD_RE.search(scan_text):
         return ValidationReason.RAW_CARD
@@ -535,13 +521,12 @@ def _first_rejection_reason(
     for pattern in _CASE_PROOF_PATTERNS:
         if re.search(pattern, scan_text):
             return ValidationReason.REVIEWED_CASE_AS_PROOF
-    # The legacy boolean cannot waive person/account/database prohibitions. R6's
-    # only authoritative exception is the separately grounded URL blocklist fact.
-    _ = authoritative_lookup
     for pattern in _UNSUPPORTED_LOOKUP_PATTERNS:
         if re.search(pattern, scan_text):
             return ValidationReason.UNSUPPORTED_EXTERNAL_LOOKUP
-    if _BLOCKLIST_CLAIM_RE.search(scan_text) and not has_blocklist_fact:
+    # There is no URL blocklist behind the product any more, so a model claiming
+    # a domain is listed is always claiming an external check we did not make.
+    if _BLOCKLIST_CLAIM_RE.search(scan_text):
         return ValidationReason.UNSUPPORTED_BLOCKLIST_CLAIM
     if _uses_wrong_script(scan_text, language):
         return ValidationReason.WRONG_LANGUAGE_SCRIPT

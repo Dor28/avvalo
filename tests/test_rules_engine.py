@@ -86,7 +86,7 @@ def test_minimization_tokenizes_pii_and_preserves_link_signal() -> None:
     )
 
     _hits, signals = run_rules(raw_text)
-    minimized = minimize(raw_text, signals)
+    minimized = minimize(raw_text)
     signal_pairs = {(signal.kind, signal.note) for signal in signals}
 
     assert ("link_lookalike", "lookalike-domain") in signal_pairs

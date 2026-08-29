@@ -69,12 +69,14 @@ Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` an
    channel's per-IP guard shares `rate_limit` under `scope="web_ip"`.
 2. Content: text as-is, or image → OCR provider with a confidence gate (`low_ocr` below threshold).
 3. Language resolution — the reply language follows the content, not the UI.
-4. Deterministic rules (`app/engine/rules/`): keyword packs in `rules/*.yaml` (per-script keyword groups, matched on raw text) plus regex extractors → `RuleHit`s and `Signal`s. `rules/shared/` holds reference data and is deliberately *not* loaded as a rule pack: the URL-reputation feed, and `official_domains.yaml` — the founder-reviewed catalog of impersonated organizations, shorteners, and public suffixes that [app/engine/url.py](app/engine/url.py) classifies against.
+4. Deterministic rules (`app/engine/rules/`): keyword packs in `rules/*.yaml` (per-script keyword groups, matched on raw text) plus regex extractors → `RuleHit`s and `Signal`s. `rules/shared/` holds reference data and is deliberately *not* loaded as a rule pack: `official_domains.yaml`, the founder-reviewed catalog of impersonated organizations, shorteners, and public suffixes that [app/engine/url.py](app/engine/url.py) classifies against.
 5. `minimize()` builds two ephemeral views: strict identifier minimization for knowledge
    retrieval/routing, and an answer-prompt view that retains submitted names and full URLs while
    still tokenizing phones, cards, credentials, codes, passports, addresses, and other protected
    values. Decoded QR payloads remain strictly minimized.
-6. LLM call in JSON-schema mode via an OpenAI-compatible provider; only the answer model receives
+6. LLM call via an OpenAI-compatible provider in JSON mode (`response_format:
+   {"type": "json_object"}`) — the output shape is declared in `prompts/system_safety.txt`,
+   not sent as a `json_schema` response format; only the answer model receives
    the name/URL-preserving view. The prompt is `prompts/system_safety.txt` + `prompts/check.txt`
    with rule hits injected as grounded facts.
 7. Deterministic safety validator ([app/engine/validate.py](app/engine/validate.py)): bans verdict words in ru/uz_latn/Cyrillic-Uzbek/English, strips contacts/links/card numbers/OTPs, caps list lengths; one corrective retry, then `safety_fallback`.
@@ -102,10 +104,9 @@ matcher / real retrieval so a preview cannot drift from production.
 The legal posture depends on these; several are enforced by tests that will fail the build:
 
 - **Submitted content is never persisted or logged.** `raw_text` / `image_bytes` / `caption` on `CheckInput` are ephemeral. `check_event` rows and `log_event()` output carry only IDs, enums, rule IDs, and metrics.
-- **Active product writes have no content columns.** `tests/test_schema_privacy.py` rejects new
-  content-like persistence. The existing `story_submission.minimized_text` column is legacy
-  stewardship only: no new writes or product reads, while `/delete_my_data` and retention continue
-  to cover old rows until a separately authorized purge removes the table.
+- **No table has a content column.** `tests/test_schema_privacy.py` rejects new content-like
+  persistence, and its allowlist is empty: the last text column,
+  `story_submission.minimized_text`, went with the table in migration `0013_drop_story_submission`.
 - **`CheckInput` carries no product discriminator.** `tests/test_types_contract.py` asserts `face`
   stays absent, so the retired concept can't creep back through the boundary type.
 - **Submitted destinations are never opened.** No code path fetches, renders, or executes a

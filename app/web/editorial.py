@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES
+from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES, normalize_language
 from app.config import Settings
 from app.content import (
     ARTICLE_MAX_CHARS,
@@ -36,8 +36,12 @@ from app.content import (
 from app.web.abuse import require_same_origin
 from app.web.admin_auth import (
     access_key_matches,
+    admin_no_store,
+    admin_session_factory,
+    admin_settings_or_404,
     clear_admin_cookie,
     is_admin_authenticated,
+    require_admin,
     set_admin_cookie,
 )
 from app.web.editorial_copy import EDITORIAL_COPY
@@ -78,7 +82,7 @@ def _editorial_draft_from_form(
 async def cases(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
     """List published founder-authored educational cases."""
 
-    language = _normalize_language(language)
+    language = normalize_language(language)
     posts = []
     session_factory = _session_factory_or_none(request)
     if session_factory is not None:
@@ -89,7 +93,7 @@ async def cases(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
         "cases.html",
         _public_context(request, language, language_path="/cases", posts=posts),
     )
-    return _no_store(response)
+    return admin_no_store(response)
 
 
 @router.get("/cases/{slug}", response_class=HTMLResponse)
@@ -100,7 +104,7 @@ async def case_detail(
 ) -> HTMLResponse:
     """Render one published case; draft slugs remain indistinguishable from missing ones."""
 
-    language = _normalize_language(language)
+    language = normalize_language(language)
     session_factory = _session_factory_or_none(request)
     if session_factory is None:
         raise HTTPException(status_code=404)
@@ -118,7 +122,7 @@ async def case_detail(
             post=post,
         ),
     )
-    return _no_store(response)
+    return admin_no_store(response)
 
 
 @router.get("/cases/{slug}/cover", name="case_cover", include_in_schema=False)
@@ -149,19 +153,20 @@ async def case_cover(request: Request, slug: str) -> Response:
 async def admin_root(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
     """Send the founder to the editorial dashboard or its login screen."""
 
-    settings = _admin_settings(request)
+    settings = admin_settings_or_404(request)
     target = "/admin/posts" if is_admin_authenticated(request, settings) else "/admin/login"
-    return _no_store(RedirectResponse(f"{target}?language={_normalize_language(language)}", 303))
+    destination = f"{target}?language={normalize_language(language)}"
+    return admin_no_store(RedirectResponse(destination, 303))
 
 
 @router.get("/admin/login", response_class=HTMLResponse, include_in_schema=False)
 async def admin_login(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
     """Render the founder-only access-key screen."""
 
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
     if is_admin_authenticated(request, settings):
-        return _no_store(RedirectResponse(f"/admin/posts?language={language}", 303))
+        return admin_no_store(RedirectResponse(f"/admin/posts?language={language}", 303))
     return _admin_login_response(request, language)
 
 
@@ -174,13 +179,13 @@ async def admin_login_submit(
     """Create a short-lived founder session after constant-time key validation."""
 
     require_same_origin(request)
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
     if not access_key_matches(access_key, settings):
         return _admin_login_response(request, language, error=True, status_code=401)
     response = RedirectResponse(f"/admin/posts?language={language}", status_code=303)
     set_admin_cookie(response, settings, secure=_cookie_secure(request, settings))
-    return _no_store(response)
+    return admin_no_store(response)
 
 
 @router.post("/admin/logout", include_in_schema=False)
@@ -191,27 +196,27 @@ async def admin_logout(
     """Clear the dedicated founder session."""
 
     require_same_origin(request)
-    _admin_settings(request)
+    admin_settings_or_404(request)
     response = RedirectResponse(
-        f"/admin/login?language={_normalize_language(language)}", status_code=303
+        f"/admin/login?language={normalize_language(language)}", status_code=303
     )
     clear_admin_cookie(response)
-    return _no_store(response)
+    return admin_no_store(response)
 
 
 @router.get("/admin/posts", response_class=HTMLResponse, include_in_schema=False)
 async def admin_posts(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
     """Render all drafts and published case posts."""
 
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
-    session_factory = _session_factory_or_error(request)
+    session_factory = admin_session_factory(request, detail="Editorial storage is not configured.")
     async with session_factory() as session:
         posts = await list_admin_posts(session)
-    return _no_store(
+    return admin_no_store(
         templates.TemplateResponse(
             request,
             "admin_posts.html",
@@ -224,9 +229,9 @@ async def admin_posts(request: Request, language: str = DEFAULT_LANGUAGE) -> Res
 async def admin_post_new(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
     """Render an empty trilingual post editor."""
 
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
     return _admin_form_response(request, language, post=None)
@@ -245,9 +250,9 @@ async def admin_post_create(
     """Validate and create one founder-authored post."""
 
     require_same_origin(request)
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
     return await _save_admin_post(
@@ -274,12 +279,12 @@ async def admin_post_edit(
 ) -> Response:
     """Render an existing post in the trilingual editor."""
 
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
-    session_factory = _session_factory_or_error(request)
+    session_factory = admin_session_factory(request, detail="Editorial storage is not configured.")
     async with session_factory() as session:
         post = await get_admin_post(session, post_id)
     if post is None:
@@ -294,15 +299,15 @@ async def admin_post_edit(
 async def admin_post_cover(request: Request, post_id: uuid.UUID) -> Response:
     """Preview a cover inside the authenticated editor, including for drafts."""
 
-    settings = _admin_settings(request)
+    settings = admin_settings_or_404(request)
     if not is_admin_authenticated(request, settings):
         raise HTTPException(status_code=404)
-    session_factory = _session_factory_or_error(request)
+    session_factory = admin_session_factory(request, detail="Editorial storage is not configured.")
     async with session_factory() as session:
         cover = await get_admin_cover(session, post_id)
     if cover is None:
         raise HTTPException(status_code=404)
-    return _no_store(
+    return admin_no_store(
         Response(
             content=cover.image_bytes,
             media_type=cover.media_type,
@@ -329,9 +334,9 @@ async def admin_post_update(
     """Validate and update an existing founder-authored post."""
 
     require_same_origin(request)
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
     return await _save_admin_post(
@@ -357,7 +362,7 @@ async def _save_admin_post(
     cover_alt_ru: str,
     remove_cover: bool,
 ) -> Response:
-    session_factory = _session_factory_or_error(request)
+    session_factory = admin_session_factory(request, detail="Editorial storage is not configured.")
     error_key: str | None = None
     post: EditorialPost | EditorialPostDraft | None = draft
     try:
@@ -398,7 +403,7 @@ async def _save_admin_post(
             cover_alts={"uz_latn": cover_alt_uz_latn, "ru": cover_alt_ru},
             status_code=409 if error_key == "duplicate_slug" else 400,
         )
-    return _no_store(RedirectResponse(f"/admin/posts?language={language}", status_code=303))
+    return admin_no_store(RedirectResponse(f"/admin/posts?language={language}", status_code=303))
 
 
 def _admin_login_response(
@@ -408,7 +413,7 @@ def _admin_login_response(
     error: bool = False,
     status_code: int = 200,
 ) -> HTMLResponse:
-    return _no_store(
+    return admin_no_store(
         templates.TemplateResponse(
             request,
             "admin_login.html",
@@ -431,7 +436,7 @@ def _admin_form_response(
         language_code: getattr(post, f"cover_alt_{language_code}", "") or ""
         for language_code in LANGUAGES
     }
-    return _no_store(
+    return admin_no_store(
         templates.TemplateResponse(
             request,
             "admin_post_form.html",
@@ -500,38 +505,8 @@ def _admin_context(request: Request, language: str, **extra) -> dict:
     }
 
 
-def _admin_settings(request: Request) -> Settings:
-    settings = getattr(request.app.state, "settings", None)
-    if settings is None or settings.admin_access_key is None:
-        raise HTTPException(status_code=404)
-    if not settings.admin_access_key.get_secret_value():
-        raise HTTPException(status_code=404)
-    return settings
-
-
-def _require_admin(
-    request: Request,
-    settings: Settings,
-    language: str,
-) -> RedirectResponse | None:
-    if is_admin_authenticated(request, settings):
-        return None
-    return _no_store(RedirectResponse(f"/admin/login?language={language}", status_code=303))
-
-
 def _session_factory_or_none(request: Request) -> async_sessionmaker[AsyncSession] | None:
     return getattr(request.app.state, "session_factory", None)
-
-
-def _session_factory_or_error(request: Request) -> async_sessionmaker[AsyncSession]:
-    session_factory = _session_factory_or_none(request)
-    if session_factory is None:
-        raise HTTPException(status_code=503, detail="Editorial storage is not configured.")
-    return session_factory
-
-
-def _normalize_language(language: str) -> str:
-    return language if language in LANGUAGES else DEFAULT_LANGUAGE
 
 
 def _cookie_secure(request: Request, settings: Settings) -> bool:
@@ -539,9 +514,3 @@ def _cookie_secure(request: Request, settings: Settings) -> bool:
         return True
     forwarded = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip()
     return request.url.scheme.casefold() == "https" or forwarded.casefold() == "https"
-
-
-def _no_store(response: Response) -> Response:
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
-    return response

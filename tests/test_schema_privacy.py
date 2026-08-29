@@ -1,13 +1,12 @@
 """Schema, privacy, and repository contract tests."""
 
 import uuid
-from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import select
 
 from app.data import repo
-from app.data.models import Base, DeletionLog, StorySubmission
+from app.data.models import Base, DeletionLog
 from app.privacy.user_key import derive_user_key
 
 # Any column whose name hints at stored user content breaks the privacy promise.
@@ -35,11 +34,9 @@ EXPECTED_TABLES = {
     "feedback",
     "rate_limit",
     "deletion_log",
-    "story_submission",
-    "url_blocklist",
 }
-# Legacy exception: intake is disabled, but old rows remain deletable/retained.
-ALLOWED_CONTENT_COLUMNS = {"story_submission.minimized_text"}
+# No exception: the schema has no column that can hold submitted content.
+ALLOWED_CONTENT_COLUMNS: set[str] = set()
 
 
 def test_expected_tables_present() -> None:
@@ -132,16 +129,6 @@ async def test_delete_user_data_removes_every_row(session) -> None:
         status="ok",
     )
     await repo.record_feedback(session, check_id=check_id, usefulness="yes", next_action="verify")
-    session.add(
-        StorySubmission(
-            id=uuid.uuid4(),
-            user_key="u1",
-            language="ru",
-            minimized_text="Legacy minimized story",
-            status="submitted",
-            created_ts=datetime.now(UTC),
-        )
-    )
     await repo.increment_usage(session, user_key="u1", scope="user")
     await session.commit()
 
@@ -150,8 +137,6 @@ async def test_delete_user_data_removes_every_row(session) -> None:
 
     assert await repo.get_consent(session, user_key="u1") is None
     assert await repo.get_usage(session, user_key="u1", scope="user") == 0
-    stories = (await session.execute(select(StorySubmission))).scalars().all()
-    assert stories == []
     deletion_log = (await session.execute(select(DeletionLog))).scalar_one()
     assert deletion_log.user_key != "u1"
     assert len(deletion_log.user_key) == 32

@@ -23,7 +23,6 @@ class WebSession:
 
     user_key: str
     signed_id: str
-    is_new: bool
 
 
 def get_or_create_web_session(request: Request, *, secret: str) -> WebSession:
@@ -31,7 +30,6 @@ def get_or_create_web_session(request: Request, *, secret: str) -> WebSession:
 
     signed_id = request.cookies.get(COOKIE_NAME)
     session_id = _unsign(signed_id, secret=secret) if signed_id else None
-    is_new = session_id is None
     if session_id is None:
         session_id = uuid.uuid4().hex
         signed_id = _sign(session_id, secret=secret)
@@ -39,7 +37,6 @@ def get_or_create_web_session(request: Request, *, secret: str) -> WebSession:
     return WebSession(
         user_key=derive_user_key(f"web:{session_id}", secret=secret),
         signed_id=signed_id,
-        is_new=is_new,
     )
 
 

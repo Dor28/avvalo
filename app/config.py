@@ -47,10 +47,6 @@ class Settings(BaseSettings):
     knowledge_router_api_key: SecretStr | None = None
     knowledge_router_model: str | None = None
     knowledge_router_timeout_s: float = Field(default=10.0, gt=0)
-    url_reputation_enabled: bool = False
-    urlhaus_feed_url: str | None = None
-    openphish_feed_url: str | None = None
-    url_feeds_refresh_hours: int = Field(default=12, ge=1, le=168)
     rule_pack_refresh_minutes: int = Field(default=15, ge=1, le=1440)
     knowledge_refresh_minutes: int = Field(default=15, ge=1, le=1440)
     knowledge_gap_default_days: int = Field(default=7, ge=1, le=365)
@@ -68,9 +64,6 @@ class Settings(BaseSettings):
     daily_check_limit: int = Field(default=5, ge=1)
     operator_alert_chat_id: int | None = None
     operator_alert_debounce_s: float = Field(default=900.0, gt=0)
-    # Legacy rejected story rows are retained only until cleanup; new story
-    # intake is disabled and this setting does not authorize new writes.
-    story_rejected_retention_days: int = Field(default=30, ge=1)
 
     web_enabled: bool = False
     web_host: str = "0.0.0.0"

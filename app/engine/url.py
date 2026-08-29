@@ -182,26 +182,6 @@ def load_official_domains() -> OfficialDomainCatalog:
     )
 
 
-def find_urls(text: str) -> list[str]:
-    """Return every raw URL-shaped span in ephemeral text, in order."""
-
-    return [
-        match.group(0)
-        for match in URL_RE.finditer(text)
-        # The bare-host branch also matches the domain half of an email.
-        # An email address is not a submitted destination and must not enter
-        # URL reputation lookup as if the user had supplied a link.
-        if match.start() == 0 or text[match.start() - 1] != "@"
-    ]
-
-
-def extract_normalized_domains(text: str) -> tuple[str, ...]:
-    """Return unique normalized domains found in ephemeral raw text."""
-
-    domains = (normalize_domain(raw_url) for raw_url in find_urls(text))
-    return tuple(dict.fromkeys(domain for domain in domains if domain))
-
-
 def normalize_domain(value: str) -> str | None:
     """Normalize scheme/www/case/IDNA variants to one exact-match domain."""
 

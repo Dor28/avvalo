@@ -15,9 +15,9 @@ nit.
 
 1. **Submitted content is never persisted or logged.** `raw_text` / `image_bytes` / `caption`
    on `CheckInput` are ephemeral. `check_event` rows and `log_event()` output carry only IDs,
-   enums, rule IDs, and metrics. `story_submission.minimized_text` is a legacy stewardship-only
-   exception: no new product flow may write or read it, and the old rows remain reachable only for
-   `/delete_my_data` and retention until a separately authorized data purge.
+   enums, rule IDs, and metrics. No table has a content column at all — the last one,
+   `story_submission.minimized_text`, was dropped with its table in migration `0013`, and the
+   allowlist in `tests/test_schema_privacy.py` is now empty.
 2. **No verdicts, no risk scores.** The product verifies the *situation, never the person*, and
    never outputs "safe" / "scam" / "fraud confirmed" in any language. Enforced deterministically
    in [app/engine/validate.py](app/engine/validate.py). Decisiveness belongs in the recommended

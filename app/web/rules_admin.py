@@ -22,10 +22,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES
-from app.config import Settings
+from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES, normalize_language
 from app.engine.rules.loader import (
     MATCH_MODE_SUBSTRING,
     MATCH_MODES,
@@ -46,7 +44,12 @@ from app.rules_store import (
 )
 from app.rules_store.repo import LANGUAGES as PATTERN_LANGUAGES
 from app.web.abuse import require_same_origin
-from app.web.admin_auth import is_admin_authenticated
+from app.web.admin_auth import (
+    admin_no_store,
+    admin_session_factory,
+    admin_settings_or_404,
+    require_admin,
+)
 from app.web.editorial_copy import EDITORIAL_COPY
 from app.web.knowledge_copy import KNOWLEDGE_COPY
 from app.web.routes import WEB_COPY, templates
@@ -223,17 +226,17 @@ def _rule_rows(
 async def admin_rules(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
     """List the stored overrides and the shipped rules none of them replaces."""
 
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
 
-    session_factory = _session_factory_or_error(request)
+    session_factory = admin_session_factory(request, detail="Rule storage is not configured.")
     async with session_factory() as session:
         overrides = await list_overrides(session)
     baseline = load_yaml_rule_pack().rules
-    return _no_store(
+    return admin_no_store(
         templates.TemplateResponse(
             request,
             "admin_rules.html",
@@ -252,9 +255,9 @@ async def admin_rules(request: Request, language: str = DEFAULT_LANGUAGE) -> Res
 async def admin_rule_new(request: Request, language: str = DEFAULT_LANGUAGE) -> Response:
     """Render an empty rule editor."""
 
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
     return _form_response(request, language, override=None)
@@ -272,9 +275,9 @@ async def admin_rule_baseline_edit(
 ) -> Response:
     """Open a shipped rule pre-filled; saving stores an override with its ID."""
 
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
     rule = next(
@@ -298,12 +301,12 @@ async def admin_rule_edit(
 ) -> Response:
     """Render an existing override in the editor."""
 
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
-    session_factory = _session_factory_or_error(request)
+    session_factory = admin_session_factory(request, detail="Rule storage is not configured.")
     async with session_factory() as session:
         override = await get_override(session, override_id)
     if override is None:
@@ -322,9 +325,9 @@ async def admin_rule_preview(
     """Dry-run the edited rule against sample text without saving anything."""
 
     require_same_origin(request)
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
 
@@ -359,13 +362,13 @@ async def admin_rule_save(
     """Create or update one override, then republish the merged pack."""
 
     require_same_origin(request)
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
 
-    session_factory = _session_factory_or_error(request)
+    session_factory = admin_session_factory(request, detail="Rule storage is not configured.")
     error: str | None = None
     try:
         async with session_factory() as session:
@@ -395,7 +398,7 @@ async def admin_rule_save(
             sample=sample,
             status_code=400,
         )
-    return _no_store(RedirectResponse(f"/admin/rules?language={language}", status_code=303))
+    return admin_no_store(RedirectResponse(f"/admin/rules?language={language}", status_code=303))
 
 
 @router.post("/admin/rules/{override_id}/delete", include_in_schema=False)
@@ -407,13 +410,13 @@ async def admin_rule_delete(
     """Delete an override so the shipped baseline rule applies again."""
 
     require_same_origin(request)
-    settings = _admin_settings(request)
-    language = _normalize_language(language)
-    redirect = _require_admin(request, settings, language)
+    settings = admin_settings_or_404(request)
+    language = normalize_language(language)
+    redirect = require_admin(request, settings, language)
     if redirect is not None:
         return redirect
 
-    session_factory = _session_factory_or_error(request)
+    session_factory = admin_session_factory(request, detail="Rule storage is not configured.")
     async with session_factory() as session:
         override = await get_override(session, override_id)
         if override is None:
@@ -421,7 +424,7 @@ async def admin_rule_delete(
         await delete_override(session, override)
         await session.commit()
         await refresh_rule_pack(session)
-    return _no_store(RedirectResponse(f"/admin/rules?language={language}", status_code=303))
+    return admin_no_store(RedirectResponse(f"/admin/rules?language={language}", status_code=303))
 
 
 def _form_response(
@@ -439,7 +442,7 @@ def _form_response(
     resolved_id = override_id or (
         str(override.id) if isinstance(override, RuleOverride) else None
     )
-    return _no_store(
+    return admin_no_store(
         templates.TemplateResponse(
             request,
             "admin_rule_form.html",
@@ -516,37 +519,3 @@ def _context(request: Request, language: str, **extra) -> dict:
         "cards_nav_label": KNOWLEDGE_COPY[language]["title"],
         **extra,
     }
-
-
-def _admin_settings(request: Request) -> Settings:
-    settings = getattr(request.app.state, "settings", None)
-    if settings is None or settings.admin_access_key is None:
-        raise HTTPException(status_code=404)
-    if not settings.admin_access_key.get_secret_value():
-        raise HTTPException(status_code=404)
-    return settings
-
-
-def _require_admin(
-    request: Request, settings: Settings, language: str
-) -> RedirectResponse | None:
-    if is_admin_authenticated(request, settings):
-        return None
-    return _no_store(RedirectResponse(f"/admin/login?language={language}", status_code=303))
-
-
-def _session_factory_or_error(request: Request) -> async_sessionmaker[AsyncSession]:
-    session_factory = getattr(request.app.state, "session_factory", None)
-    if session_factory is None:
-        raise HTTPException(status_code=503, detail="Rule storage is not configured.")
-    return session_factory
-
-
-def _normalize_language(language: str) -> str:
-    return language if language in LANGUAGES else DEFAULT_LANGUAGE
-
-
-def _no_store(response: Response) -> Response:
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
-    return response

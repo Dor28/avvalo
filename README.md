@@ -340,9 +340,9 @@ python tools/secret_scan.py --all
 
 ## Engineering Guardrails
 
-- Do not store submitted content. `story_submission.minimized_text` is a legacy
-  stewardship-only exception: no new writes or product reads; old rows remain
-  covered by `/delete_my_data` and retention until a separately authorized purge.
+- Do not store submitted content. No table has a content column: the last one,
+  `story_submission.minimized_text`, was dropped with its table in migration
+  `0013`, so the allowlist in `tests/test_schema_privacy.py` is empty.
 - Keep one checker and do not reintroduce a product/face/mode discriminator. Merchant payment protections belong in the
   main checker; do not recreate Merchants, scam-library, story-capture, or
   Scam-Pulse surfaces. The approved wave notification is not Scam Pulse: it is a

@@ -54,6 +54,31 @@ def test_validator_rejects_empty_action_blocks() -> None:
     assert result.reason == "verify block is empty"
 
 
+def test_validator_rejects_every_blocklist_claim() -> None:
+    """No blocklist exists behind the product, so the claim is never supportable.
+
+    This check used to be waived when a URL-reputation rule supplied the fact.
+    That feature and its table were removed, so the rejection is unconditional
+    and a model asserting a listing is always claiming a check we did not make.
+    """
+
+    for line in (
+        "The link appears in a public phishing list.",
+        "Ссылка есть в чёрном списке.",
+        "Havola bloklistda ko'rsatilgan.",
+    ):
+        result = _run(
+            DraftOutput(
+                red_flags=[line],
+                verify=["Use an independent official channel."],
+                ask=["What evidence is available through that channel?"],
+            )
+        )
+
+        assert result.ok is False, line
+        assert result.reason == "unsupported URL blocklist claim", line
+
+
 def test_formatter_renders_current_sections_in_each_reply_language() -> None:
     draft = DraftOutput(
         red_flags=["One detail deserves attention."],
