@@ -15,8 +15,10 @@ work equally for Claude Code, Codex, or a human.
 
 | ID | Task | Status | Owner | Branch | Depends on |
 |---|---|---|---|---|---|
-| [T-09](T-09-knowledge-cards-store.md) | Move knowledge cards into the database behind the existing sync store protocol | done | claude | `claude/product-overview-explanation-90819c` | — |
-| [T-10](T-10-knowledge-cards-admin.md) | Add the operator-only knowledge card editor with a retrieval dry-run | done | claude | `claude/product-overview-explanation-90819c` | T-09 |
+| — | No open tasks | — | — | — | — |
+
+Completed task files are deleted once their work ships; Git history holds them. The next tasks
+come from [ROADMAP.md](../ROADMAP.md) Phase 1.
 
 Avvalo Verify is **parked** ([PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md) §9). Do not create an
 implementation task for it, or for anything else listed under ROADMAP §8 "Parked" or §9 "Not on
