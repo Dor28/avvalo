@@ -163,7 +163,7 @@ existing validator, so a bad card cannot bypass the safety chassis.
 
 **Cards without a localized block fall back to today's behavior** — the model localizes them. This
 keeps the change additive: the schema and the composition path ship now, and each card becomes
-deterministic as its translation is reviewed. Per ROADMAP Phase 2, card text in `uz_latn` / `ru`
+deterministic as its translation is reviewed. Per the ROADMAP content track (§6), card text in `uz_latn` / `ru`
 is founder/native-reviewer work; an engineer inventing it and stamping `status: approved` would
 defeat the review contract.
 
@@ -239,7 +239,7 @@ fixtures are a smoke test for the answer format, not a precision metric for dete
 ships seeded with ordinary Uzbek and Russian messages (deliveries, marketplace haggling, family
 chatter, real bank notifications) — the traffic that must *not* trip a rule.
 
-Real scam material for the positive half stays ROADMAP Phase 2 founder work, sourced from actually
+Real scam material for the positive half stays ROADMAP content-track founder work (§6), sourced from actually
 circulating messages. It is never sourced from user submissions: those are ephemeral by design.
 
 ## 8. What does not change

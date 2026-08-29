@@ -1,22 +1,26 @@
 # Avvalo
 
-Avvalo is a privacy-first safety assistant for Uzbekistan. It helps people check
-suspicious messages, screenshots, links, QR codes, payment requests, offers, and
-documents before they reply, pay, install, sign, or share personal information.
+Avvalo is a privacy-first digital-safety assistant for Uzbekistan. It helps
+people check suspicious links, QR codes, messages, screenshots, payment
+requests, offers, and documents before they reply, pay, install, sign, or share
+personal information — and tells them what to do when it has already happened.
 
-The product rule is simple:
+The promise, in the form a user reads it:
 
-> Verify the situation, artifact, process, or source. Never rate the reputation
-> of a person.
+> **Avvalo does not tell you something is safe. Avvalo makes you hard to
+> deceive.**
+
+Two rules follow from it and shape everything below:
+
+> Verify the situation, artifact, process, or source — never the reputation of a
+> person. Decisiveness goes into the recommended *action*, never into a claim
+> about the object.
 
 Avvalo is one consumer product, Telegram-first, and available in Uzbek (Latin
-script) and Russian. Cyrillic-Uzbek input is still read and analysed, but
-replies are always Latin-script Uzbek. Telegram and the anonymous web checker
-are two channels over one shared engine.
-
-The product loop is:
-
-> **Send → Understand → Verify → Act → Share**
+script) and Russian. Cyrillic-Uzbek input is read and analysed today; replies
+are Latin-script Uzbek for now, with Cyrillic-Uzbek output scheduled in
+[docs/ROADMAP.md](docs/ROADMAP.md). Telegram and the anonymous web checker are
+two channels over one shared engine.
 
 Live Telegram bot: [@Avvalo_official_bot](https://t.me/Avvalo_official_bot)
 
@@ -32,28 +36,44 @@ payment-screenshot, courier, and refund situations are handled by the same
 checker and its safety rules. Avvalo Merchants, the public scam library, story
 capture, and Scam Pulse are retired surfaces, not optional product modes.
 
-The next product capability is **Avvalo Verify**: bounded, source-backed facts
-for official identity, links/QR codes, and regulated-organization/license
-routing. It is not considered built or live yet. The manual validation gate in
-[docs/VERIFY_VALIDATION.md](docs/VERIFY_VALIDATION.md) comes before feature code.
+The product has three capabilities, described in
+[docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) §4:
+
+- **Scanner** — a pasted link or a QR code, answered immediately from
+  deterministic analysis with no model call. Includes resolving where a
+  shortened link leads, inside the bounded exception in PRODUCT_GUIDE §8.1.
+- **Check** — the full situation analysis in chat, including the "it already
+  happened" situations.
+- **Knowledge** — founder-written explanations of real schemes, a rare
+  notification about a circulating wave, and a forwardable reminder.
+
+The Scanner and the short answer it returns are not built yet;
+[docs/ROADMAP.md](docs/ROADMAP.md) holds the order of work.
+
+**Avvalo Verify** — typed facts from official registries, specified in
+[docs/VERIFY_VALIDATION.md](docs/VERIFY_VALIDATION.md) — is **parked**, not
+cancelled, and is not part of the current plan.
 
 ## What Avvalo Returns
 
-Every successful baseline check returns a fixed, non-verdict structure:
+Two answer forms, both passing the same deterministic validator.
 
-- Red flags found in the submitted situation.
-- What the user should verify independently.
+The **Check** (long form) returns a fixed, non-verdict structure:
+
+- Red flags found in the submitted situation, each grounded in a detected rule,
+  signal, or knowledge card.
+- What the user should do now, independently.
+- What remains unknown.
 - Questions to ask before paying, replying, or sending information.
-- A limitation line making clear Avvalo did not certify safety and did not judge
-  a person.
 
-After Avvalo Verify passes validation and is implemented, a result may also
-include up to three typed source facts, each with a named source, observation
-time, and explicit limitation. Source failure stays `unavailable`; absence from
-one source never becomes a verdict.
+The **Scanner** (short form) returns one of three states, each naming a safe
+action rather than judging the destination: a specific signal was found, nothing
+suspicious was found in the address, or the address could not be parsed. The
+"nothing found" state reports the absence of a *finding* — never the absence of
+risk, and never that a site is genuine.
 
 The system must never say "safe", "scammer", "fraud confirmed", or provide a
-person-level accusation.
+person-level accusation, in any supported language.
 
 ## Architecture
 
@@ -325,7 +345,12 @@ python tools/secret_scan.py --all
   covered by `/delete_my_data` and retention until a separately authorized purge.
 - Keep one checker and do not reintroduce a product/face/mode discriminator. Merchant payment protections belong in the
   main checker; do not recreate Merchants, scam-library, story-capture, or
-  Scam-Pulse surfaces.
+  Scam-Pulse surfaces. The approved wave notification is not Scam Pulse: it is a
+  founder-authored push, never an aggregate feed derived from user checks.
+- Never fetch, render, or execute a submitted destination. The one bounded
+  exception is shortener redirect resolution under PRODUCT_GUIDE §8.1 — `HEAD`
+  only, `https` and public addresses only, capped hops, explicit user action.
+  Do not let it widen into fetching page content.
 - Do not add person, phone, card, or "reported N times" lookup features.
 - Do not weaken the safety prompts, validator, or output contract casually.
 - Do not put analysis logic in Telegram handlers or web routes; call the shared
@@ -341,11 +366,12 @@ Read in this order:
 
 - [docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) — canonical product and safety.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — the only active order of work.
-- [docs/VERIFY_VALIDATION.md](docs/VERIFY_VALIDATION.md) — experiment and gates.
 - [docs/V1_TECHNICAL_PLAN.md](docs/V1_TECHNICAL_PLAN.md) — current implemented
   architecture and engineering constraints.
 - [docs/AI_KNOWLEDGE_PIPELINE.md](docs/AI_KNOWLEDGE_PIPELINE.md) — explanation
   knowledge and LLM safety contract.
+- [docs/VERIFY_VALIDATION.md](docs/VERIFY_VALIDATION.md) — parked; read only if
+  Avvalo Verify is taken off the shelf.
 
 For the full docs index, see [docs/README.md](docs/README.md).
 

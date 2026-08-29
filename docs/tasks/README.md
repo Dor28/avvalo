@@ -18,8 +18,9 @@ work equally for Claude Code, Codex, or a human.
 | [T-09](T-09-knowledge-cards-store.md) | Move knowledge cards into the database behind the existing sync store protocol | done | claude | `claude/product-overview-explanation-90819c` | — |
 | [T-10](T-10-knowledge-cards-admin.md) | Add the operator-only knowledge card editor with a retrieval dry-run | done | claude | `claude/product-overview-explanation-90819c` | T-09 |
 
-Do not create an Avvalo Verify implementation task until Phase A in
-[ROADMAP.md](../ROADMAP.md) records a `go` decision.
+Avvalo Verify is **parked** ([PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md) §9). Do not create an
+implementation task for it, or for anything else listed under ROADMAP §8 "Parked" or §9 "Not on
+the roadmap", without an explicit founder decision recorded in the guide first.
 
 Statuses: `open` · `in_progress` · `blocked` · `done` · `cancelled`.
 The frontmatter in each file is the source of truth; this table is a convenience view — update
@@ -60,7 +61,7 @@ to an executor; the generator can be wrong about scope in a way the executor wil
 ## Related
 
 - [ROADMAP.md](../ROADMAP.md) — the only active order of work.
-- [VERIFY_VALIDATION.md](../VERIFY_VALIDATION.md) — the gate that must pass before the first
-  Avvalo Verify implementation task is written.
+- [VERIFY_VALIDATION.md](../VERIFY_VALIDATION.md) — parked. If Avvalo Verify is ever taken off
+  the shelf, this gate passes before any implementation task is written.
 - Founder-owned research or validation may use `owner: founder`; an agent may prepare materials
   but must never fabricate results.

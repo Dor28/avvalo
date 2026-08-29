@@ -1,6 +1,6 @@
 # Avvalo — Documentation Index
 
-> **Last updated:** 2026-07-22
+> **Last updated:** 2026-08-29
 
 The repository has one product direction and one active roadmap. Historical and superseded
 documents were removed; Git history remains the source for old decisions.
@@ -9,9 +9,8 @@ documents were removed; Git history remains the source for old decisions.
 
 | Order | Document | Purpose |
 |---:|---|---|
-| 1 | [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) | Canonical product, features, evidence boundary, privacy, and non-goals |
-| 2 | [ROADMAP.md](ROADMAP.md) | Current order: editorial cases, manual Verify validation, strict MVP, measured alpha |
-| 3 | [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md) | Manual experiment, source inventory, and go/stop gates |
+| 1 | [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) | Canonical product, capabilities, answer contract, privacy, and non-goals |
+| 2 | [ROADMAP.md](ROADMAP.md) | Current order of work: the scanner answer, the application, reach, distribution — plus the parallel content track |
 
 No other document may introduce a feature or change priority.
 
@@ -21,14 +20,26 @@ No other document may introduce a feature or change priority.
 |---|---|
 | [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) | Current implemented architecture and engineering constraints |
 | [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) | Rules, minimization, reviewed knowledge, LLM, and safety validation |
-| [tasks/](tasks/README.md) | Executor-ready tasks created only when the roadmap gate permits implementation |
+| [PIPELINE_V2.md](PIPELINE_V2.md) | Answer grounding, rule precision fields, and the evaluation corpus |
+| [tasks/](tasks/README.md) | Executor-ready tasks created only when the roadmap permits implementation |
+
+## Parked
+
+| Document | Why |
+|---|---|
+| [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md) | Avvalo Verify — typed facts from official registries. Parked, not cancelled; see PRODUCT_GUIDE §9. No implementation task may be written for it |
 
 ## Current status
 
-The built baseline accepts suspicious text and images through Telegram and web, explains supported
-risk signals, and suggests independent verification steps. Seller, payment, courier, and refund
-situations use the same checker. There is no separate merchant product, public scam library, story
-capture, or Scam Pulse.
+Built: Telegram and anonymous web intake, OCR, local QR decoding, one URL analyzer, the
+deterministic rule layer, PII minimization, the LLM explanation behind a safety validator,
+database-backed rule and card overrides with founder editors, the Knowledge section, retention
+and deletion.
 
-The next proposed capability is Avvalo Verify. It is not built or live until the validation gate,
-implementation acceptance and automated checks pass.
+Not built: the Telegram Mini App, the short scanner answer, redirect resolution, Cyrillic-Uzbek
+output, wave notifications, first-run examples, the forwardable reminder, family-group behaviour,
+and inline mode. ROADMAP holds the order.
+
+Detection assets are thin — 13 rules, 10 knowledge cards, 14 catalog organizations, 13 golden
+cases, all universal patterns rather than local ones. The content track in ROADMAP §6 is what
+closes that gap, and no product surface compensates for its absence.

@@ -4,8 +4,11 @@
 > **Authority:** [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) remains the product and safety authority. This document defines how the shared engine must combine local rules, curated knowledge, reviewed cases, and the LLM.
 > **Scope:** Questions and submitted content about suspicious messages, calls, payments, documents, links, deals, and related situations. Avvalo is not a general-purpose assistant for unrelated topics.
 > **Evidence boundary:** A knowledge card or reviewed case is explanatory guidance, never an
-> official-source fact. Avvalo Verify requires a separate typed adapter result with source,
-> observation time, status, and limitations. Do not relabel knowledge retrieval as verification.
+> official-source fact. Do not relabel knowledge retrieval as verification, and never claim an
+> official source was checked. Avvalo Verify — which would require a separate typed adapter
+> result with source, observation time, status, and limitations — is parked (PRODUCT_GUIDE §9).
+> **Answer stance:** the pipeline never asserts that something is safe. Decisiveness belongs in
+> the recommended action, never in a claim about the submitted object (PRODUCT_GUIDE §5.1).
 > **Current runtime:** There is one knowledge pack and no face discriminator. Merchant payment protections
 > are part of the main checker. The retired story-capture flow is not a source of new cases.
 

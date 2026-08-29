@@ -21,9 +21,17 @@ There is no internal product-face ID: it was removed from the code and the schem
 flow.
 
 The product does not provide accounts, history, person/entity lookup, accusations, verdicts, risk
-scores, merchant mode, public content pages, story capture, trend publishing, or general browsing.
-Avvalo Verify is not implemented until the validation gate in
-[VERIFY_VALIDATION.md](VERIFY_VALIDATION.md) passes.
+scores, merchant mode, story capture, trend publishing, or general browsing. No code path fetches,
+renders, or executes a submitted destination; the one bounded exception is shortener redirect
+resolution under [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) §8.1, which is specified but not yet
+implemented.
+
+Avvalo Verify is **parked** (PRODUCT_GUIDE §9). If it is ever taken off the shelf, the validation
+gate in [VERIFY_VALIDATION.md](VERIFY_VALIDATION.md) passes first.
+
+Capabilities described in PRODUCT_GUIDE §4 but not yet in this contract — the Telegram Mini App,
+the short scanner answer, redirect resolution, Cyrillic-Uzbek output, wave notifications — are
+scheduled in [ROADMAP.md](ROADMAP.md). This document describes what exists, not what is planned.
 
 ## 2. Runtime architecture
 

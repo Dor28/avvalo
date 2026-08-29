@@ -1,6 +1,6 @@
 # Avvalo Verify — Validation Spec
 
-> **Status:** Active product experiment
+> **Status:** PARKED — not part of the current plan; see PRODUCT_GUIDE.md §9
 > **Last updated:** 2026-07-22
 > **Authority:** [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md)
 
