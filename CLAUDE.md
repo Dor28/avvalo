@@ -4,7 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Avvalo — a "check before you commit" assistant for Uzbekistan. Users send a suspicious message, screenshot, link, QR code, payment request, offer, or document (Uzbek Latin/Cyrillic or Russian) through Telegram or an anonymous web page. One shared engine explains red flags and next actions. The next product capability, Avvalo Verify, may add typed source facts only after the validation gate in `docs/VERIFY_VALIDATION.md`. Two rules shape the whole codebase: verify the **situation, never the person**, and never issue "safe"/"scam" **verdicts**.
+Avvalo — a digital-safety assistant for Uzbekistan, built around one promise: **it never tells you something is safe; it makes you hard to deceive.** Users send a suspicious link, QR code, message, screenshot, payment request, offer, or document (Uzbek Latin/Cyrillic or Russian) through Telegram or an anonymous web page, and one shared engine explains what deserves attention and what to do next.
+
+The product runs at three tempos ([docs/PRODUCT_GUIDE.md](docs/PRODUCT_GUIDE.md) §4): a **Scanner** that answers a link or QR deterministically with no model call, a **Check** that analyses a full situation in chat, and **Knowledge** — founder-written explanations plus rare wave notifications. Avvalo Verify (typed facts from official registries) is **parked**, not next; see PRODUCT_GUIDE §9.
+
+Three rules shape the whole codebase:
+
+- verify the **situation, never the person**;
+- never issue "safe"/"scam" **verdicts** — decisiveness goes into the recommended *action*, never into a claim about the object;
+- never open a submitted destination, except through the one bounded exception in PRODUCT_GUIDE §8.1.
 
 ## Commands
 
@@ -38,7 +46,9 @@ One process ([app/main.py](app/main.py)) runs everything: the aiogram Telegram b
 checker with a single rule pack (`rules/`), prompt (`prompts/check.txt`), and daily limit
 (`DAILY_CHECK_LIMIT`). Seller, payment-screenshot, courier, and refund situations all use it.
 The former `merchants` face, scam library, story-capture flow, and Scam Pulse are retired and must
-not be restored from git history.
+not be restored from git history. **Scam Pulse is not the same thing as the approved wave
+notification** (ROADMAP Phase 3): that is a founder-authored push, two or three a month, never an
+aggregate trend feed and never derived from user submissions.
 
 The `face` discriminator that used to select between products is **gone** — from the code and from
 the database (migration `0007_drop_face`). Do not reintroduce it, and do not add a "mode" or
@@ -70,6 +80,8 @@ Channels (`app/bot/`, `app/web/`) are thin adapters that build a `CheckInput` an
 7. Deterministic safety validator ([app/engine/validate.py](app/engine/validate.py)): bans verdict words in ru/uz_latn/Cyrillic-Uzbek/English, strips contacts/links/card numbers/OTPs, caps list lengths; one corrective retry, then `safety_fallback`.
 8. `format_result` renders the reply in the resolved language.
 
+**Two answer paths, one engine.** The pipeline above is the *Check* (long form). The *Scanner* short form — ROADMAP Phase 1, **not built yet** — resolves a submitted link or decoded QR through the same [app/engine/url.py](app/engine/url.py) analyzer and returns the three-state answer in PRODUCT_GUIDE §5.2 with **no LLM call**, without consuming `DAILY_CHECK_LIMIT`. Both forms pass the same validator. A scanner answer must never claim safety: its "nothing found" state reports the absence of a *finding*, which is not the absence of risk.
+
 Boundary contracts are Pydantic models in [app/engine/types.py](app/engine/types.py) (`CheckInput`, `CheckResult`, `CheckStatus`, `DraftOutput`); extend those instead of passing loose dicts. New statuses must also be added to the allow-set in [app/data/repo.py](app/data/repo.py).
 
 **Detection assets are database-backed with a YAML fallback.** The repo is public, so new keyword
@@ -96,6 +108,12 @@ The legal posture depends on these; several are enforced by tests that will fail
   to cover old rows until a separately authorized purge removes the table.
 - **`CheckInput` carries no product discriminator.** `tests/test_types_contract.py` asserts `face`
   stays absent, so the retired concept can't creep back through the boundary type.
+- **Submitted destinations are never opened.** No code path fetches, renders, or executes a
+  submitted URL or QR destination. The single bounded exception is shortener redirect resolution
+  (PRODUCT_GUIDE §8.1): `HEAD` only, `https` and public addresses only, capped hops, no cookies,
+  on an explicit user action, separate egress — and the resolved destination is shown once, never
+  persisted, logged, or sent to a model. Widening this requires a founder decision recorded in the
+  guide; do not let it drift into fetching page content.
 - **Users are pseudonymous:** `user_key = HMAC_SHA256(APP_HMAC_SECRET, telegram_id)[:32]` ([app/privacy/user_key.py](app/privacy/user_key.py)); raw Telegram IDs are never stored or logged.
 - Retention ([app/data/retention.py](app/data/retention.py)) prunes aged rows; `/delete_my_data` is audited in `deletion_log`.
 - `tests/test_secret_scan.py` scans the tree for committed secrets.
@@ -115,8 +133,8 @@ The legal posture depends on these; several are enforced by tests that will fail
   driving an adversarial model that tries to emit each one. `must_include` stays English
   reviewer-facing rationale (replies are `uz_latn`/`ru`, so it can never be a substring match);
   `expected_knowledge_card_ids` is its checkable form. Adding a case therefore buys reply-content
-  cover, so add the hardest Phase 2 material here.
-- **Every user-facing string exists in both languages** (`uz_latn`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. Uzbek replies are Latin-script only. Cyrillic-Uzbek *input* is still supported: `app/engine/language.py` detects it and resolves it to `uz_latn`, the `uz_cyrl` keyword groups in `rules/` and `knowledge/` still match it, and `app/engine/validate.py` still bans Cyrillic verdict words. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
+  cover, so add the hardest material from the content track (ROADMAP §6) here.
+- **Every user-facing string exists in both languages** (`uz_latn`, `ru`): `app/bot/texts.py`, `app/web/routes.py`, `app/engine/format.py`. Uzbek replies are Latin-script only **today** — Cyrillic-Uzbek *output* is scheduled work (ROADMAP Phase 3), not a permanent boundary. Cyrillic-Uzbek *input* is already supported: `app/engine/language.py` detects it and resolves it to `uz_latn`, the `uz_cyrl` keyword groups in `rules/` and `knowledge/` still match it, and `app/engine/validate.py` still bans Cyrillic verdict words. These files carry E501/RUF001 lint exemptions for long lines and Cyrillic lookalike glyphs — don't "fix" those.
 - Async end-to-end; pytest runs with `asyncio_mode = "auto"` (no `@pytest.mark.asyncio` needed).
 - Style follows ruff config in [pyproject.toml](pyproject.toml): 100-char lines, import sorting (I), modern syntax (UP). Module docstrings state purpose and spec section; internal helpers use frozen dataclasses, boundary types use Pydantic.
 - `.claude/worktrees/` can hold stale checkouts with pre-rename names (family_shield/seller_guard, and the retired `face` plumbing) — exclude it when searching the repo.
