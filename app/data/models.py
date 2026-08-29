@@ -125,25 +125,6 @@ class DeletionLog(Base):
     completed_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class StorySubmission(Base):
-    """Legacy minimized story retained only for stewardship.
-
-    New product paths do not write or read this table. It remains mapped so
-    retention and ``/delete_my_data`` can cover rows created by the retired
-    story-capture flow until a separately authorized purge removes the table.
-    """
-
-    __tablename__ = "story_submission"
-
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_key: Mapped[str] = mapped_column(Text, nullable=False, index=True)
-    language: Mapped[str] = mapped_column(Text, nullable=False)
-    minimized_text: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(Text, nullable=False, default="submitted")
-    created_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    reviewed_ts: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-
-
 class URLBlocklist(Base):
     """Hash-only local reputation entry sourced from a public feed."""
 

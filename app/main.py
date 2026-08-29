@@ -45,12 +45,7 @@ async def run(*, check_only: bool = False) -> None:
             return
 
         session_factory = create_session_factory(engine)
-        scheduler = start_retention_scheduler(
-            session_factory,
-            policy=RetentionPolicy(
-                story_rejected_days=settings.story_rejected_retention_days
-            ),
-        )
+        scheduler = start_retention_scheduler(session_factory, policy=RetentionPolicy())
         install_url_reputation_job(scheduler, session_factory, settings)
         install_knowledge_availability_alert_job(scheduler, session_factory, settings)
         install_rule_pack_refresh_job(scheduler, session_factory, settings)

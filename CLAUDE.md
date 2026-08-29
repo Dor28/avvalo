@@ -102,10 +102,9 @@ matcher / real retrieval so a preview cannot drift from production.
 The legal posture depends on these; several are enforced by tests that will fail the build:
 
 - **Submitted content is never persisted or logged.** `raw_text` / `image_bytes` / `caption` on `CheckInput` are ephemeral. `check_event` rows and `log_event()` output carry only IDs, enums, rule IDs, and metrics.
-- **Active product writes have no content columns.** `tests/test_schema_privacy.py` rejects new
-  content-like persistence. The existing `story_submission.minimized_text` column is legacy
-  stewardship only: no new writes or product reads, while `/delete_my_data` and retention continue
-  to cover old rows until a separately authorized purge removes the table.
+- **No table has a content column.** `tests/test_schema_privacy.py` rejects new content-like
+  persistence, and its allowlist is empty: the last text column,
+  `story_submission.minimized_text`, went with the table in migration `0013_drop_story_submission`.
 - **`CheckInput` carries no product discriminator.** `tests/test_types_contract.py` asserts `face`
   stays absent, so the retired concept can't creep back through the boundary type.
 - **Submitted destinations are never opened.** No code path fetches, renders, or executes a

@@ -173,9 +173,9 @@ These carry the legal posture and are enforced by tests that fail the build.
 - **Submitted content is never persisted or logged.** `raw_text`, `image_bytes` and
   `caption` on `CheckInput` are ephemeral. `check_event` rows and `log_event()` output carry
   only IDs, enums, rule IDs, and metrics.
-- **Active product writes have no content columns.** `tests/test_schema_privacy.py` rejects
-  new content-like persistence. `story_submission.minimized_text` is legacy stewardship
-  only: no new writes, no product reads.
+- **No table has a content column.** `tests/test_schema_privacy.py` rejects content-like
+  persistence against an empty allowlist. The last text column, the retired flow's
+  `story_submission.minimized_text`, was dropped in migration `0013`.
 - **Users are pseudonymous.** `user_key = HMAC_SHA256(APP_HMAC_SECRET, telegram_id)[:32]`;
   raw Telegram IDs are never stored or logged.
 - **No verdicts.** The product never outputs "safe", "scammer", "fraud confirmed", a trust

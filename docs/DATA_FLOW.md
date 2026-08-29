@@ -129,7 +129,8 @@ Substitution is one-way and per-request. No token-to-value mapping is built, kep
 
 ## 4. What survives the request
 
-No active table has a content column; `tests/test_schema_privacy.py` fails the build if one appears.
+No table has a content column at all — the allowlist in `tests/test_schema_privacy.py` is empty,
+so the build fails if one appears.
 
 | Table | Row contents | Retention |
 |---|---|---|
@@ -139,7 +140,6 @@ No active table has a content column; `tests/test_schema_privacy.py` fails the b
 | `consent` | `user_key`, notice version, language | 365 days |
 | `deletion_log` | `user_key`, requested and completed timestamps for `/delete_my_data` | 365 days |
 | `url_blocklist` | SHA-256 of a domain from a public feed — not user data | refreshed out of band |
-| `story_submission` | Minimized text from the retired story-capture flow. **The only text column in the schema.** No new writes, no product reads; retention and `/delete_my_data` still cover it until a separately authorized purge drops the table | legacy |
 
 Logging is allowlisted at both ends: `app/obs/events.py` rejects an unknown event name and an
 unknown field name, and neither `log_event` nor `log_error` accepts free-form exception text — a

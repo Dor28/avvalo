@@ -20,7 +20,6 @@ from app.data.models import (
     DeletionLog,
     Feedback,
     RateLimit,
-    StorySubmission,
 )
 
 USEFULNESS_VALUES = {"yes", "partly", "no"}
@@ -328,7 +327,6 @@ async def delete_user_data(session: AsyncSession, *, user_key: str) -> None:
     check_ids = result.scalars().all()
     if check_ids:
         await session.execute(delete(Feedback).where(Feedback.check_id.in_(check_ids)))
-    await session.execute(delete(StorySubmission).where(StorySubmission.user_key == user_key))
     await session.execute(delete(CheckEvent).where(CheckEvent.user_key == user_key))
     await session.execute(delete(Consent).where(Consent.user_key == user_key))
     await session.execute(delete(RateLimit).where(RateLimit.user_key == user_key))

@@ -68,9 +68,6 @@ class Settings(BaseSettings):
     daily_check_limit: int = Field(default=5, ge=1)
     operator_alert_chat_id: int | None = None
     operator_alert_debounce_s: float = Field(default=900.0, gt=0)
-    # Legacy rejected story rows are retained only until cleanup; new story
-    # intake is disabled and this setting does not authorize new writes.
-    story_rejected_retention_days: int = Field(default=30, ge=1)
 
     web_enabled: bool = False
     web_host: str = "0.0.0.0"

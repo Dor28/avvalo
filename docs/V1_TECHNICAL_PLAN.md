@@ -219,12 +219,10 @@ versions plus draft/publication metadata and may contain one normalized WebP cov
 alt text. No user key or submitted check content enters this table, and editorial rows are not part
 of `/delete_my_data` because they are operator-owned public content.
 
-`story_submission` is a legacy stewardship-only table:
-
-- no active route, handler, repository API, or tool writes or reads it as product data;
-- `/delete_my_data` still deletes matching legacy rows;
-- retention still removes rejected legacy rows under the configured policy;
-- dropping the table or purging remaining data requires a separately authorized migration.
+The `story_submission` table of the retired story-capture flow was dropped by migration
+`0013_drop_story_submission` under founder authorization. It held `minimized_text`, the last
+text column in the schema; no table now has a column that can hold submitted content, and
+`tests/test_schema_privacy.py` enforces that with an empty allowlist.
 
 `log_event()` and `log_error()` accept only allowlisted categorical metadata. Submitted content,
 decoded QR payloads, OCR text, model output, URLs, contacts, and exception strings are forbidden.
