@@ -1,4 +1,8 @@
-"""Short-lived signed-cookie authentication for the founder-only post editor."""
+"""Admin gate for the founder-only editors: signed-cookie auth and the shared guards.
+
+The three admin routers (posts, rules, cards) enter through the same checks, so
+they live here once rather than once per router.
+"""
 
 from __future__ import annotations
 
@@ -6,8 +10,9 @@ import hashlib
 import hmac
 import time
 
-from fastapi import Request
-from starlette.responses import Response
+from fastapi import HTTPException, Request
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from starlette.responses import RedirectResponse, Response
 
 from app.config import Settings
 
@@ -61,3 +66,49 @@ def clear_admin_cookie(response: Response) -> None:
 
 def _signature(expires_text: str, secret: str) -> str:
     return hmac.new(secret.encode(), f"admin:{expires_text}".encode(), hashlib.sha256).hexdigest()
+
+
+def admin_settings_or_404(request: Request) -> Settings:
+    """Return settings only when the admin surface is configured and enabled.
+
+    A blank or absent ``ADMIN_ACCESS_KEY`` disables /admin entirely, and it does
+    so as a 404 rather than a 403 so the surface is not advertised.
+    """
+
+    settings = getattr(request.app.state, "settings", None)
+    if settings is None or settings.admin_access_key is None:
+        raise HTTPException(status_code=404)
+    if not settings.admin_access_key.get_secret_value():
+        raise HTTPException(status_code=404)
+    return settings
+
+
+def admin_no_store(response: Response) -> Response:
+    """Keep an admin response out of every cache, shared or private."""
+
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
+def require_admin(
+    request: Request, settings: Settings, language: str
+) -> RedirectResponse | None:
+    """Return ``None`` when authenticated, else the redirect to the login page."""
+
+    if is_admin_authenticated(request, settings):
+        return None
+    return admin_no_store(
+        RedirectResponse(f"/admin/login?language={language}", status_code=303)
+    )
+
+
+def admin_session_factory(
+    request: Request, *, detail: str
+) -> async_sessionmaker[AsyncSession]:
+    """Return the configured session factory, or 503 with the caller's wording."""
+
+    session_factory = getattr(request.app.state, "session_factory", None)
+    if session_factory is None:
+        raise HTTPException(status_code=503, detail=detail)
+    return session_factory

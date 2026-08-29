@@ -12,7 +12,13 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bot.texts import DEFAULT_LANGUAGE, LANGUAGE_LABELS, LANGUAGES, t
+from app.bot.texts import (
+    DEFAULT_LANGUAGE,
+    LANGUAGE_LABELS,
+    LANGUAGES,
+    normalize_language,
+    t,
+)
 from app.config import Settings, get_settings
 from app.content import list_published_posts
 from app.data import repo
@@ -286,7 +292,7 @@ async def index(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLRespo
     one, and POST /check creates it on first submit anyway.
     """
 
-    language = _normalize_language(language)
+    language = normalize_language(language)
     copy = WEB_COPY[language]
     latest_posts = await _latest_editorial_posts(request, language=language)
     return _no_store(templates.TemplateResponse(
@@ -317,7 +323,7 @@ async def retired_merchants(language: str = DEFAULT_LANGUAGE) -> RedirectRespons
     """Preserve old bookmarks while sending users to the unified checker."""
 
     response = RedirectResponse(
-        url=f"/check?language={_normalize_language(language)}",
+        url=f"/check?language={normalize_language(language)}",
         status_code=308,
     )
     response.headers["Cache-Control"] = "no-store"
@@ -327,7 +333,7 @@ async def retired_merchants(language: str = DEFAULT_LANGUAGE) -> RedirectRespons
 async def _check_page(request: Request, *, language: str) -> HTMLResponse:
     """Render the focused consumer check surface: the composer and its result."""
 
-    language = _normalize_language(language)
+    language = normalize_language(language)
     settings = _settings_or_none(request)
     web_session = get_or_create_web_session(request, secret=_web_secret(settings))
     copy = WEB_COPY[language]
@@ -359,7 +365,7 @@ def _turnstile_site_key(settings: Settings | None) -> str | None:
 async def privacy(request: Request, language: str = DEFAULT_LANGUAGE) -> HTMLResponse:
     """Render the localized privacy notice."""
 
-    language = _normalize_language(language)
+    language = normalize_language(language)
     copy = WEB_COPY[language]
     return _no_store(templates.TemplateResponse(
         request,
@@ -388,7 +394,7 @@ async def check(
 
     require_same_origin(request)
     settings = _settings_or_error(request)
-    language = _normalize_language(language)
+    language = normalize_language(language)
     copy = WEB_COPY[language]
 
     web_session = get_or_create_web_session(request, secret=_web_secret(settings))
@@ -611,10 +617,6 @@ def _web_secret(settings: Settings | None) -> str:
     if settings is None:
         return DEV_WEB_SESSION_SECRET
     return settings.web_session_secret.get_secret_value()
-
-
-def _normalize_language(language: str) -> str:
-    return language if language in LANGUAGES else DEFAULT_LANGUAGE
 
 
 def _no_store(response: HTMLResponse) -> HTMLResponse:
