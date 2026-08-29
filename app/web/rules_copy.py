@@ -18,7 +18,6 @@ SCRIPT_LABELS = {
 
 _ERRORS = {
     "uz_latn": {
-        "invalid_face": "Noma'lum tekshiruv yuzasi.",
         "invalid_rule_id": "Qoida ID'si `fs.oila.nom` ko'rinishida bo'lishi kerak.",
         "invalid_family": "Oila nomi faqat kichik lotin harflari va pastki chiziqdan iborat bo'lsin.",
         "invalid_message_key": "Xabar kaliti faqat kichik lotin harflari va pastki chiziqdan iborat bo'lsin.",
@@ -35,7 +34,6 @@ _ERRORS = {
         "duplicate_rule": "Bu qoida ID'si allaqachon mavjud.",
     },
     "ru": {
-        "invalid_face": "Неизвестная поверхность проверки.",
         "invalid_rule_id": "ID правила должен быть вида `fs.семейство.имя`.",
         "invalid_family": "Имя семейства — только строчные латинские буквы и подчёркивание.",
         "invalid_message_key": "Ключ сообщения — только строчные латинские буквы и подчёркивание.",
