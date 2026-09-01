@@ -1,7 +1,7 @@
 # Avvalo — Product Guide
 
 > **Status:** Canonical product direction
-> **Last updated:** 2026-08-28
+> **Last updated:** 2026-09-01
 > **Rule:** If another document conflicts with this guide on product scope, this guide wins.
 
 ## 1. Product in one sentence
@@ -20,22 +20,36 @@ That sentence is the product. The refusal to issue verdicts is not a limitation 
 around — it is the positioning, and it is the one property a competitor built as a wrapper
 around a language model does not have and cannot retrofit.
 
-## 2. What changed, and why this document was rewritten
+## 2. The three rules
 
-Avvalo was previously scoped as an incident helper: a person arrives frightened, submits one
-situation, reads one answer, leaves. That framing is now retired. The unit of value is no
-longer a resolved case but the user's own acquired ability to notice what is wrong.
+Everything in this document follows from three rules. They are not guidelines, and a change
+that violates one is a change to the product, not to its implementation. Two of them are
+enforced by tests that fail the build. The first is a scope boundary that no test can hold,
+which is exactly why it is written down here.
 
-Concretely, three things changed:
+1. **Verify the situation, never the person.** Avvalo examines an artifact — a link, a
+   message, a screenshot, a payment request — and the process around it. It never assembles
+   a picture of who someone is. There is no person, phone, card, or handle lookup, and none
+   is coming (§9). Nothing in the test suite can catch a violation of this one — it is held
+   by the non-goals in §9 and by refusing the feature when it is asked for, which it will be.
+2. **Never issue a verdict.** Not "safe", not "scammer", not "fraud confirmed", not a trust
+   or risk score, in any supported language. Decisiveness moves into the recommended
+   *action* instead (§5.1). The deterministic validator enforces this on every answer, and
+   it is why the Scanner's "nothing found" state is a statement about a *finding* rather
+   than about risk. Enforced by [app/engine/validate.py](../app/engine/validate.py) and by
+   `tests/test_validation_contract.py`, `tests/test_validate_format.py`, and the adversarial
+   model driven by `tests/test_golden_e2e.py`.
+3. **Never open a submitted destination.** No code path fetches, renders, or executes a
+   submitted URL or QR destination. The single exception is shortener redirect resolution,
+   bounded in §8.1, and it must not widen by drift. Enforced by
+   `test_analysis_never_fetches_the_destination` in `tests/test_url_analyzer.py`, which reads
+   the analyzer's own source and fails if a networking import appears in it.
 
-1. **One reactive flow became three capabilities** — Scanner, Check, Knowledge (§4).
-2. **The answer became decisive** — about the action, never about the object (§5).
-3. **The product became an application inside Telegram**, not only a bot and a web form (§6).
-
-Removed from scope in the same pass, deliberately and not by omission: the digital-hygiene
-checklist, the phishing trainer, the personal counter, voice answers, an answer variant
-addressed to a third party, result-as-image export, Telegram account verification, and a
-second on-device implementation of the URL analyzer. §9 holds the full list.
+One framing follows from these and is worth stating outright, because it is what keeps the
+product from collapsing back into a support desk: **the unit of value is not a resolved
+case.** It is the user's own acquired ability to notice what is wrong. That is why Knowledge
+(§4) is a capability rather than a marketing surface, and why an answer that solves today's
+problem without teaching anything is only half an answer.
 
 ## 3. Audience
 
@@ -44,9 +58,10 @@ and Payme, OLX and Uzum, bank SMS, and QR payments. The product is not narrowed 
 segment.
 
 Reply languages are `uz_latn` and `ru`. Cyrillic-Uzbek input is detected and understood
-today but is always answered in `uz_latn`; adding Cyrillic-Uzbek **output** is scheduled
-work (ROADMAP Phase 3) because the group most exposed to fraud reads Cyrillic fluently and
-Latin with difficulty. Until that ships, the audience is not broad — it is truncated by age.
+today, but is always answered in `uz_latn`. Cyrillic-Uzbek **output** is committed work
+(ROADMAP Phase 3), not a permanent boundary — the group most exposed to fraud reads Cyrillic
+fluently and Latin with difficulty. Until it ships, the audience is not broad. It is
+truncated by age.
 
 ## 4. What the product does
 
@@ -169,7 +184,8 @@ first-run examples, the forwardable reminder, family-group behaviour, and inline
 
 ## 8. Privacy and safety invariants
 
-These carry the legal posture and are enforced by tests that fail the build.
+These carry the legal posture. All but one are enforced by tests that fail the build;
+**situation, not person** is the scope boundary from §2, held by §9 and by review.
 
 - **Submitted content is never persisted or logged.** `raw_text`, `image_bytes` and
   `caption` on `CheckInput` are ephemeral. `check_event` rows and `log_event()` output carry
@@ -207,8 +223,8 @@ must not widen by drift.
 
 ## 9. Non-goals
 
-Cut deliberately during scope planning, not forgotten. A one-person, evenings-only build
-pays for every extra surface with emptiness in the others.
+Cut deliberately during scope planning, not forgotten. A one-person build pays for every
+extra surface with emptiness in the others.
 
 Cut from this plan: digital-hygiene checklist · phishing trainer · personal check counter ·
 voice answers · an answer variant written for a third party · result-as-image export ·
@@ -232,7 +248,8 @@ depends on is being built anyway, as lookalike detection, so parking costs nothi
 ## 10. Documentation authority
 
 - This file defines the product and the safety boundary.
-- [ROADMAP.md](ROADMAP.md) defines the order of work.
+- [ROADMAP.md](ROADMAP.md) defines the order of work. It deliberately carries no dates,
+  estimates, or capacity arithmetic; sequence and exit criteria are what it commits to.
 - [V1_TECHNICAL_PLAN.md](V1_TECHNICAL_PLAN.md) describes the implemented architecture.
 - [AI_KNOWLEDGE_PIPELINE.md](AI_KNOWLEDGE_PIPELINE.md) defines explanation knowledge; a
   knowledge card is not official-source evidence.
